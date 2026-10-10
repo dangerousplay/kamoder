@@ -1,0 +1,15 @@
+[package]
+name = "ptz-proto"
+description = "Wire protocol and async client for the Anyka PTZ ownership socket (no motor backend, no SDK)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+# Deliberately no anyka-ptz, anyka-sys or anyka-link here, and no build.rs:
+# see the crate docs (src/lib.rs) for why this is a separate crate.
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+snafu.workspace = true
+tokio = { version = "1", features = ["net", "io-util", "time"] }

@@ -1,0 +1,21 @@
+[package]
+name = "telemetry"
+description = "Tracing and Prometheus metrics wiring for Anyka camera binaries"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+# Nothing here is published; these crates only make sense next to the
+# vendored SDK and the camera's toolchain.
+publish = false
+
+[dependencies]
+metrics.workspace = true
+snafu.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+# Recorder and text renderer only. The crate's own HTTP listener pulls in a
+# full tokio + hyper stack; this crate serves `/metrics` from a single blocking
+# thread instead, which matters on a 32 MB device.
+metrics-exporter-prometheus = { version = "0.17", default-features = false }
+# Size-based rotation for the on-device log files.
+file-rotate = "0.8"

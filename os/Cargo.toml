@@ -1,0 +1,15 @@
+[package]
+name = "os"
+description = "Camera-level helpers that need no Anyka SDK libraries"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+# Nothing here is published; these crates only make sense next to the
+# vendored SDK and the camera's toolchain.
+publish = false
+
+[dependencies]
+libc.workspace = true
+snafu.workspace = true
+tracing.workspace = true
+nix = { workspace = true, features = ["ioctl", "signal", "process", "fs"] }

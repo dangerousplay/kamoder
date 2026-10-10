@@ -1,0 +1,47 @@
+Make the Versatile PB SD card usable under QEMU.
+
+Two problems kept /dev/mmcblk0 from ever appearing in the test VM:
+
+1. The second (PIO) MMC interrupt, routed through the secondary interrupt
+   controller, cannot be requested on this 4.4 board-file kernel, so mmci
+   probe failed with -EINVAL. mmci has a single-IRQ mode that routes the PIO
+   status bits to line A, and QEMU's PL181 raises line A for whatever is
+   unmasked there.
+
+2. QEMU does not wire card-detect into SYS_MCI (it reads 0), so mmc_status()
+   always reported an empty slot. Without a status callback mmci assumes the
+   card is present.
+
+Test VM only: the camera's kernel is untouched.
+
+--- a/arch/arm/mach-versatile/core.c	2026-09-26 22:47:30.993209555 -0300
++++ b/arch/arm/mach-versatile/core.c	2026-09-26 22:47:31.021782502 -0300
+@@ -290,7 +290,7 @@
+ 
+ static struct mmci_platform_data mmc0_plat_data = {
+ 	.ocr_mask	= MMC_VDD_32_33|MMC_VDD_33_34,
+-	.status		= mmc_status,
++	/* QEMU does not wire card-detect into SYS_MCI; no callback = present. */
+ 	.gpio_wp	= -1,
+ 	.gpio_cd	= -1,
+ };
+@@ -602,7 +602,7 @@
+ };
+ 
+ #define AACI_IRQ	{ IRQ_AACI }
+-#define MMCI0_IRQ	{ IRQ_MMCI0A,IRQ_SIC_MMCI0B }
++#define MMCI0_IRQ	{ IRQ_MMCI0A, 0 }
+ #define KMI0_IRQ	{ IRQ_SIC_KMI0 }
+ #define KMI1_IRQ	{ IRQ_SIC_KMI1 }
+ 
+--- a/arch/arm/mach-versatile/versatile_pb.c	2026-09-26 22:47:30.995372201 -0300
++++ b/arch/arm/mach-versatile/versatile_pb.c	2026-09-26 22:47:30.999116341 -0300
+@@ -49,7 +49,7 @@
+ 
+ #define UART3_IRQ	{ IRQ_SIC_UART3 }
+ #define SCI1_IRQ	{ IRQ_SIC_SCI3 }
+-#define MMCI1_IRQ	{ IRQ_MMCI1A, IRQ_SIC_MMCI1B }
++#define MMCI1_IRQ	{ IRQ_MMCI1A, 0 }
+ 
+ /*
+  * These devices are connected via the DMA APB bridge

@@ -1,0 +1,21 @@
+[package]
+name = "anyka"
+description = "Safe Rust wrappers around the Anyka AK39xx IPC SDK"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+# Nothing here is published; these crates only make sense next to the
+# vendored SDK and the camera's toolchain.
+publish = false
+
+# No host-runnable tests live here, and an auto-generated test harness would
+# try to link the SDK objects, which only the binaries select.
+[lib]
+test = false
+
+[dependencies]
+anyka-sys.workspace = true
+os.workspace = true
+libc.workspace = true
+snafu.workspace = true
+tracing.workspace = true

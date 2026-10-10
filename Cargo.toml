@@ -1,0 +1,113 @@
+[workspace]
+resolver = "2"
+members = [
+    "anyka-sys",
+    "os",
+    "anyka-link",
+    "telemetry",
+    "anyka",
+    "anyka-v8",
+    "demos/wdt_feeder",
+    "demos/ai_demo",
+    "demos/aenc_demo",
+    "demos/venc_demo",
+    "demos/md_demo",
+    "demos/md_demo_v8",
+    "demos/rtsp_demo",
+    "demos/jpeg_snapshot",
+    "sshd",
+    "supervisor",
+    "wifi",
+    "auth",
+    "anyka-ptz",
+    "ptz-proto",
+    "lights-proto",
+    "lights",
+    "onvif-schema",
+    "onvif",
+    "rtsp",
+    "web",
+    "itest/support",
+]
+# xtask builds for the host, not the camera, so it is kept out of the
+# cross-compiled workspace. Run it through ./x. third_party/ holds vendored
+# upstream crates pulled in through [patch.crates-io] below; they are not ours
+# to lint or format.
+exclude = ["xtask", "third_party"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "GPL-3.0-or-later"
+
+[workspace.dependencies]
+anyka-sys = { path = "anyka-sys" }
+os = { path = "os" }
+anyka-link = { path = "anyka-link" }
+telemetry = { path = "telemetry" }
+anyka = { path = "anyka" }
+anyka-v8 = { path = "anyka-v8" }
+auth = { path = "auth" }
+anyka-ptz = { path = "anyka-ptz" }
+ptz-proto = { path = "ptz-proto" }
+lights-proto = { path = "lights-proto" }
+onvif-schema = { path = "onvif-schema" }
+supervisor = { path = "supervisor" }
+wifi = { path = "wifi" }
+
+# Shared by the control sockets, the web API and the ONVIF service.
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# `ring`, not aws-lc: aws-lc has no ARMv5TE support. See sshd.
+ring = "0.17"
+base64 = "0.22"
+
+# Errors: `snafu` for typed, context-carrying library errors; `eyre` for the
+# top-level report in binaries.
+snafu = { version = "0.8", default-features = false, features = ["std", "rust_1_81"] }
+eyre = "0.6"
+
+# Diagnostics. `tracing` replaces ad-hoc printing so the demos and the SDK
+# wrappers emit structured, filterable events.
+tracing = { version = "0.1", default-features = false, features = ["std", "attributes"] }
+tracing-subscriber = { version = "0.3", default-features = false, features = ["std", "fmt", "env-filter", "ansi"] }
+
+# Metrics facade. Note there is deliberately no OpenTelemetry here — see
+# telemetry for why it cannot run on this CPU.
+metrics = "0.24"
+
+# Safe wrappers over the libc surface this project needs (ioctl, fork/exec,
+# pty, signals). Everything used is present in the camera's uClibc.
+nix = { version = "0.30", default-features = false }
+
+libc = "0.2"
+
+# Command-line parsing for every binary, derive style so the flags, defaults
+# and --help text live next to the fields they fill.
+clap = { version = "4", features = ["derive", "env"] }
+
+# Binaries live on the SD card, so file size is not a constraint. What *is*
+# constrained is the 400 MHz ARM926EJ-S, so this optimises for speed.
+# onvif-device-rs 0.8.0 drops the namespace declarations a SOAP Body's child
+# inherits from Envelope/Body, which breaks gSOAP-style clients. Patched copy
+# until upstream releases the fix; see third_party/onvif-device-rs/PATCHES.md.
+[patch.crates-io]
+onvif-device-rs = { path = "third_party/onvif-device-rs" }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+
+# `unwind`, not `abort`. Every SDK resource in this workspace is released by a
+# `Drop` impl — frames back to the ISP, streams cancelled, encoders and the
+# video input closed. Aborting skips all of it and leaves the ISP holding DMA
+# buffers, which on this hardware usually needs a reboot to clear. Unwinding
+# runs the teardown, and no Rust code here is ever called from an SDK-owned
+# thread, so there is no unwinding across an FFI frame.
+panic = "unwind"
+
+# Keep line tables. They cost only file size, and they turn a panic on the
+# camera from a bare address into a file and line number.
+strip = false
+debug = "line-tables-only"

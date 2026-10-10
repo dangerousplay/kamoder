@@ -1,0 +1,42 @@
+[package]
+name = "sshd"
+description = "Password-authenticated SSH server for Anyka AK3918 cameras"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+# Nothing here is published; these crates only make sense next to the
+# vendored SDK and the camera's toolchain.
+publish = false
+
+[dependencies]
+clap.workspace = true
+# `ring` rather than the default `aws-lc-rs`: aws-lc has no ARMv5TE support,
+# while ring builds against the crosstool once CC_* is set (see .cargo/config.toml).
+russh = { version = "0.63", default-features = false, features = ["ring"] }
+# A current-thread runtime is enough and saves a worker thread per core on a
+# device with 32 MB of RAM. Every child's stdio is driven asynchronously on it
+# (`process` for pipes, `net`'s `AsyncFd` for the PTY master); `rt` still
+# provides the small blocking pool that password hashing runs on.
+tokio = { version = "1", features = ["rt", "net", "io-util", "macros", "sync", "time", "signal", "process"] }
+# Credentials file, PBKDF2 hashing and the FAT-aware permissions check.
+auth.workspace = true
+# Must match the `rand_core` that `ssh-key` uses, or its `CryptoRng` bound
+# will not accept our generator.
+rand = "0.10"
+libc.workspace = true
+# Pulls in the `pthread_setname_np` shim the crosstool's uClibc lacks.
+os.workspace = true
+telemetry.workspace = true
+snafu.workspace = true
+eyre.workspace = true
+tracing.workspace = true
+metrics.workspace = true
+nix = { workspace = true, features = ["term", "process", "signal", "fs", "ioctl"] }
+
+[[bin]]
+name = "sshd"
+path = "src/main.rs"
+
+[dev-dependencies]
+# SHA-256 of the streamed test data; already in the tree through russh.
+ring.workspace = true

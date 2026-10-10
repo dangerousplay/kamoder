@@ -1,0 +1,20 @@
+[project]
+name = "anyka-itest"
+version = "0.1.0"
+description = "System tests for the Rust camera stack: qemu ARM926 VM with simulated camera devices, via labgrid + pytest"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+    "labgrid>=24.0",
+    "onvif-zeep-async>=4",
+    "pytest>=8",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# Keep the order the files are named in: the scenarios build on one booted VM.
+addopts = "-p no:randomly -ra"
+markers = [
+    "vm: needs the simulated world (radios, APs, flash) — skipped on real hardware",
+]
+log_cli = true
+log_cli_level = "WARNING"

@@ -1,0 +1,73 @@
+---
+title: Build from source
+description: Cross-compile the stack for the ARM926EJ-S and assemble an SD card.
+icon: Hammer
+---
+
+Everything goes through `./x`, a small task runner (`xtask/`) that builds for the
+host while the workspace targets the camera.
+
+## Prerequisites
+
+| What | Why |
+| --- | --- |
+| Linux x86-64 (Debian/Ubuntu tested) | the Anyka cross toolchain is a 32-bit x86 binary |
+| Rust **nightly ≥ 1.100** + `rust-src` | `armv5te-unknown-linux-uclibceabi` is a tier 3 target; `std` is built from source |
+| Anyka cross toolchain in `/opt/arm-anykav200-crosstool` | links against the camera's uClibc and the vendor SDK objects |
+| `clang` / `libclang` | `bindgen` generates the SDK bindings at build time |
+| Node.js ≥ 20 + npm | only for the web admin UI |
+
+```bash
+rustup toolchain install nightly --component rust-src
+tools/install-toolchain.sh        # i386 runtime + /opt/arm-anykav200-crosstool
+```
+
+`install-toolchain.sh` downloads the toolchain Anyka ships with its SDK (mirrored
+by [helloworld-spec/qiwen](https://github.com/helloworld-spec/qiwen)). Set
+`CROSSTOOL_SHA256` to pin the tarball, or `ANYKA_TOOLCHAIN` to use a toolchain
+installed elsewhere.
+
+## Build
+
+```bash
+./x webui     # web admin SPA → webui/dist
+./x dist      # cross-compile everything → dist/anyka_rust (with line tables)
+./x sd        # dist + strip + assemble the card → dist/sdcard
+./x flash     # sd, then write it to the card labelled ANYKA (udisks, no root)
+```
+
+`dist/sdcard` mirrors the root of the card: `autorun.sh`, `Factory/` and
+`anyka_rust/`. Set `ANYKA_SD_TREE` to assemble it somewhere else; files the camera
+owns there (`camera.conf`, `etc/`, `logs/`, `backup/`, `metrics/`) are never
+overwritten.
+
+<Callout type="info" title="Why stripped binaries on the card">
+  `dist/` keeps line tables so a panic address from the camera maps to a file and
+  line. The card gets stripped copies (about a fifth of the size): large uploads
+  over the camera's Wi-Fi can wedge its driver.
+</Callout>
+
+## Every task
+
+| Task | What it does |
+| --- | --- |
+| `./x build` / `check` / `clippy` / `fmt` | the usual cargo commands, cross-compiled |
+| `./x test` | host-side unit tests |
+| `./x gen-onvif [--check]` | regenerate the ONVIF types from the vendored WSDL/XSD |
+| `./x deny` | cargo-deny: advisories, licences, bans, sources |
+| `./x ci` | fmt, gen-onvif, clippy, deny and build, as CI runs them |
+| `./x qemu <bin> [args]` | run a staged binary under `qemu-arm-static` |
+| `./x itest` | the SD card on a simulated camera (qemu + labgrid + pytest) |
+| `./x deploy user@host:dir` | copy `dist/anyka_rust` over scp |
+
+### System tests
+
+`./x itest` boots the real firmware's userland in QEMU with the card attached. It
+needs a VM built by `tools/qemu-armv5/run.sh` from **your own** camera's flash
+dump (`DUMP=<dir>`). No vendor firmware is distributed with this repository.
+`ANYKA_VM_DIR` points at a VM built elsewhere.
+
+## Release packaging
+
+`tools/package-release.sh <version>` turns `dist/` into the archives CI publishes.
+See [Releases](/docs/releases).

@@ -1,0 +1,63 @@
+[package]
+name = "onvif"
+description = "ONVIF (Profile S subset) device service and WS-Discovery for Anyka AK3918 cameras"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+# Nothing here is published; these crates only make sense next to the
+# vendored SDK and the camera's toolchain.
+publish = false
+
+[dependencies]
+# The SOAP server, Device/Media handlers, WS-UsernameToken verification and the
+# WS-Discovery responder. Pinned exactly: the crate is young (one maintainer)
+# and its response XML is part of our wire contract with NVRs. Default features
+# only — `tls` would pull rustls, and ONVIF on a LAN camera is plain HTTP.
+onvif-device-rs = "=0.8.0"
+# Needed to implement `OnvifActionHandler`, whose methods are `#[async_trait]`.
+async-trait = "0.1"
+# The Device/Media/PTZ message types, generated from the ONVIF WSDL/XSD.
+onvif-schema.workspace = true
+# onvif-device-rs logs through the `log` facade; this forwards those records
+# into `tracing` so they land in the same filtered, rotated log.
+tracing-log = { version = "0.2", default-features = false, features = ["log-tracer", "std"] }
+# A current-thread runtime, as everywhere on this 32 MB board.
+tokio = { version = "1", features = ["rt", "net", "macros", "time", "signal", "sync"] }
+clap.workspace = true
+# Secret-file permission check that knows FAT has no modes.
+auth.workspace = true
+# Pulls in the `pthread_setname_np` shim the crosstool's uClibc lacks.
+os.workspace = true
+telemetry.workspace = true
+snafu.workspace = true
+eyre.workspace = true
+tracing.workspace = true
+metrics.workspace = true
+# `getifaddrs` for the XAddr address (present in the camera's uClibc).
+nix = { workspace = true, features = ["net"] }
+# The motor backends.
+anyka-ptz.workspace = true
+# The PTZ ownership socket protocol, which this process serves for web
+# (design D4). Its wire types are converted from anyka-ptz's in ptz_socket.rs.
+ptz-proto.workspace = true
+# Client of the lights owner's socket: Imaging's IR-cut filter is its
+# day/night mode. Protocol only, no GPIO code linked.
+lights-proto.workspace = true
+serde_json.workspace = true
+
+[build-dependencies]
+# The SDK PTZ backend's `$ORIGIN` RPATH, only with the `sdk` feature (build.rs).
+anyka-link.workspace = true
+
+[features]
+# Off by default: no vendor library. Enables anyka-ptz's EV200 SDK backend.
+sdk = ["anyka-ptz/sdk"]
+
+[dev-dependencies]
+# The tests act as an ONVIF client and compute PasswordDigest themselves.
+sha1 = "0.10"
+base64.workspace = true
+
+[[bin]]
+name = "onvif"
+path = "src/main.rs"

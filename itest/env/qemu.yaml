@@ -1,0 +1,30 @@
+# labgrid environment: the simulated camera.
+#
+# An ARM926EJ-S (versatilepb) VM running the camera's own rootfs, with the
+# SD card, JFFS2 /rom, app partition, Wi-Fi radio and watchdog simulated —
+# see itest/guest/firmware-init. `./x itest` builds the images and sets:
+#   LG_KERNEL     tools/qemu-armv5/out/zImage
+#   LG_ITEST_DIR  directory holding initramfs.cpio.gz and sd.img
+targets:
+  main:
+    drivers:
+      QEMUDriver:
+        qemu_bin: qemu
+        machine: versatilepb
+        cpu: arm926
+        memory: 256M
+        kernel: kernel
+        extra_args: !template "-initrd $LG_ITEST_DIR/initramfs.cpio.gz -drive if=sd,format=raw,file=$LG_ITEST_DIR/sd.img -no-reboot"
+        # hwsim radios: 0 is the camera's wlan0, 1 and 2 become access points.
+        boot_args: "console=ttyAMA0,115200 rdinit=/itest/firmware-init mem=256M loglevel=1 mac80211_hwsim.radios=3"
+        nic: "user,model=smc91c111"
+        display: none
+      ShellDriver:
+        prompt: 'anyka-vm# '
+        login_prompt: 'login: '
+        username: root
+        login_timeout: 300
+images:
+  kernel: !template "$LG_KERNEL"
+tools:
+  qemu: /usr/bin/qemu-system-arm

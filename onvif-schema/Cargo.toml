@@ -1,0 +1,16 @@
+[package]
+name = "onvif-schema"
+description = "ONVIF Device/Media/PTZ/Imaging message types generated from the official WSDL/XSD, with namespace-aware XML (de)serialization"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+# No build.rs: src/generated is produced by `./x gen-onvif` (xsd-parser runs
+# on the host, in xtask) and committed. See src/lib.rs.
+[dependencies]
+# The runtime half of xsd-parser: the quick_xml (de)serializer traits the
+# generated code implements, and AnyElement/AnyAttributes for `xs:any`.
+# Pinned exactly, in step with xsd-parser in xtask/Cargo.toml: the generated
+# code is written against this version's internals.
+xsd-parser-types = { version = "=0.2.1", features = ["quick-xml"] }

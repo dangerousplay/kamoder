@@ -1,0 +1,18 @@
+[package]
+name = "auth"
+description = "Credential files, password hashing and session tokens shared by sshd and web"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+# `ring`, not aws-lc: aws-lc has no ARMv5TE support. PBKDF2, HMAC and the
+# CSPRNG all come from here, so there is exactly one crypto stack.
+ring.workspace = true
+base64.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+snafu.workspace = true
+tracing.workspace = true
+libc.workspace = true

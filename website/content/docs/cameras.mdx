@@ -1,0 +1,85 @@
+---
+title: Cameras
+description: Tested hardware, what works on it, and how to tell which camera you have.
+icon: Cctv
+---
+
+Anyka AK3918 cameras are sold under many brands (V380, E27 bulb cameras, cheap
+"smart" PTZ domes). What matters is the **SoC variant**, the **Wi-Fi chip** and the
+**sensor**, not the label on the box.
+
+## Support levels
+
+| Level | Meaning |
+| --- | --- |
+| <span className="text-fd-primary font-semibold">Tested</span> | Run on real hardware by the maintainers; the feature matrix below is from that unit. |
+| Expected | Same SoC and board family as a tested camera; should work, not verified. |
+| Untested | Builds for it, nobody has run it. |
+
+## AK3918AV100 — EVB_CBDM_KM01N · Tested
+
+The primary target. A PTZ indoor camera with Gwell firmware **38.2.72**.
+
+| | |
+| --- | --- |
+| SoC | Anyka AK3918AV100-C, ARM926EJ-S @ 888 MHz (ARMv5TE, soft-float) |
+| RAM | 64 MB DDR2 (≈ 32 MB usable after ISP/encoder reservations) |
+| Flash | 8 MB SPI NOR (XMC XM25QH64C) |
+| Firmware | U-Boot 2019.10, Linux 4.4.282, Buildroot 2018.02, uClibc-ng 1.0.31 |
+| Wi-Fi | SSV6x5x on USB (`8065:6011`), power switch on GPIO 98 |
+| Sensor | SmartSens SC2331 (an SC1346 board variant also exists) |
+| Ethernet | JL1101 PHY |
+| Extras | PTZ steppers, IR-cut filter, IR + white LEDs, red/blue LED, speaker. No RTC. |
+
+| Feature | Status |
+| --- | --- |
+| Boot from SD card | ✅ with the [autostart patch](/docs/getting-started/autostart), or by hand |
+| Vendor app never runs | ✅ verified after reboot |
+| Watchdog | ✅ hours of uptime, no resets |
+| Wi-Fi + recovery ladder | ✅ renew → restart → driver reset → USB power cycle, verified with an injected fault |
+| SSH | ✅ |
+| Web admin UI | ✅ login, services, Wi-Fi, PTZ API, reboot |
+| ONVIF device/media/imaging | ✅ tested with onvif-zeep |
+| IR-cut, IR, white, red/blue lights | ✅ |
+| PTZ | ⚠️ driver opens and reads position; motion not yet verified |
+| RTSP | ⚠️ protocol verified with ffmpeg, but streams a **test clip** |
+| Live video / snapshots | ❌ not yet — needs the V8 encoder path |
+| Audio in/out | ❌ the bundled SDK does not match this firmware |
+
+<Callout type="warn" title="Why no live video yet">
+  The vendor SDK this project started from (EV200, V3.1) does not match the AV100's
+  firmware (SDK V8, V4L2 ISP subdevices). Live video needs the V8 ISP and encoder
+  path, which is the next milestone.
+</Callout>
+
+## AK3918EV200 (AK3918EN080 v200) · Untested with Kamoder
+
+The camera the original
+[SD-card hack](https://gitea.raspiweb.com/Gerge/Anyka_ak3918_hacking_journey) was
+built on, with a Realtek RTL8188FTV Wi-Fi chip, 8 MB SPI flash, Linux 3.4.35 and
+a GC1034, GC1054, GC1084, H62 or H63 sensor. Its stock firmware runs
+`Factory/config.sh` from the card by itself, so no flash patch is needed.
+
+Kamoder links against that camera's SDK, so it builds for it, but nobody has run the
+current stack on an EV200 yet. Reports are welcome. Until then, Gerge's project is
+the proven option for these cameras.
+
+## Identify your camera
+
+From a root shell (UART or telnet):
+
+```sh
+cat /proc/cpuinfo | grep -i -E 'hardware|model'   # ARM926EJ-S
+uname -r                                          # 4.4.x = AV100, 3.4.x = EV200
+cat /proc/mtd                                     # AV100: UBOOT ... APP ROM FLASH
+lsusb 2>/dev/null || cat /sys/bus/usb/devices/*/idVendor
+ls /ipc/setup.sh 2>/dev/null && echo "AV100 layout"
+```
+
+A Wi-Fi radio at `8065:6011` and an `APP` partition on `mtd6` mean you have the
+tested AV100 layout.
+
+## Report a camera
+
+Open an issue with the output of the commands above, the brand and model on the
+label, and which features worked. Please include the UART boot log if you have one.

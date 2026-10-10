@@ -1,0 +1,54 @@
+[package]
+name = "rtsp"
+description = "RTSP 1.0 server streaming H.264 (RFC 6184) over TCP-interleaved and UDP, with Digest auth"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+# Nothing here is published; these crates only make sense next to the
+# vendored SDK and the camera's toolchain.
+publish = false
+
+[dependencies]
+# The RTSP framework: request framing, interleaved and UDP channels, the RTCP
+# sender, typed Transport/Session/RTP-Info headers. We write the method
+# handlers (see design.md, "RTSP crate evaluation"). Pinned exactly, like the
+# rest of the msf family: one maintainer, 0.x APIs. No default features:
+# `server` and the H.264 codec only — no client, no RTSP 2.0 time types.
+msf-rtsp = { version = "=0.3.1", default-features = false, features = ["server", "h264"] }
+# FU-A packetizer and the RTP packet type.
+msf-rtp = { version = "=0.4.2", features = ["h264"] }
+# SDP builder and the H.264 fmtp (profile-level-id, sprop-parameter-sets).
+msf-sdp = { version = "=0.2.4", features = ["h264"] }
+# Annex-B start-code scanning, the same routine the packetizer uses.
+msf-util = { version = "=0.1.0", features = ["h264"] }
+# Digest challenge builder and response verification (MD5, qop=auth).
+ttpkit-auth = "=0.2.1"
+# Already in the tree through msf-rtp; session ids, SSRCs, nonce key.
+rand = "0.10"
+bytes = "1"
+futures = { version = "0.3", default-features = false, features = ["std"] }
+# A current-thread runtime, as everywhere on this 32 MB board.
+tokio = { version = "1", features = ["rt", "net", "macros", "time", "signal", "sync"] }
+clap.workspace = true
+# Secret-file permission check that knows FAT has no modes.
+auth.workspace = true
+# Pulls in the `pthread_setname_np` shim the crosstool's uClibc lacks.
+os.workspace = true
+telemetry.workspace = true
+snafu.workspace = true
+eyre.workspace = true
+tracing.workspace = true
+metrics.workspace = true
+
+[dev-dependencies]
+# Pure-Rust RTSP client, host only: the integration tests DESCRIBE/SETUP/PLAY
+# through it and depacketize what we send. Dev-dependencies are never built
+# for the camera.
+retina = "0.4"
+tokio = { version = "1", features = ["rt", "net", "macros", "time", "sync", "io-util", "test-util"] }
+url = "2"
+base64.workspace = true
+
+[[bin]]
+name = "rtsp"
+path = "src/main.rs"

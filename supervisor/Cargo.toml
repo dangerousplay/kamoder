@@ -1,0 +1,43 @@
+[package]
+name = "supervisor"
+description = "Event-driven process supervisor for Anyka AK3918 cameras"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+clap.workspace = true
+# Erlang-style supervision. Each supervised process is an actor whose panics
+# are caught and turned into a restart instead of taking the tree down.
+# `ractor` and `bastion` were both tried first and neither compiles for
+# ARMv5TE — they need AtomicU64, which this CPU has no instruction for.
+kameo = { version = "0.17", default-features = false, features = ["macros", "tracing"] }
+# `process` gives SIGCHLD-driven child reaping: no polling, no `sleep 10` loop.
+# `net` for the control socket (a Unix socket, see src/control.rs).
+tokio = { version = "1", features = ["rt", "macros", "process", "signal", "sync", "time", "io-util", "net"] }
+file-rotate = "0.8"
+serde.workspace = true
+serde_json.workspace = true
+toml = { version = "0.9", default-features = false, features = ["parse", "serde"] }
+
+os.workspace = true
+telemetry.workspace = true
+eyre.workspace = true
+snafu.workspace = true
+tracing.workspace = true
+metrics.workspace = true
+nix = { workspace = true, features = ["signal", "process"] }
+# O_NOCTTY for the boot banner on /dev/console.
+libc.workspace = true
+# wpa_supplicant client and interface helpers for the ready report.
+wifi.workspace = true
+
+# The library exposes only the control protocol and client (`control`), so
+# `web` can depend on this crate for the types.
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "supervisor"
+path = "src/main.rs"

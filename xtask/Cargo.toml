@@ -1,0 +1,31 @@
+[package]
+name = "xtask"
+description = "Build and packaging tasks for the Anyka camera workspace"
+version = "0.1.0"
+edition = "2021"
+license = "GPL-3.0-or-later"
+publish = false
+
+# Its own workspace: xtask builds for the host, while the crates next to it
+# cross-compile to ARMv5TE through .cargo/config.toml.
+[workspace]
+
+[dependencies]
+eyre = "0.6"
+
+# `./x gen-onvif` (src/gen_onvif.rs): the ONVIF type generator. Host-only on
+# purpose: xsd-parser and its ~80 crates stay out of every camera build, which
+# only needs the generated code and `xsd-parser-types` (see onvif-schema).
+# Exact pins, because the committed output in onvif-schema/src/generated must
+# not change under a semver-compatible update; bump them together, regenerate
+# and review the diff. `xsd-parser-types` must match onvif-schema's pin.
+xsd-parser = "=1.5.2"
+xsd-parser-types = "=0.2.1"
+# Same proc-macro2/quick-xml/url as xsd-parser uses, so nothing is built twice.
+proc-macro2 = "1"
+quick-xml = "0.38"
+roxmltree = "0.21"
+url = "2"
+
+[profile.release]
+opt-level = 1

@@ -1,0 +1,53 @@
+---
+title: Services
+description: What runs on the camera, the ports it listens on, and how it is supervised.
+icon: Server
+---
+
+All services are declared in `anyka_rust/supervisor.toml` and started by the
+supervisor in file order. Paths in it are relative to `anyka_rust/`.
+
+| Service | Default | Listens on | Purpose |
+| --- | --- | --- | --- |
+| `wdt_feeder` | on, **critical** | — | Feeds `/dev/watchdog` every second. Started first; the web UI cannot stop it. |
+| `lights` | on | `/tmp/kamoder-lights.sock` | Owns the IR-cut filter, IR and white LEDs, red/blue indicator and speaker amp. Day/night mode, persisted in `etc/lights.json`. |
+| `wifi` | on | — | Keeps the station associated, applies `wifi_ssid` changes with rollback, and runs the [recovery ladder](/docs/architecture#wi-fi-recovery). |
+| `sshd` | on | TCP **2222** | Password-authenticated SSH (PBKDF2 hashes in `etc/`). |
+| `web` | on | TCP **80** | Admin SPA and JSON API: login, services, Wi-Fi, PTZ, lights, users, reboot. |
+| `onvif` | on | TCP **8000**, UDP **3702** | ONVIF Profile S: device, media, PTZ and imaging (IR-cut), plus WS-Discovery. Owns the PTZ motor. |
+| `rtsp` | off | TCP **554** `/vs0` | RTSP 1.0, H.264 over TCP-interleaved or UDP, Digest auth with the ONVIF account. |
+| `snapshot` | off | TCP **3000** | `jpeg_snapshot` (EV200 SDK). |
+
+## Supervisor
+
+- Restarts a service that exits, with exponential backoff.
+- Stops restarting after too many crashes in a window (per service
+  `max_restarts` / `restart_window_secs`).
+- Exposes a control socket the web UI uses to list, start, stop and restart services.
+  Critical services refuse to be stopped.
+
+To change what runs, edit `supervisor.toml` on the card (`enabled = false`, `args`)
+and restart the stack with `sh anyka_rust/init.sh --stop` followed by
+`sh Factory/config.sh`.
+
+## Logs
+
+Every service logs through `tracing` to `anyka_rust/logs/<service>.log`. The level is
+`log_level` in `camera.conf` (for example `info,wifi=debug`). Boot is logged to
+`logs/boot.log` and `logs/init.log`, and every call of the boot hook to
+`/tmp/anyka_config_sh.log`.
+
+## Metrics
+
+Set `metrics='textfile:/mnt/disc1/anyka_rust/metrics'` and each service writes
+`<service>.prom` for node_exporter's textfile collector. All metric names start with
+`kamoder_`, for example `kamoder_wifi_escalation_level` or
+`kamoder_lights_*`.
+
+## Demos
+
+The vendor SDK's demo programs are ported and shipped in `bin/` for experiments:
+`ai_demo`, `aenc_demo`, `venc_demo`, `md_demo`, `md_demo_v8`, `rtsp_demo` and
+`jpeg_snapshot`. Run one with `sh anyka_rust/run-on-camera.sh <demo> [args]`. All
+but `md_demo_v8` use the EV200 SDK, which does not match the AV100's video
+pipeline; `md_demo_v8` uses the AV100's V8 SDK and is not yet tested on hardware.

@@ -1,0 +1,6 @@
+/target
+/xtask/target
+/dist
+/release
+/firmware_dump
+/tools/camera-access/

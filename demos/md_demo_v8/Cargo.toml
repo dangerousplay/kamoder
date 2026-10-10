@@ -1,0 +1,23 @@
+[package]
+name = "md_demo_v8"
+description = "ISP motion detection on the AK3918AV100 (V8) SDK"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+clap.workspace = true
+anyka-v8.workspace = true
+os.workspace = true
+telemetry.workspace = true
+eyre.workspace = true
+tracing.workspace = true
+metrics.workspace = true
+
+[build-dependencies]
+anyka-link.workspace = true
+
+[[bin]]
+name = "md_demo_v8"
+path = "src/main.rs"

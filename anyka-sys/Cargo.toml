@@ -1,0 +1,19 @@
+[package]
+name = "anyka-sys"
+description = "Raw FFI bindings to the Anyka AK39xx IPC SDK"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+# Nothing here is published; these crates only make sense next to the
+# vendored SDK and the camera's toolchain.
+publish = false
+links = "anyka_sdk"
+
+[build-dependencies]
+bindgen = "0.72"
+
+[lints.rust]
+# bindgen output does not follow Rust naming conventions.
+non_camel_case_types = "allow"
+non_snake_case = "allow"
+non_upper_case_globals = "allow"

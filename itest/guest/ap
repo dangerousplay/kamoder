@@ -1,0 +1,54 @@
+#!/bin/sh
+# Simulated access points.
+#
+#   ap NAME create IFACE SSID PSK CHANNEL NET   e.g. ap home create wlan1 HomeNet homepass1 1 192.168.10
+#   ap NAME up | down                           start / stop the AP's hostapd
+#
+# `create` starts a holder shell in a fresh network namespace (busybox
+# unshare) and moves the radio into it with wiphy-netns, so the AP, its DHCP
+# server and its gateway address NET.1 live on "another machine": traffic from
+# the camera to the gateway really crosses the simulated air. The holder then
+# takes up/down commands over a FIFO, since BusyBox has no nsenter.
+set -u
+name=$1 cmd=$2
+run=/var/run/ap-$name
+mkdir -p "$run"
+
+case "$cmd" in
+    create)
+        iface=$3 ssid=$4 psk=$5 channel=$6 net=$7
+        [ -p "$run/ctl" ] || mknod "$run/ctl" p
+        rm -f "$run/ready" "$run/ack"
+        unshare -n sh /itest/bin/ap-netns "$name" "$iface" "$ssid" "$psk" "$channel" "$net" \
+            >>"$run/log" 2>&1 &
+        holder=$!
+        i=0
+        while [ ! -f "$run/ready" ] && [ "$i" -lt 15 ]; do sleep 1; i=$((i + 1)); done
+        # wiphy-netns is built by the Rust crosstool but is not on the card,
+        # so it has no lib/sys beside it; the harness keeps libc aliases for
+        # it in /itest/lib instead.
+        LD_LIBRARY_PATH=/itest/lib wiphy-netns "$iface" "$holder" ||
+            { echo "ap $name: cannot move $iface" >&2; exit 1; }
+        echo "$holder" > "$run/holder.pid"
+        ;;
+    up|down)
+        holder=$(cat "$run/holder.pid" 2>/dev/null)
+        if [ -z "$holder" ] || ! kill -0 "$holder" 2>/dev/null; then
+            echo "ap $name: holder is not running (see $run/log)" >&2
+            exit 1
+        fi
+        rm -f "$run/ack"
+        # Opening a FIFO for writing blocks until the reader opens it; do it
+        # in the background so a wedged holder is a timeout, not a hang.
+        echo "$cmd" > "$run/ctl" &
+        writer=$!
+        i=0
+        while [ ! -f "$run/ack" ] && [ "$i" -lt 40 ]; do sleep 1; i=$((i + 1)); done
+        kill "$writer" 2>/dev/null
+        [ -f "$run/ack" ] || { echo "ap $name: no ack for $cmd (see $run/log)" >&2; exit 1; }
+        ;;
+    *)
+        echo "usage: ap NAME create|up|down ..." >&2
+        exit 2
+        ;;
+esac

@@ -1,0 +1,18 @@
+[package]
+name = "lights-proto"
+description = "Wire protocol and async client for the camera lights ownership socket (no GPIO access)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+# Like ptz-proto: only the protocol, so web and onvif can be clients without
+# linking the GPIO owner.
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+snafu.workspace = true
+tokio = { version = "1", features = ["net", "io-util", "time"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["rt", "macros"] }

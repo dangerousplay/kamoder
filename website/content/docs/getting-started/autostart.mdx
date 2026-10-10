@@ -1,0 +1,112 @@
+---
+title: Autostart on the AV100
+description: Patch one file in flash so the camera starts Kamoder at boot and never starts the vendor app.
+icon: Power
+---
+
+The AV100's stock firmware runs nothing from the SD card. Boot goes
+`rcS → rc.local → /ipc/setup.sh → /ipc/ipc`, and `setup.sh` mounts the card only to
+look for vendor files before unmounting it again. To start Kamoder on every boot,
+you have to change `/ipc/setup.sh`, which lives in the read-only APP squashfs on
+`/dev/mtd6`.
+
+<Callout type="error" title="This writes to flash">
+  The procedure below is tested on the AK3918AV100 EVB_CBDM_KM01N only. Keep a
+  serial console attached for the first boot, and keep the rollback files on the
+  card. On any other board, stop and compare your `md5sum /dev/mtd6ro` against the
+  expected baseline first.
+</Callout>
+
+## What the patch changes
+
+Lines 1–250 of the vendor `setup.sh` stay byte-for-byte: kernel modules, sensor
+clock, Ethernet, USB and Wi-Fi bring-up, GPIO 98 (Wi-Fi power) and the DTB
+self-check. The vendor tail is replaced by:
+
+1. `insmod /ipc/patch/ko/presetmotor.ko` — normally loaded by the vendor app; PTZ needs it.
+2. Wait up to 20 s for `/dev/mmcblk0p1` and mount it on `/mnt/disc1`.
+3. If `Factory/config.sh` exists, run it in the background.
+4. Otherwise start **nothing**. `/ipc/ipc` is never started, so a camera without
+   the card stays offline until you put the card back and reboot.
+
+Nothing else in the filesystem changes. In practice the write touches about 57
+erase blocks of 4 KiB.
+
+## Procedure
+
+Everything lives in <RepoLink path="tools/autostart" />.
+The vendor script is never shipped: `build-image.sh` takes it from **your**
+camera's own flash dump.
+
+<Steps>
+<Step>
+
+### Dump the partition (camera)
+
+```sh
+cat /dev/mtd6ro > /mnt/disc1/mtd6.bin
+md5sum /dev/mtd6ro /mnt/disc1/mtd6.bin   # both must match
+```
+
+Copy `mtd6.bin` off the card and keep it safe: it is your way back.
+
+</Step>
+<Step>
+
+### Build the image (computer)
+
+```bash
+cd tools/autostart
+./build-image.sh /path/to/mtd6.bin out/   # needs squashfs-tools ≥ 4.5
+./mtdpatch/build.sh                       # or download mtdpatch-armv5 from a release
+```
+
+`build-image.sh` rebuilds the unmodified tree first to prove the tools reproduce
+it, cuts `setup.sh` at the vendor's `#stop ipc` line, appends `kamoder-tail.sh`,
+and checks that nothing but `setup.sh` changed. It warns if your dump is not the
+tested firmware and prints the diff for you to review.
+
+</Step>
+<Step>
+
+### Copy the kit to the card
+
+Put `out/*` (the patched image, the backup and their `.md5` files),
+`flash-app.sh`, `rollback.sh` and `mtdpatch` in `/mnt/disc1/kamoder-flash/`.
+
+</Step>
+<Step>
+
+### Dry run, then write (camera)
+
+```sh
+cd /mnt/disc1/kamoder-flash
+sh flash-app.sh            # preflight + list of blocks that differ
+sh flash-app.sh --write    # write only those blocks, read each one back
+```
+
+The preflight refuses to run unless the flash holds exactly your backup, or a
+previous patched image you name with `PREVIOUS=<file>`. `mtdpatch` restores the
+original automatically if any block fails to verify. The script never reboots.
+
+</Step>
+<Step>
+
+### Reboot and check
+
+After the reboot, `/tmp/anyka_config_sh.log` shows that `config.sh` ran, and
+`ps` lists the supervisor and its services but no `ipc` process.
+
+</Step>
+</Steps>
+
+## Rollback
+
+```sh
+sh /mnt/disc1/kamoder-flash/rollback.sh --write
+```
+
+This writes the pristine partition back through the same block-verified path and
+checks the full md5 against the baseline. If the camera does not come back on the
+network, use the serial console (115200 8N1) — see
+[Troubleshooting](/docs/troubleshooting).

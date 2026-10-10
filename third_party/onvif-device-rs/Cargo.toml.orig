@@ -1,0 +1,48 @@
+[package]
+name = "onvif-device-rs"
+version = "0.8.0"
+edition = "2021"
+rust-version = "1.80"
+description = "ONVIF Device (server) library for Rust — SOAP Device/Media/Imaging/PTZ services, WS-Discovery responder, WS-Security auth"
+license = "MIT"
+repository = "https://github.com/mickeyzzc/onvif-rs"
+keywords = ["onvif", "soap", "camera", "ws-discovery", "video-surveillance"]
+categories = ["network-programming", "multimedia"]
+
+[dependencies]
+async-trait = "0.1"
+base64 = "0.22"
+futures-util = { version = "0.3", default-features = false, features = ["std"] }
+hex = "0.4"
+log = "0.4"
+md-5 = "0.10"
+quick-xml = "0.41"
+rand = "0.8"
+serde = { version = "1", features = ["derive"] }
+sha1 = "0.10"
+socket2 = "0.5"
+tokio = { version = "1", features = ["sync", "rt", "macros", "net", "time", "io-util"] }
+tokio-rustls = { version = "0.26", optional = true, default-features = false, features = ["ring", "logging", "tls12"] }
+rustls-pemfile = { version = "2", optional = true }
+
+[dev-dependencies]
+proptest = "1.4"
+base64 = "0.22"
+# Same crate as [dependencies] (listed here so tests/ can build a Digest
+# client); not an additional dependency.
+md-5 = "0.10"
+anyhow = "1"
+tempfile = "3"
+toml = "0.8"
+criterion = "0.5"
+rcgen = "0.13"
+
+[features]
+# TLS listener support (HTTPS ONVIF serving via tokio-rustls). Off by
+# default: the products embedding this library depend on default features
+# and must not gain a TLS dependency stack.
+tls = ["dep:tokio-rustls", "dep:rustls-pemfile"]
+
+[[bench]]
+name = "soap"
+harness = false

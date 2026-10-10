@@ -1,0 +1,29 @@
+# Cross-compilation setup for the AK3918EV200 (ARM926EJ-S, ARMv5TE, uClibc).
+#
+# The camera runs uClibc-ng 1.0.31 and the Anyka SDK shared objects link against
+# `libc.so.0`, so the uclibceabi target is the only one that can call into them:
+# a glibc or musl std would pull in a second, incompatible libc.
+#
+# `armv5te-unknown-linux-uclibceabi` is a tier 3 target with no prebuilt std,
+# which is why every build goes through `-Z build-std` on nightly. See build.sh.
+
+[build]
+target = "armv5te-unknown-linux-uclibceabi"
+
+[target.armv5te-unknown-linux-uclibceabi]
+# Wrapper around the cross-gcc; see tools/ak-linker.sh for why.
+linker = "tools/ak-linker.sh"
+rustflags = ["-C", "target-cpu=arm926ej-s"]
+
+[unstable]
+# The release profile unwinds (see the workspace Cargo.toml), so the unwinder
+# has to be built alongside std. `panic_abort` stays listed because cargo needs
+# it for build scripts and proc macros, which are compiled for the host.
+build-std = ["std", "panic_abort", "panic_unwind"]
+
+# `cc`-based build scripts (ring, and anything else with C sources) need to be
+# told which cross compiler to use; they do not read the `linker` above.
+[env]
+CC_armv5te_unknown_linux_uclibceabi = "/opt/arm-anykav200-crosstool/usr/bin/arm-anykav200-linux-uclibcgnueabi-gcc"
+AR_armv5te_unknown_linux_uclibceabi = "/opt/arm-anykav200-crosstool/usr/bin/arm-anykav200-linux-uclibcgnueabi-ar"
+CFLAGS_armv5te_unknown_linux_uclibceabi = "-mcpu=arm926ej-s"

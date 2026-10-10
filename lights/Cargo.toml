@@ -1,0 +1,33 @@
+[package]
+name = "lights"
+description = "Owner of the camera's light and speaker-amp GPIOs (IR-cut, IR LEDs, white, red/blue, amp) over sysfs"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+# No SDK library and no vendor code: sysfs writes only, so the service runs on
+# a camera with nothing else installed.
+[dependencies]
+lights-proto.workspace = true
+# Pulls in the `pthread_setname_np` shim the crosstool's uClibc lacks.
+os.workspace = true
+telemetry.workspace = true
+clap.workspace = true
+eyre.workspace = true
+snafu.workspace = true
+tracing.workspace = true
+metrics.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+# EBUSY from the sysfs export file.
+libc.workspace = true
+# A current-thread runtime, as everywhere on this 32 MB board.
+tokio = { version = "1", features = ["rt", "net", "io-util", "macros", "time", "signal", "sync"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["test-util"] }
+
+[[bin]]
+name = "lights"
+path = "src/main.rs"

@@ -1,0 +1,89 @@
+#!/bin/sh
+# The VM's init: brings the simulated camera up the way the AK3918AV100
+# firmware does (etc/init.d/rcS + rc.local), then hands the console to the
+# test framework.
+#
+#   /rom        JFFS2 on flash          -> JFFS2 on an mtdram device
+#   /ipc, /usr  app squashfs (mtd6)     -> the same squashfs, on loop
+#   SD card     /dev/mmcblk0p1, FAT     -> QEMU SD card, FAT32, same device
+#   wlan0       SSV6x5x, mac80211       -> mac80211_hwsim radio 0
+#   watchdog    hardware                -> softdog
+#
+# Two more hwsim radios become access points "HomeNet" and "NewNet", each in
+# its own network namespace (see /itest/bin/ap). eth0 is not a camera device:
+# it is the management link the host uses for SSH.
+export PATH=/bin:/sbin:/usr/bin:/usr/sbin:/itest/bin
+
+mount -t proc proc /proc
+mount -t sysfs sysfs /sys
+mount -t devtmpfs devtmpfs /dev
+mkdir -p /dev/pts && mount -t devpts devpts /dev/pts
+for dir in /tmp /var /mnt; do mount -t tmpfs tmpfs "$dir"; done
+dmesg -n 1
+mkdir -p /var/run /var/log
+LOG=/var/log/firmware.log
+exec 3>&1 >>"$LOG" 2>&1
+# Progress on the console (fd 3), details in $LOG: a boot that hangs shows
+# where in the test transcript.
+step() { echo "firmware: $*" >&3; echo "== $*"; }
+
+step network
+ifconfig lo 127.0.0.1 up
+ifconfig eth0 10.0.2.15 netmask 255.255.255.0 up
+
+step rom
+# /rom: the factory Wi-Fi config lives on JFFS2 flash.
+mtd=$(sed -n 's/^mtd\([0-9]*\):.*"mtdram test device"$/\1/p' /proc/mtd)
+mount -t jffs2 "/dev/mtdblock$mtd" /rom
+[ -f /rom/wpa_supplicant0.conf ] || cp /itest/rom/wpa_supplicant0.conf /rom/
+
+step app partition
+# App partition, as rc.local does it.
+mount -t squashfs -o loop,ro /itest/app.squashfs /ipc
+mount --bind /ipc /usr
+
+step access points
+# Aliases for the harness's own Rust tool (see /itest/bin/ap).
+mkdir -p /itest/lib
+for alias in libdl.so.0 libpthread.so.0 librt.so.0 libm.so.0; do
+    ln -sf /lib/libc.so.0 "/itest/lib/$alias"
+done
+# The world: two access points.
+ap home create wlan1 HomeNet homepass1 1 192.168.10
+ap new create wlan2 NewNet newpass12 6 192.168.30
+ap home up
+ap new up
+
+step station
+# The camera's station, started the way the firmware scripts start it.
+wpa_supplicant -B -iwlan0 -Dwext -c /rom/wpa_supplicant0.conf -C /etc/Wireless
+udhcpc -i wlan0 -b -s /usr/share/udhcpc/default.script
+
+step sd card
+# The SD card.
+i=0
+while [ ! -b /dev/mmcblk0p1 ] && [ "$i" -lt 20 ]; do sleep 1; i=$((i + 1)); done
+mkdir -p /mnt/disc1
+mount -t vfat /dev/mmcblk0p1 /mnt/disc1
+
+# Test-only: wifi's timers shortened from minutes to seconds. Exported
+# here so the supervisor, and through it wifi, inherits them.
+export ANYKA_WIFI_INTERVAL=2
+export ANYKA_WIFI_GRACE=20
+export ANYKA_WIFI_BACKOFF=5
+export ANYKA_WIFI_BACKOFF_MAX=10
+export ANYKA_WIFI_MAX_ATTEMPTS=2
+export ANYKA_WIFI_ROLLBACK_HOLD=90
+# No motor in the VM: onvif (supervisor.toml leaves --ptz at its
+# default) runs the simulated pan/tilt head instead, so the PTZ paths of the
+# web API and ONVIF are exercised end to end.
+export ANYKA_ONVIF_PTZ=sim
+
+step autorun
+# The SD card hook, as the firmware runs it.
+sh /mnt/disc1/autorun.sh
+
+exec 1>&3 2>&3 3>&-
+echo "FIRMWARE BOOTED"
+export PS1='anyka-vm# '
+exec cttyhack /bin/sh

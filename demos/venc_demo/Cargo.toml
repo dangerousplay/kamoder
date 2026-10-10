@@ -1,0 +1,24 @@
+[package]
+name = "venc_demo"
+description = "H.264 stream and JPEG still capture (Rust port of ak_venc_demo.c)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+# Nothing here is published; these crates only make sense next to the
+# vendored SDK and the camera's toolchain.
+publish = false
+
+[dependencies]
+clap.workspace = true
+anyka.workspace = true
+telemetry.workspace = true
+eyre.workspace = true
+tracing.workspace = true
+metrics.workspace = true
+
+[build-dependencies]
+anyka-link.workspace = true
+
+[[bin]]
+name = "venc_demo"
+path = "src/main.rs"

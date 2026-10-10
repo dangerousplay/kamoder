@@ -1,0 +1,437 @@
+/**
+ * Typed client for the `anyka-web` REST API (design.md, "anyka-web API").
+ *
+ * - Base path `/api`; bearer token read from sessionStorage (`anyka.token`).
+ * - Non-2xx responses throw `ApiError` (status + server `{error, code}` body).
+ * - 401 on any authenticated call clears the token and emits
+ *   `UNAUTHORIZED_EVENT`; the AuthProvider reacts and the router sends the
+ *   user to /login (with a hard redirect as a fallback when nothing listens).
+ */
+
+export const API_BASE = "/api"
+export const TOKEN_KEY = "anyka.token"
+export const UNAUTHORIZED_EVENT = "anyka:unauthorized"
+
+// ---------------------------------------------------------------- errors ----
+
+/** JSON body the server returns on every error response. */
+export interface ApiErrorBody {
+  error: string
+  code: string
+}
+
+export class ApiError extends Error {
+  readonly status: number
+  readonly code: string
+
+  constructor(status: number, message: string, code = "unknown") {
+    super(message)
+    this.name = "ApiError"
+    this.status = status
+    this.code = code
+  }
+
+  get isUnauthorized() {
+    return this.status === 401
+  }
+  get isForbidden() {
+    return this.status === 403
+  }
+  get isRateLimited() {
+    return this.status === 429
+  }
+  /** 503: backend (video, PTZ, lights, supervisor) not available. */
+  get isUnavailable() {
+    return this.status === 503
+  }
+}
+
+// ----------------------------------------------------------------- token ----
+
+export function getToken(): string | null {
+  return sessionStorage.getItem(TOKEN_KEY)
+}
+
+/** When the token stops being valid, in *browser* milliseconds; see auth.tsx. */
+export const EXPIRES_KEY = "anyka.expires_at"
+
+export function setToken(token: string, expiresAt?: number): void {
+  sessionStorage.setItem(TOKEN_KEY, token)
+  if (expiresAt !== undefined)
+    sessionStorage.setItem(EXPIRES_KEY, String(expiresAt))
+}
+
+export function getTokenExpiry(): number | null {
+  const v = Number(sessionStorage.getItem(EXPIRES_KEY))
+  return Number.isFinite(v) && v > 0 ? v : null
+}
+
+export function clearToken(): void {
+  sessionStorage.removeItem(TOKEN_KEY)
+  sessionStorage.removeItem(EXPIRES_KEY)
+}
+
+function handleUnauthorized() {
+  clearToken()
+  const notified = !window.dispatchEvent(
+    new Event(UNAUTHORIZED_EVENT, { cancelable: true })
+  )
+  // A listener (AuthProvider) calls preventDefault() and navigates itself.
+  if (!notified && window.location.pathname !== "/login") {
+    window.location.assign("/login")
+  }
+}
+
+// ----------------------------------------------------------------- types ----
+
+export type Role = "admin" | "viewer"
+
+export interface LoginRequest {
+  user: string
+  password: string
+}
+
+export interface LoginResponse {
+  token: string
+  role: Role
+  /** Expiry, seconds since the Unix epoch. */
+  exp: number
+}
+
+export interface Me {
+  user: string
+  role: Role
+  exp?: number
+}
+
+export type ServiceState =
+  "running" | "starting" | "stopped" | "backoff" | "failed" | "disabled"
+
+export interface ServiceStatus {
+  name: string
+  state: ServiceState
+  pid?: number | null
+  /** Seconds since the current instance started. */
+  uptime_s?: number | null
+  restarts: number
+  enabled: boolean
+  /** Critical services (e.g. wdt_feeder) cannot be stopped (409). */
+  critical: boolean
+  /** Log file name usable with the logs endpoints, if any. */
+  log?: string | null
+  last_exit?: string | null
+}
+
+export type ServiceAction = "start" | "stop" | "restart"
+
+export interface LogFile {
+  name: string
+  size: number
+  /** Last modification, seconds since the Unix epoch. */
+  modified?: number
+}
+
+export interface LogTail {
+  file: string
+  lines: string[]
+}
+
+export interface StreamToken {
+  token: string
+  exp: number
+}
+
+export type ConfigValue = string | number | boolean
+
+/** GET /api/config — secrets are never returned. */
+export interface ConfigResponse {
+  values: Record<string, ConfigValue>
+  /** Secret keys (wifi_password, ssh_password, ...) that currently have a value. */
+  secrets_set: string[]
+}
+
+/** PUT /api/config — only the keys to change; secrets are write-only. */
+export interface ConfigUpdate {
+  values: Record<string, ConfigValue>
+}
+
+export interface ConfigUpdateResult {
+  /** Keys the server actually rewrote in camera.conf (CFG-02 "what changed"). */
+  changed?: string[]
+  /** Services the server restarted / that need a restart to apply. */
+  restart?: string[]
+}
+
+export interface WifiStatus {
+  iface: string
+  connected: boolean
+  ssid?: string | null
+  ip?: string | null
+  gateway?: string | null
+  signal_dbm?: number | null
+  /** e.g. "healthy", "reconnecting", "rolled_back". */
+  state?: string
+  /** anyka-wifi health verdict (associated to target, addressed, gateway ok). */
+  healthy?: boolean | null
+  /** Network anyka-wifi is trying to reach (camera.conf `wifi_ssid`). */
+  target_ssid?: string | null
+  /** Last network observed working (rollback target). */
+  last_good_ssid?: string | null
+  /** Seconds until anyka-wifi rolls back / retries the held network. */
+  rollback_in_s?: number | null
+}
+
+export interface PtzPreset {
+  id: number
+  name: string
+  pan: number
+  tilt: number
+}
+
+export interface PtzStatus {
+  available: boolean
+  /** Backend name, e.g. "av100" or "sim". */
+  backend?: string
+  pan: number
+  tilt: number
+  moving: boolean
+  presets?: PtzPreset[]
+  /** Travel range in the backend's units (degrees, or raw steps until calibrated). */
+  limits?: PtzLimits
+}
+
+export interface PtzLimits {
+  pan_min_deg: number
+  pan_max_deg: number
+  tilt_min_deg: number
+  tilt_max_deg: number
+}
+
+/** Continuous move; velocities in [-1, 1]. */
+export interface PtzMove {
+  pan: number
+  tilt: number
+  speed?: number
+}
+
+/** Absolute move to a position or to a stored preset. */
+export type PtzGoto = { pan: number; tilt: number } | { preset: number }
+
+/** Day = IR-cut filter in, IR LEDs off; night = filter out, IR LEDs on. */
+export type LightsMode = "day" | "night"
+
+/** Red/blue lights; `period_ms` is one on/off cycle (200–10000, default 1000). */
+export type LightsAlarm =
+  { state: "off" } | { state: "on" } | { state: "blink"; period_ms?: number }
+
+/** `GET /api/lights`: the lights owner's state. */
+export interface LightsState {
+  mode: LightsMode
+  white: boolean
+  alarm: LightsAlarm
+  /** Speaker amplifier off. */
+  muted: boolean
+}
+
+/** `PUT /api/lights` (admin): any subset; answers the full state. */
+export type LightsUpdate = Partial<LightsState>
+
+export interface User {
+  name: string
+  role: Role
+}
+
+export interface CreateUser {
+  name: string
+  password: string
+  role: Role
+}
+
+export interface UpdateUser {
+  role?: Role
+  password?: string
+}
+
+export interface ChangePassword {
+  current: string
+  new: string
+}
+
+export interface OnvifCredentials {
+  user: string
+  password: string
+}
+
+// ---------------------------------------------------------------- client ----
+
+type Method = "GET" | "POST" | "PUT" | "DELETE"
+
+interface RequestOptions {
+  body?: unknown
+  signal?: AbortSignal
+  /** Skip the global 401 handling (login itself). */
+  anonymous?: boolean
+}
+
+async function toApiError(res: Response): Promise<ApiError> {
+  let message = res.statusText || `HTTP ${res.status}`
+  let code = "http_" + res.status
+  try {
+    const body = (await res.json()) as Partial<ApiErrorBody>
+    if (body.error) message = body.error
+    if (body.code) code = body.code
+  } catch {
+    // Non-JSON error body (e.g. proxy error page): keep the status text.
+  }
+  return new ApiError(res.status, message, code)
+}
+
+async function send(
+  method: Method,
+  path: string,
+  opts: RequestOptions = {}
+): Promise<Response> {
+  const headers: Record<string, string> = { Accept: "application/json" }
+  const token = opts.anonymous ? null : getToken()
+  if (token) headers.Authorization = `Bearer ${token}`
+  if (opts.body !== undefined) headers["Content-Type"] = "application/json"
+
+  let res: Response
+  try {
+    res = await fetch(API_BASE + path, {
+      method,
+      headers,
+      body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
+      signal: opts.signal,
+    })
+  } catch (e) {
+    if (e instanceof DOMException && e.name === "AbortError") throw e
+    throw new ApiError(0, "Camera unreachable", "network")
+  }
+
+  if (!res.ok) {
+    if (res.status === 401 && !opts.anonymous) handleUnauthorized()
+    throw await toApiError(res)
+  }
+  return res
+}
+
+async function request<T>(
+  method: Method,
+  path: string,
+  opts?: RequestOptions
+): Promise<T> {
+  const res = await send(method, path, opts)
+  if (res.status === 204) return undefined as T
+  const text = await res.text()
+  return (text ? JSON.parse(text) : undefined) as T
+}
+
+const enc = encodeURIComponent
+
+// ------------------------------------------------------------- endpoints ----
+
+export const api = {
+  // auth
+  login: (body: LoginRequest) =>
+    request<LoginResponse>("POST", "/auth/login", { body, anonymous: true }),
+  me: (signal?: AbortSignal) => request<Me>("GET", "/me", { signal }),
+
+  // services
+  services: (signal?: AbortSignal) =>
+    request<ServiceStatus[]>("GET", "/services", { signal }),
+  serviceAction: (name: string, action: ServiceAction) =>
+    request<ServiceStatus | undefined>(
+      "POST",
+      `/services/${enc(name)}/${action}`
+    ),
+
+  // logs
+  logs: (signal?: AbortSignal) =>
+    request<LogFile[]>("GET", "/logs", { signal }),
+  logTail: (file: string, lines = 500, signal?: AbortSignal) =>
+    request<LogTail>("GET", `/logs/${enc(file)}?lines=${lines}`, { signal }),
+  logStreamToken: () => request<StreamToken>("POST", "/logs/stream-token"),
+
+  // config
+  config: (signal?: AbortSignal) =>
+    request<ConfigResponse>("GET", "/config", { signal }),
+  updateConfig: (body: ConfigUpdate) =>
+    request<ConfigUpdateResult>("PUT", "/config", { body }),
+
+  // system
+  wifi: (signal?: AbortSignal) =>
+    request<WifiStatus>("GET", "/wifi", { signal }),
+  reboot: () => request<void>("POST", "/system/reboot"),
+  /** Unauthenticated liveness probe (used to detect the end of a reboot). */
+  health: (signal?: AbortSignal) =>
+    request<unknown>("GET", "/health", { signal, anonymous: true }),
+
+  // video
+  /** Fetches one JPEG with the bearer header; 503 when video is down. */
+  snapshot: async (signal?: AbortSignal): Promise<Blob> =>
+    (await send("GET", "/snapshot.jpg", { signal })).blob(),
+
+  // ptz
+  ptz: (signal?: AbortSignal) => request<PtzStatus>("GET", "/ptz", { signal }),
+  ptzMove: (body: PtzMove) => request<void>("POST", "/ptz/move", { body }),
+  ptzStop: () => request<void>("POST", "/ptz/stop"),
+  ptzHome: () => request<void>("POST", "/ptz/home"),
+  ptzGoto: (body: PtzGoto) => request<void>("POST", "/ptz/goto", { body }),
+  ptzPresets: (signal?: AbortSignal) =>
+    request<PtzPreset[]>("GET", "/ptz/presets", { signal }),
+  /** Stores the current position as a preset. */
+  ptzSavePreset: (name: string) =>
+    request<PtzPreset>("POST", "/ptz/presets", { body: { name } }),
+  ptzDeletePreset: (id: number) =>
+    request<void>("DELETE", `/ptz/presets/${id}`),
+
+  // lights
+  lights: (signal?: AbortSignal) =>
+    request<LightsState>("GET", "/lights", { signal }),
+  updateLights: (body: LightsUpdate) =>
+    request<LightsState>("PUT", "/lights", { body }),
+
+  // users
+  users: (signal?: AbortSignal) => request<User[]>("GET", "/users", { signal }),
+  createUser: (body: CreateUser) => request<User>("POST", "/users", { body }),
+  updateUser: (name: string, body: UpdateUser) =>
+    request<User>("PUT", `/users/${enc(name)}`, { body }),
+  deleteUser: (name: string) => request<void>("DELETE", `/users/${enc(name)}`),
+  /**
+   * Changing the password bumps the user's generation, which invalidates the
+   * current token; the server answers with a fresh session to adopt.
+   */
+  changeOwnPassword: (body: ChangePassword) =>
+    request<LoginResponse>("PUT", "/users/me/password", { body }),
+
+  // onvif
+  setOnvifCredentials: (body: OnvifCredentials) =>
+    request<void>("PUT", "/onvif/credentials", { body }),
+}
+
+// ------------------------------------------------------------ URL helpers ----
+// <img>/<EventSource> cannot send headers: these URLs carry a short-lived
+// stream token from `api.logStreamToken()` as `?token=`.
+
+export function logStreamUrl(file: string, streamToken: string): string {
+  return `${API_BASE}/logs/${enc(file)}/stream?token=${enc(streamToken)}`
+}
+
+export function snapshotUrl(streamToken: string, bust = Date.now()): string {
+  return `${API_BASE}/snapshot.jpg?token=${enc(streamToken)}&t=${bust}`
+}
+
+export function liveMjpegUrl(streamToken: string): string {
+  return `${API_BASE}/live.mjpeg?token=${enc(streamToken)}`
+}
+
+/** Human-readable message for toasts. */
+export function errorMessage(e: unknown): string {
+  if (e instanceof ApiError) {
+    if (e.isRateLimited) return "Too many attempts, try again later"
+    return e.message
+  }
+  if (e instanceof Error) return e.message
+  return String(e)
+}

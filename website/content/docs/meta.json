@@ -1,0 +1,16 @@
+{
+  "title": "Kamoder",
+  "pages": [
+    "index",
+    "---[Rocket]Start here---",
+    "getting-started",
+    "---[BookOpen]Concepts---",
+    "architecture",
+    "services",
+    "---[Cctv]Hardware---",
+    "cameras",
+    "---[ShieldCheck]Operations---",
+    "releases",
+    "troubleshooting"
+  ]
+}

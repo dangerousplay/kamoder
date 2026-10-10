@@ -1,0 +1,75 @@
+---
+title: Releases & verification
+description: What a release contains, how it is built, and how to verify its Sigstore signatures.
+icon: ShieldCheck
+---
+
+Releases are built only by GitHub Actions (`.github/workflows/release.yml`), from a
+clean checkout, and signed **keylessly with Sigstore**: there is no long-lived
+signing key to leak. Each signature binds the file to the exact workflow, commit
+and ref that built it, and is recorded in the public Rekor transparency log.
+
+## When a release is made
+
+| Trigger | Result |
+| --- | --- |
+| Push a tag `v1.2.3` | Release **v1.2.3** (a prerelease if the tag contains `-`, e.g. `v1.2.3-beta.1`) |
+| Push to a branch `release/1.2` | Prerelease **v1.2-rc.&lt;run&gt;** for every push |
+| Run the workflow by hand | Build and sign only; files are attached to the run |
+
+## Assets
+
+| File | What |
+| --- | --- |
+| `kamoder-<version>-sdcard.tar.gz` | The SD card root: `autorun.sh`, `Factory/`, `anyka_rust/` with stripped binaries |
+| `kamoder-<version>-debug.tar.gz` | Unstripped binaries with line tables, to symbolize a panic |
+| `mtdpatch-armv5` | Static ARM tool used by the [autostart kit](/docs/getting-started/autostart) |
+| `SHA256SUMS` | Checksums of the above |
+| `*.sigstore.json` | One Sigstore bundle per file: signature, certificate and Rekor inclusion proof |
+
+## Verify with cosign
+
+Install [cosign](https://docs.sigstore.dev/cosign/system_config/installation/) and
+check the archive against its bundle. The identity must be this repository's
+release workflow:
+
+```bash
+cosign verify-blob kamoder-1.2.3-sdcard.tar.gz \
+  --bundle kamoder-1.2.3-sdcard.tar.gz.sigstore.json \
+  --certificate-identity-regexp '^https://github.com/<owner>/<repo>/\.github/workflows/release\.yml@refs/(tags|heads)/' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
+
+`Verified OK` means the file is byte-for-byte what that workflow produced. For a tag
+release you can pin the exact ref instead of the regexp:
+`--certificate-identity https://github.com/<owner>/<repo>/.github/workflows/release.yml@refs/tags/v1.2.3`.
+
+To check everything at once, verify `SHA256SUMS` and then the checksums:
+
+```bash
+cosign verify-blob SHA256SUMS --bundle SHA256SUMS.sigstore.json \
+  --certificate-identity-regexp '^https://github.com/<owner>/<repo>/\.github/workflows/release\.yml@' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+sha256sum -c SHA256SUMS
+```
+
+## Verify build provenance
+
+Each archive also has an [SLSA build-provenance](https://slsa.dev/) attestation
+stored by GitHub. It records the commit, workflow and runner that built it:
+
+```bash
+gh attestation verify kamoder-1.2.3-sdcard.tar.gz --repo <owner>/<repo>
+```
+
+## Cutting a release (maintainers)
+
+```bash
+git tag -s v1.2.3 -m "Kamoder 1.2.3"
+git push origin v1.2.3
+```
+
+The repository needs one variable, **`CROSSTOOL_SHA256`** (Settings → Secrets and
+variables → Actions → Variables): the SHA-256 of the Anyka toolchain tarball.
+`tools/install-toolchain.sh` refuses any other tarball when it is set, and prints the
+hash it saw when it is not.

@@ -1,0 +1,17 @@
+[package]
+name = "anyka-v8"
+description = "Safe wrappers for the AK3918AV100 (V8) Anyka SDK"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+# No host-runnable integration tests; an auto-generated harness would try to
+# link the ARM SDK objects, which only the binaries select.
+[lib]
+test = true
+
+[dependencies]
+anyka-sys.workspace = true
+snafu.workspace = true
+tracing.workspace = true

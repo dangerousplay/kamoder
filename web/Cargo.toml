@@ -1,0 +1,57 @@
+[package]
+name = "web"
+description = "Web admin UI and JSON API for Anyka AK3918 cameras"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+# No default features: only the HTTP/1 server, JSON bodies, query strings and
+# the matched route (for metrics labels). No HTTP/2, forms, tower-log or
+# tracing layers — every feature is code and RAM on a 32 MB board.
+axum = { version = "0.8", default-features = false, features = ["http1", "tokio", "json", "query", "matched-path"] }
+# `fs` only: ServeDir for the precompressed SPA. No compression layer — the
+# assets are gzip/brotli'd at build time, the CPU never compresses anything.
+tower-http = { version = "0.7", default-features = false, features = ["fs"] }
+# Current-thread runtime, like every other service here. `rt` still provides
+# the blocking pool that runs PBKDF2 off the event loop.
+tokio = { version = "1", features = ["rt", "net", "macros", "signal", "sync", "time", "io-util"] }
+# Streaming bodies (SSE log tail, MJPEG) are built with `stream::unfold`;
+# already in the tree through axum/hyper, so no new code in the binary.
+futures-util = { version = "0.3", default-features = false }
+auth.workspace = true
+# The control-socket protocol types and client (lib only).
+supervisor.workspace = true
+# `camera.conf` parsing and the Wi-Fi status probes, shared with the daemon.
+wifi.workspace = true
+# PTZ socket protocol + client. Not anyka-ptz: a workspace build unifies its
+# `sdk` feature in from onvif and the SDK link lines would follow; see
+# ptz-proto's crate docs. This binary must start without the SDK.
+ptz-proto.workspace = true
+# Lights socket protocol + client (no GPIO code), like ptz-proto.
+lights-proto.workspace = true
+libc.workspace = true
+# Pulls in the `pthread_setname_np` shim the crosstool's uClibc lacks.
+os.workspace = true
+telemetry.workspace = true
+# CSPRNG for stream tokens; already linked through auth.
+ring.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+clap.workspace = true
+snafu.workspace = true
+eyre.workspace = true
+tracing.workspace = true
+metrics.workspace = true
+
+[dev-dependencies]
+tower = { version = "0.5", default-features = false, features = ["util"] }
+tokio = { version = "1", features = ["rt", "macros"] }
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "web"
+path = "src/main.rs"

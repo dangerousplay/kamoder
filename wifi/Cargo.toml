@@ -1,0 +1,22 @@
+[package]
+name = "wifi"
+description = "Wi-Fi station reconciler for the AK3918AV100: keeps the camera on a network it can be reached on"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+os.workspace = true
+telemetry.workspace = true
+clap.workspace = true
+eyre.workspace = true
+libc.workspace = true
+metrics.workspace = true
+nix = { workspace = true, features = ["signal"] }
+snafu.workspace = true
+tracing.workspace = true
+
+[[bin]]
+name = "wifi"
+path = "src/main.rs"

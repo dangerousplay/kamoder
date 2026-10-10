@@ -1,0 +1,61 @@
+---
+title: Configuration
+description: Every key in anyka_rust/camera.conf and what happens to it on first boot.
+icon: SlidersHorizontal
+---
+
+`anyka_rust/camera.conf` is a POSIX shell file sourced by BusyBox `sh`. Quote any
+value with spaces or shell characters in single quotes:
+`wifi_password='my pass;word'`. Start from `camera.conf.example`, which is in
+every release.
+
+<Callout type="warn">
+  `camera.conf` holds secrets until first boot. Never commit it or share a card
+  image that contains one.
+</Callout>
+
+## Stack
+
+| Key | Default | Meaning |
+| --- | --- | --- |
+| `run_rust` | `1` | `1` = `Factory/config.sh` starts the Rust stack. `0` = run the legacy `anyka_happy` scripts instead. |
+| `start_telnetd` | `1` | Unauthenticated root shell on port 23 — the way back in if `sshd` fails. Turn it off once SSH works. |
+| `stop_vendor_ipc` | `1` | Stop the vendor app (`/ipc/ipc`, `anyka_ipc`) before starting, so the watchdog, ISP and ADC are free. |
+| `log_level` | `info` | `tracing` filter for every service, e.g. `info,supervisor=debug`. |
+| `metrics` | empty | `textfile:<dir>` writes `<service>.prom` files for node_exporter. Empty disables metrics. |
+
+## Wi-Fi
+
+Handled by the supervised `wifi` service, which re-reads the file every 10 s.
+
+| Key | Meaning |
+| --- | --- |
+| `wifi_ssid` | **Empty** keeps the network the camera already uses; `wifi` only keeps it associated. Set it to move to another network. |
+| `wifi_password` | WPA passphrase, 8–63 characters. |
+
+When you change networks, the old configuration is backed up to `backup/`. If the
+new one does not come up, the camera **rolls back** to the last network it saw
+working and retries the new one after 30 minutes.
+
+## Accounts
+
+| Key | Default | Stored after first boot |
+| --- | --- | --- |
+| `ssh_user` / `ssh_password` | `root` / — | PBKDF2-HMAC-SHA256 hash in `etc/anyka-sshd.passwd`; the password line is blanked. |
+| `web_admin_user` / `web_admin_password` | `admin` / — | PBKDF2 hash in `etc/web-users` as an admin; more users are managed from the UI. |
+| `onvif_user` / `onvif_password` | `admin` / — | Plaintext `user:password` in `etc/onvif.secret` (mode 0600), because ONVIF PasswordDigest needs the password itself. |
+
+`onvif` does not start without a password, and `onvif_user` must not contain `:`.
+
+### Changing a password later
+
+- **SSH:** delete `etc/anyka-sshd.passwd`, set `ssh_password`, reboot.
+- **Web:** delete `etc/web-users`, set `web_admin_password`, reboot. Deleting
+  `etc/web-jwt.key` logs every session out.
+- **ONVIF:** change it on the web UI's settings page, or delete `etc/onvif.secret`,
+  set `onvif_password` and reboot.
+
+## Services
+
+Which services run, their arguments and restart policy live in
+`anyka_rust/supervisor.toml`. See [Services](/docs/services).

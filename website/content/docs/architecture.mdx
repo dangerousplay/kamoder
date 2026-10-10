@@ -1,0 +1,86 @@
+---
+title: Architecture
+description: How the camera boots into Kamoder, and how the pieces fit together.
+icon: Layers
+---
+
+## Boot chain
+
+```text
+rcS → rc.local → /ipc/setup.sh          (firmware: modules, clocks, Wi-Fi, GPIO 98)
+                     │  autostart patch, or by hand on the AV100
+                     ▼
+        /mnt/disc1/Factory/config.sh    (SD card)
+                     ▼
+            anyka_rust/init.sh
+                     ▼
+               supervisor ──┬─ wdt_feeder   (first, critical)
+                            ├─ lights
+                            ├─ wifi
+                            ├─ sshd         :2222
+                            ├─ web          :80
+                            ├─ onvif        :8000, udp 3702
+                            └─ rtsp         :554 (off by default)
+```
+
+1. **Firmware.** The kernel and the vendor's `setup.sh` load the drivers: ISP and
+   sensor, Ethernet, USB, the Wi-Fi radio and its power switch (GPIO 98).
+2. **Hand-over.** On the EV200 the stock firmware runs `Factory/config.sh` from the
+   card by itself. On the AV100 the [autostart patch](/docs/getting-started/autostart)
+   does it, or you run it by hand.
+3. **`config.sh`** mounts the card, starts a rescue `telnetd` (optional) and runs
+   `anyka_rust/init.sh`. With `run_rust=0` it hands over to a legacy tree instead.
+4. **`init.sh`** checks the card, turns first-boot passwords into hashes, guards
+   against the vendor app and starts the **supervisor**.
+5. The **supervisor** starts each service from `supervisor.toml` in order, restarts
+   it with backoff, and stops a crash loop.
+
+## Design rules
+
+- **Vendor-free at runtime.** No vendor daemon runs. Hardware the vendor SDK used to
+  drive is reached through kernel interfaces (sysfs GPIO, `/dev/watchdog`, the
+  Wi-Fi control socket) or thin safe wrappers around SDK objects where nothing else
+  exists yet.
+- **One owner per resource.** `lights` owns the indicator and IR GPIOs; `onvif` owns
+  the PTZ motor; everything else is a client over a Unix socket. The `lights`
+  allow-list cannot reach the Wi-Fi power or motor pins; only the `wifi` power-cycle
+  step touches GPIO 98, and it always restores it.
+- **Never brick.** The watchdog feeder starts first and is critical. The vendor app
+  is stopped only while the feeder runs. The Wi-Fi service rolls back to the last
+  network it saw working. The flash patch is reversible.
+- **Small.** About 32 MB of RAM is usable after the ISP and encoder reservations.
+  Every service is a small Rust binary linked against the camera's own uClibc;
+  there is no interpreter, and nothing pulls in a second libc.
+- **Generated, not hand-written, protocols.** ONVIF types come from the official
+  WSDL/XSD; SOAP is (de)serialized with serde, never `format!`.
+
+## Wi-Fi recovery
+
+The `wifi` service reconciles the link every 10 s. On a trusted network it escalates
+through a ladder before giving up:
+
+| Step | Action |
+| --- | --- |
+| 1. renew | `REASSOCIATE` + DHCP renew (after 3 missed gateway checks) |
+| 2. restart ×2 | restart `wpa_supplicant` and `udhcpc` |
+| 3. reset driver | `rmmod` / `insmod ssv6x5x` with timeouts |
+| 4. power cycle | USB radio off for 3 s on GPIO 98, then re-enumerate |
+
+The ladder then repeats with backoff capped at 5 minutes. Every step is exported as
+a `kamoder_wifi_*` metric.
+
+## Repository layout
+
+| Path | What |
+| --- | --- |
+| `anyka-sys`, `anyka`, `anyka-link` | FFI bindings and safe wrappers for the vendor SDK |
+| `os`, `telemetry` | kernel helpers (watchdog, signals) and tracing + Prometheus |
+| `supervisor`, `wifi`, `lights`, `sshd`, `web`, `onvif`, `rtsp` | the services |
+| `onvif-schema`, `lights-proto`, `ptz-proto`, `auth` | protocol and shared crates |
+| `demos/` | the vendor SDK demos, ported |
+| `webui/` | the admin SPA (React + Vite) |
+| `card/` | files at the root of the SD card (`autorun.sh`, `Factory/`) |
+| `sdk/` | vendored SDK headers and shared objects |
+| `tools/` | `init.sh`, `supervisor.toml`, toolchain install, autostart kit, qemu VM |
+| `itest/` | system tests on a simulated camera |
+| `website/` | this documentation |

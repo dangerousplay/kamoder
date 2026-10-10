@@ -1,0 +1,68 @@
+# Build the Fumadocs site (website/) as a static export and deploy it to
+# GitHub Pages. Pull requests only build it.
+#
+# One-time setup: Settings → Pages → Source: "GitHub Actions".
+name: docs
+
+on:
+  push:
+    branches: [main]
+    paths: ['website/**', '.github/workflows/docs.yml']
+  pull_request:
+    paths: ['website/**', '.github/workflows/docs.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: website
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: website/package-lock.json
+
+      - name: Configure Pages
+        id: pages
+        if: github.event_name != 'pull_request'
+        uses: actions/configure-pages@v5
+
+      - run: npm ci
+
+      - name: Build
+        env:
+          # "/<repo>" for a project site, "" for a custom domain or user site.
+          DOCS_BASE_PATH: ${{ steps.pages.outputs.base_path }}
+          DOCS_GIT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: npm run build
+
+      - uses: actions/upload-pages-artifact@v4
+        if: github.event_name != 'pull_request'
+        with:
+          path: website/out
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

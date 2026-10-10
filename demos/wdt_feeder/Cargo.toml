@@ -1,0 +1,22 @@
+[package]
+name = "wdt_feeder"
+description = "Hardware watchdog feeder for the AK3918 (Rust port of wdt_feeder.c)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+# Nothing here is published; these crates only make sense next to the
+# vendored SDK and the camera's toolchain.
+publish = false
+
+[dependencies]
+clap.workspace = true
+os.workspace = true
+libc.workspace = true
+telemetry.workspace = true
+eyre.workspace = true
+tracing.workspace = true
+metrics.workspace = true
+
+[[bin]]
+name = "wdt_feeder"
+path = "src/main.rs"

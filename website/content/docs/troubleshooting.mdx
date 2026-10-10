@@ -1,0 +1,58 @@
+---
+title: Troubleshooting
+description: Getting back into a camera that does not answer, and the usual suspects.
+icon: LifeBuoy
+---
+
+## The camera is not on the network
+
+1. **Wait two minutes.** The `wifi` service retries with backoff and escalates up
+   to a USB power cycle of the radio before it gives up a round.
+2. **Check the card.** Pull it and read `anyka_rust/logs/boot.log`, `init.log` and
+   `wifi.log` on your computer. `wifi status` on the camera shows the reconciler's
+   view.
+3. **Wrong network settings?** If you set `wifi_ssid`, the camera rolls back to the
+   last network it saw working when the new one does not come up, and tries again
+   after 30 minutes.
+4. **Rescue shell.** With `start_telnetd=1`, a root shell answers on port 23 even if
+   `sshd` failed.
+
+## Serial console
+
+The UART is the way in when nothing else works: **115200 8N1** on the camera's
+`TX`/`RX`/`GND` pads (3.3 V — do not connect a 5 V adapter). Paste commands slowly;
+the console drops characters when input arrives too fast.
+
+<Callout type="warn" title="Root password">
+  The stock root password is not published. Without it, interrupt U-Boot (the boot
+  delay is 0, so press a key repeatedly while powering on) and boot with
+  `init=/bin/sh` for a password-free root shell, then run the rollback.
+</Callout>
+
+## Undo the autostart patch
+
+```sh
+sh /mnt/disc1/kamoder-flash/rollback.sh          # dry run
+sh /mnt/disc1/kamoder-flash/rollback.sh --write  # restore the original APP partition
+```
+
+## Known quirks
+
+| Symptom | Cause / fix |
+| --- | --- |
+| Wi-Fi drops during a big upload | The SSV6x5x driver wedges under sustained load. Upload stripped binaries in small chunks; the recovery ladder brings the link back. |
+| Clock shows 1970 | There is no RTC; time is right once NTP syncs. |
+| `pidof`, `head`, `tail`, `dirname` missing | The camera's BusyBox is minimal; scripts here avoid them. |
+| Camera beeps and the Wi-Fi config changes | Something started the vendor `/ipc/ipc`. Never start it by hand: it rewrites the Wi-Fi configuration. |
+| `onvif` does not start | No ONVIF password: set `onvif_password` in `camera.conf` and reboot. |
+| Locked out of the web UI | Delete `etc/web-users`, set `web_admin_password`, reboot. |
+
+## Symbolize a panic
+
+A panic message names its source line, but a backtrace from the stripped binaries
+on the card shows only addresses. Download the matching
+`kamoder-<version>-debug.tar.gz` and resolve them on your computer:
+
+```bash
+llvm-addr2line -f -C -e kamoder-<version>-debug/<service> 0x<address>
+```

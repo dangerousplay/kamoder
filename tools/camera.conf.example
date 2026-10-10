@@ -1,0 +1,90 @@
+# Settings for the Rust camera stack. Copy to `camera.conf` next to this file
+# and edit that copy — `camera.conf` is gitignored because it holds secrets.
+#
+# Sourced by POSIX sh (BusyBox). Quote any value that contains spaces or shell
+# characters with single quotes: wifi_password='my pass;word'
+
+# ---------------------------------------------------------------------------
+# Stack
+# ---------------------------------------------------------------------------
+
+# 1 = Factory/config.sh starts the Rust stack; 0 = fall back to anyka_happy.
+run_rust=1
+
+# Unauthenticated root shell on port 23. It is the only way back in if sshd
+# fails to start, so leave it on until SSH has been proven on this camera.
+start_telnetd=1
+
+# 1 = stop the vendor IPC process (/ipc/ipc and its watchers) before starting
+# the Rust stack, like the old quiet-console script: the console goes quiet
+# and the ISP, ADC and /dev/watchdog are freed for the Rust binaries. The
+# supervisor's wdt_feeder takes over the watchdog right after. 0 = leave the
+# vendor stack running alongside.
+stop_vendor_ipc=1
+
+# tracing filter for every Rust binary: error, warn, info, debug, trace, or
+# a directive list such as 'info,supervisor=debug'.
+log_level=info
+
+# Prometheus metrics. Empty disables them. For node_exporter's textfile
+# collector, name a directory — each service writes <service>.prom into it:
+#   metrics='textfile:/mnt/disc1/anyka_rust/metrics'
+# Do not use `http:` here: the supervisor passes its environment to every
+# service, so they would all try to bind the same port.
+metrics=
+
+# ---------------------------------------------------------------------------
+# Wi-Fi — handled by wifi (a supervised service), re-read every 10 s
+# ---------------------------------------------------------------------------
+
+# Leave wifi_ssid EMPTY to keep the camera's current network: wifi then
+# never writes the config, it only keeps that network associated and restores
+# the last working one if something else (e.g. /ipc/ipc) changes it.
+#
+# Set it to move the camera to a network. The old config is backed up to
+# backup/, the new one is tried, and if it does not come up (bad password, out
+# of range) the camera ROLLS BACK to the last network observed working and
+# retries this one after 30 minutes. `wifi status` shows the state.
+wifi_ssid=
+# 8-63 characters.
+wifi_password=
+
+# ---------------------------------------------------------------------------
+# SSH (sshd, port 2222)
+# ---------------------------------------------------------------------------
+
+# On first boot, if etc/anyka-sshd.passwd does not exist yet, init.sh hashes
+# this password (PBKDF2-HMAC-SHA256) into it and then blanks the line below,
+# so the plaintext does not stay on the card. To change it later, delete
+# etc/anyka-sshd.passwd and set a new one here.
+ssh_user=root
+ssh_password=
+
+# ---------------------------------------------------------------------------
+# Web admin UI (web, port 80)
+# ---------------------------------------------------------------------------
+
+# First login at http://<camera>/ uses these. On first boot, if
+# etc/web-users does not exist yet, init.sh hashes this password
+# (PBKDF2-HMAC-SHA256) into it as an admin and then blanks the line below, so
+# the plaintext does not stay on the card. Further users (admin or viewer) are
+# managed from the UI. Locked out? Delete etc/web-users, set a new password
+# here and reboot. Deleting etc/web-jwt.key logs every session out.
+web_admin_user=admin
+web_admin_password=
+
+# ---------------------------------------------------------------------------
+# ONVIF (onvif, port 8000; discovery on udp 3702)
+# ---------------------------------------------------------------------------
+
+# The account NVRs (Home Assistant, Frigate, Agent DVR, ...) use. It is
+# separate from the web users. On first boot, if etc/onvif.secret does not
+# exist yet, init.sh moves these into it (`user:password`, mode 0600) and
+# blanks the password line below. Unlike the other passwords this one is
+# kept in plaintext in etc/onvif.secret: ONVIF's PasswordDigest login is
+# computed from the password itself, so the camera cannot store only a hash.
+# Without a password onvif does not start. To change it, delete
+# etc/onvif.secret, set a new one here and reboot (or change it from the web
+# UI's settings page). onvif_user must not contain ':'.
+onvif_user=admin
+onvif_password=

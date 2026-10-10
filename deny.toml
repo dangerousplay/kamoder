@@ -1,0 +1,52 @@
+# cargo-deny policy for the camera workspace. Run with `./x deny`.
+#
+# Only the camera's target is checked: pulling in the dependency graphs of
+# every platform would flag crates that are never built here.
+
+[graph]
+targets = ["armv5te-unknown-linux-uclibceabi"]
+all-features = true
+
+[advisories]
+# Fail on any unpatched advisory. There is no allow-list on purpose: an SSH
+# server on a LAN-reachable camera is not the place to carry known holes.
+yanked = "deny"
+ignore = []
+
+[licenses]
+# Permissive licences plus the ones the crypto and SSH stacks actually use.
+# The workspace itself is GPL-3.0-or-later, which can consume all of these.
+allow = [
+    "Apache-2.0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "MIT",
+    "Unicode-3.0",
+    "Zlib",
+    # The crates in this workspace. Listed so the check covers first-party code
+    # too rather than exempting it.
+    "GPL-3.0-or-later",
+]
+confidence-threshold = 0.9
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+# The crates in this workspace depend on each other by path and carry no
+# published version; that is not the kind of wildcard this check is for.
+allow-wildcard-paths = true
+deny = [
+    # OpenTelemetry cannot build for ARMv5TE: its SDK needs AtomicU64/AtomicI64,
+    # which the CPU has no instructions for. See telemetry's docs.
+    { crate = "opentelemetry_sdk", reason = "requires 64-bit atomics that ARMv5TE lacks" },
+    # aws-lc-rs has no ARMv5TE support; `ring` is the backend that works.
+    { crate = "aws-lc-rs", reason = "no ARMv5TE support; russh is configured to use ring" },
+    # A second async runtime on a 32 MB device is a bug, not a dependency.
+    { crate = "async-std", reason = "tokio is the only runtime in this workspace" },
+]
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

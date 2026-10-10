@@ -1,0 +1,15 @@
+[package]
+name = "anyka-itest-support"
+description = "Test-only helpers for the simulated camera in the qemu integration tests"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+os.workspace = true
+libc.workspace = true
+
+[[bin]]
+name = "wiphy-netns"
+path = "src/wiphy_netns.rs"

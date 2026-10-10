@@ -1,0 +1,69 @@
+---
+title: Introduction
+description: Open firmware for cheap Anyka AK3918 IP cameras, written in Rust and run from the SD card.
+icon: House
+---
+
+import { Cctv, Cpu, Lock, Network, ShieldCheck, Wifi } from 'lucide-react';
+
+**Kamoder** replaces the vendor app on Anyka AK3918 cameras with a small, auditable
+stack written in Rust. It runs from the SD card, talks to no cloud, and exposes
+standard protocols — SSH, a web admin UI, ONVIF, RTSP and Prometheus metrics — so
+the camera works with your own NVR or Home Assistant instead of a phone app.
+
+It grew out of the shell/C [SD-card hack](https://gitea.raspiweb.com/Gerge/Anyka_ak3918_hacking_journey)
+for the AK3918**EV200**, and now targets the newer AK3918**AV100** as well.
+
+<Callout type="warn" title="Work in progress">
+  On the AV100 the network, admin and lighting stack is verified on hardware, but
+  **live video is not yet available**: RTSP streams a test clip until the new
+  encoder path lands. See [Cameras](/docs/cameras) for the exact status of each
+  feature.
+</Callout>
+
+## Why
+
+<Cards>
+  <Card icon={<Lock />} title="Private by default">
+    The vendor app phones home and pairs through a cloud account. Kamoder never
+    starts it, and nothing leaves your network unless you configure it.
+  </Card>
+  <Card icon={<Network />} title="Standard protocols">
+    ONVIF Profile S (device, media, PTZ, imaging), RTSP with Digest auth, SSH on
+    port 2222 and a JSON API behind the web UI.
+  </Card>
+  <Card icon={<Wifi />} title="Stays online">
+    A Wi-Fi reconciler with rollback to the last good network and a recovery ladder
+    that reloads the driver or power-cycles the USB radio when it wedges.
+  </Card>
+  <Card icon={<Cpu />} title="Fits 32 MB of RAM">
+    One supervisor, a handful of small services and no interpreter. Every binary is
+    cross-compiled for the ARM926EJ-S and uClibc.
+  </Card>
+  <Card icon={<ShieldCheck />} title="Signed releases">
+    Every release is built in GitHub Actions and signed with Sigstore, with a
+    build-provenance attestation you can verify offline.
+  </Card>
+  <Card icon={<Cctv />} title="Reversible">
+    Everything lives on the SD card. The optional autostart patch changes one file
+    in flash and ships with a verified rollback.
+  </Card>
+</Cards>
+
+## Where to go next
+
+<Cards>
+  <Card title="Getting started" href="/docs/getting-started" description="Flash a card from a release and bring the camera up." />
+  <Card title="Architecture" href="/docs/architecture" description="How boot, supervision and the services fit together." />
+  <Card title="Cameras" href="/docs/cameras" description="Tested hardware and the feature matrix." />
+  <Card title="Verify a release" href="/docs/releases" description="Check Sigstore signatures and provenance." />
+</Cards>
+
+## License and credits
+
+Kamoder is licensed under the **GPL-3.0-or-later**. It stands on the work of
+[Gerge's Anyka hacking journey](https://gitea.raspiweb.com/Gerge/Anyka_ak3918_hacking_journey),
+[helloworld-spec/qiwen](https://github.com/helloworld-spec/qiwen) (Anyka SDK and toolchain),
+[ricardojlrufino/anyka_v380ipcam_experiments](https://github.com/ricardojlrufino/anyka_v380ipcam_experiments),
+[kuhnchris/IOT-ANYKA-PTZdaemon](https://github.com/kuhnchris/IOT-ANYKA-PTZdaemon) and
+[MuhammedKalkan/Anyka-Camera-Firmware](https://github.com/MuhammedKalkan/Anyka-Camera-Firmware).

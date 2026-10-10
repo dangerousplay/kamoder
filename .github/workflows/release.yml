@@ -1,0 +1,168 @@
+# Build the camera stack, sign it with Sigstore and publish a GitHub release.
+#
+#   push tag v1.2.3          → release v1.2.3 (prerelease if the tag has a "-")
+#   push branch release/1.2  → prerelease v1.2-rc.<run number>
+#   workflow_dispatch        → build + sign only, artifacts on the run
+#
+# Signing is keyless: cosign gets a short-lived certificate from Fulcio for this
+# workflow's OIDC identity, and every signature is logged in Rekor. Each asset
+# gets a <file>.sigstore.json bundle, and GitHub stores an SLSA build-provenance
+# attestation. See the docs site, "Verify a release".
+name: release
+
+on:
+  push:
+    tags: ['v*']
+    branches: ['release/**']
+  workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  # Nightly is required: the target is tier 3 and std is built from source.
+  ANYKA_RUST_TOOLCHAIN: nightly-2026-09-20
+  ANYKA_TOOLCHAIN: /opt/arm-anykav200-crosstool
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    permissions:
+      contents: write      # create the release
+      id-token: write      # Sigstore keyless signing
+      attestations: write  # build provenance
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Version
+        id: version
+        shell: bash
+        run: |
+          case "$GITHUB_REF" in
+            refs/tags/v*)
+              tag=${GITHUB_REF_NAME}
+              prerelease=false
+              [[ "$tag" == *-* ]] && prerelease=true ;;
+            refs/heads/release/*)
+              base=${GITHUB_REF_NAME#release/}; base=${base#v}
+              tag=v${base}-rc.${GITHUB_RUN_NUMBER}
+              prerelease=true ;;
+            *)
+              tag=v0.0.0-dev.${GITHUB_RUN_NUMBER}
+              prerelease=true ;;
+          esac
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=${tag#v}" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
+
+      - name: Host packages
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q clang libclang-dev
+
+      - name: Prepare toolchain directory
+        # actions/cache restores as the runner user; /opt is root-owned.
+        run: sudo install -d -o "$USER" -g "$USER" /opt/arm-anykav200-crosstool
+
+      - name: Cache cross toolchain
+        id: crosstool
+        uses: actions/cache@v4
+        with:
+          path: /opt/arm-anykav200-crosstool
+          key: crosstool-anykav200-${{ vars.CROSSTOOL_SHA256 || 'unpinned' }}
+
+      - name: Install cross toolchain
+        env:
+          CROSSTOOL_SHA256: ${{ vars.CROSSTOOL_SHA256 }}
+        run: |
+          # The toolchain binaries are i386; the runtime is needed even on a cache hit.
+          sudo dpkg --add-architecture i386
+          sudo apt-get update -q
+          sudo apt-get install -y -q libc6:i386 libstdc++6:i386 zlib1g:i386
+          tools/install-toolchain.sh
+
+      - name: Rust toolchain
+        run: |
+          rustup toolchain install "$ANYKA_RUST_TOOLCHAIN" --profile minimal \
+            --component rust-src,rustfmt,clippy
+          rustup default stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ env.ANYKA_RUST_TOOLCHAIN }}
+          workspaces: |
+            . -> target
+            xtask -> target
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: webui/package-lock.json
+
+      - name: Build web UI
+        run: ./x webui
+
+      - name: Build and stage
+        run: ./x dist
+
+      - name: Package
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: tools/package-release.sh "$VERSION" release
+
+      - uses: sigstore/cosign-installer@v3
+
+      - name: Sign with Sigstore (keyless)
+        working-directory: release
+        run: |
+          for f in *.tar.gz mtdpatch-armv5 SHA256SUMS; do
+            cosign sign-blob --yes --bundle "$f.sigstore.json" "$f"
+          done
+
+      - name: Build provenance attestation
+        uses: actions/attest-build-provenance@v3
+        with:
+          subject-path: |
+            release/*.tar.gz
+            release/mtdpatch-armv5
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kamoder-${{ steps.version.outputs.version }}
+          path: release/
+          if-no-files-found: error
+
+      - name: Publish GitHub release
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+          PRERELEASE: ${{ steps.version.outputs.prerelease }}
+        run: |
+          flags=(--title "Kamoder $TAG" --target "$GITHUB_SHA" --generate-notes)
+          [ "$PRERELEASE" = true ] && flags+=(--prerelease)
+          cat > notes.md <<EOF
+          ## Verify
+
+          \`\`\`bash
+          cosign verify-blob kamoder-${TAG#v}-sdcard.tar.gz \\
+            --bundle kamoder-${TAG#v}-sdcard.tar.gz.sigstore.json \\
+            --certificate-identity "https://github.com/${GITHUB_REPOSITORY}/.github/workflows/release.yml@${GITHUB_REF}" \\
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com
+          gh attestation verify kamoder-${TAG#v}-sdcard.tar.gz --repo ${GITHUB_REPOSITORY}
+          \`\`\`
+          EOF
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" release/* --clobber
+          else
+            gh release create "$TAG" release/* "${flags[@]}" --notes-file notes.md
+          fi

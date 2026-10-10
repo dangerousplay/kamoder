@@ -1,0 +1,40 @@
+[package]
+name = "anyka-ptz"
+description = "Pan/tilt control for Anyka AK3918 cameras: one trait, SDK, preset_motor and simulated backends"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[features]
+# The EV200 backend over the vendor `ak_drv_ptz_*` API. Off by default: the
+# project links no vendor library unless asked to, and the AV100 drives its
+# motor from Rust (preset_motor). It only compiles for `target_arch = "arm"`,
+# so host test builds with the feature on still work (see src/lib.rs).
+default = []
+sdk = ["dep:anyka-sys"]
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+snafu.workspace = true
+tracing.workspace = true
+
+# Only the camera build touches the SDK. Keeping these target-specific means a
+# host `cargo test` never runs anyka-sys' bindgen step against the crosstool.
+# The AV100 backend talks to /dev/preset_motor with plain ioctls; no SDK.
+[target.'cfg(target_os = "linux")'.dependencies]
+nix = { workspace = true, features = ["ioctl"] }
+
+[target.'cfg(target_arch = "arm")'.dependencies]
+anyka-sys = { workspace = true, optional = true }
+# Supplies the `pthread_setname_np` shim the crosstool's uClibc lacks; every
+# backend that spawns a thread (SDK, preset_motor) references it.
+os.workspace = true
+
+[build-dependencies]
+anyka-link.workspace = true
+
+[[bin]]
+name = "ptz-probe"
+path = "src/bin/ptz-probe.rs"

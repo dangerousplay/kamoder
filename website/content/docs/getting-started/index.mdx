@@ -1,0 +1,107 @@
+---
+title: Quick start
+description: From a signed release to a camera answering on SSH, the web UI and ONVIF.
+icon: Zap
+---
+
+This path uses a prebuilt release and needs no toolchain. To compile it yourself,
+see [Build from source](/docs/getting-started/build-from-source).
+
+<Callout type="info" title="Before you start">
+  Check that your camera is on the [supported list](/docs/cameras). You need a
+  microSD card (FAT32, any size above 128 MB), a way to read it on your computer,
+  and the camera's Wi-Fi network name and password.
+</Callout>
+
+<Steps>
+<Step>
+
+### Download and verify a release
+
+Get `kamoder-<version>-sdcard.tar.gz` and its `.sigstore.json` bundle from the
+[Releases](/docs/releases) page, then verify it:
+
+```bash
+cosign verify-blob kamoder-<version>-sdcard.tar.gz \
+  --bundle kamoder-<version>-sdcard.tar.gz.sigstore.json \
+  --certificate-identity-regexp '^https://github.com/<owner>/<repo>/\.github/workflows/release\.yml@' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
+
+</Step>
+<Step>
+
+### Prepare the SD card
+
+Format the card as **FAT32** and extract the archive onto it. The top-level
+folder in the archive holds the card root:
+
+```bash
+tar -xzf kamoder-<version>-sdcard.tar.gz
+cp -r kamoder-<version>-sdcard/. /path/to/sdcard/
+```
+
+The card should now contain:
+
+<Files>
+  <File name="autorun.sh" />
+  <Folder name="Factory" defaultOpen>
+    <File name="config.sh" />
+  </Folder>
+  <Folder name="anyka_rust" defaultOpen>
+    <Folder name="bin" />
+    <Folder name="lib" />
+    <Folder name="www" />
+    <File name="camera.conf.example" />
+    <File name="init.sh" />
+    <File name="supervisor.toml" />
+  </Folder>
+</Files>
+
+</Step>
+<Step>
+
+### Write `camera.conf`
+
+Copy `anyka_rust/camera.conf.example` to `anyka_rust/camera.conf` and set at least
+the passwords. See [Configuration](/docs/getting-started/configuration) for every key.
+
+```sh title="anyka_rust/camera.conf"
+wifi_ssid='MyNetwork'          # empty = keep the network the camera already uses
+wifi_password='…'
+ssh_password='…'
+web_admin_password='…'
+onvif_password='…'
+```
+
+On first boot the SSH and web passwords are hashed into `anyka_rust/etc/` and
+blanked from `camera.conf`.
+
+</Step>
+<Step>
+
+### Start the stack
+
+Insert the card and power the camera.
+
+- **AV100:** the stock firmware runs nothing from the card. Start it once by hand
+  (`sh /mnt/disc1/Factory/config.sh` from a shell), or install the
+  [autostart patch](/docs/getting-started/autostart) so it starts on every boot.
+- **EV200:** the firmware runs `Factory/config.sh` from the card by itself.
+
+</Step>
+<Step>
+
+### Connect
+
+Find the camera's address in your router, then:
+
+```bash
+ssh -p 2222 root@<camera>          # shell
+xdg-open http://<camera>/          # web admin
+```
+
+Add it to your NVR as an ONVIF device on port **8000** with the ONVIF account.
+
+</Step>
+</Steps>
