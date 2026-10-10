@@ -4,6 +4,9 @@
 #   push branch release/1.2  → prerelease v1.2-rc.<run number>
 #   workflow_dispatch        → build + sign only, artifacts on the run
 #
+# Release notes come from git-cliff (cliff.toml): commits since the last final
+# release, grouped by Conventional Commit type. CHANGELOG.md is attached too.
+#
 # Signing is keyless: cosign gets a short-lived certificate from Fulcio for this
 # workflow's OIDC identity, and every signature is logged in Rekor. Each asset
 # gets a <file>.sigstore.json bundle, and GitHub stores an SLSA build-provenance
@@ -119,6 +122,24 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
         run: tools/package-release.sh "$VERSION" release
 
+      - name: Changelog (git-cliff)
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: cliff.toml
+          args: --tag ${{ steps.version.outputs.tag }}
+        env:
+          OUTPUT: release/CHANGELOG.md
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Release notes (git-cliff)
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: cliff.toml
+          args: --unreleased --tag ${{ steps.version.outputs.tag }} --strip header
+        env:
+          OUTPUT: notes-changes.md
+          GITHUB_TOKEN: ${{ github.token }}
+
       - uses: sigstore/cosign-installer@v3
 
       - name: Sign with Sigstore (keyless)
@@ -148,9 +169,11 @@ jobs:
           TAG: ${{ steps.version.outputs.tag }}
           PRERELEASE: ${{ steps.version.outputs.prerelease }}
         run: |
-          flags=(--title "Kamoder $TAG" --target "$GITHUB_SHA" --generate-notes)
+          flags=(--title "Kamoder $TAG" --target "$GITHUB_SHA")
           [ "$PRERELEASE" = true ] && flags+=(--prerelease)
-          cat > notes.md <<EOF
+          cat notes-changes.md > notes.md
+          cat >> notes.md <<EOF
+
           ## Verify
 
           \`\`\`bash
