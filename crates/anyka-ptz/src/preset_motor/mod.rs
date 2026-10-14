@@ -48,7 +48,10 @@ mod device;
 mod fake;
 mod machine;
 
-pub use config::{PresetMotorConfig, MIN_POLL_INTERVAL, VENDOR_DEVICE_CONFIG};
+pub use config::{
+    PresetMotorConfig, MIN_POLL_INTERVAL, PRESET_MOTOR_DEVICE, PRESET_MOTOR_MODULE,
+    VENDOR_DEVICE_CONFIG,
+};
 
 use crate::error::{Error, Result};
 use crate::preset::PresetStore;
@@ -168,11 +171,15 @@ impl PresetMotor {
             Start::Homing => tracing::info!("PTZ: position unknown; homing (≈ 9 s)"),
         }
         let steps_per_degree = [config.steps_per_degree_pan, config.steps_per_degree_tilt];
-        let limits = Limits {
+        let travel = Limits {
             pan_min_deg: 0.0,
             pan_max_deg: settings.border[0] as f32 / steps_per_degree[0],
             tilt_min_deg: 0.0,
             tilt_max_deg: settings.border[1] as f32 / steps_per_degree[1],
+        };
+        let limits = match config.limits {
+            Some(wanted) => narrow(travel, wanted),
+            None => travel,
         };
         limits.validate()?;
 
@@ -210,6 +217,26 @@ impl PresetMotor {
     fn to_deg(&self, axis: usize, steps: i32) -> f32 {
         steps as f32 / self.steps_per_degree[axis]
     }
+}
+
+/// The software `limits` cut down to the driver's `travel`: the borders are
+/// the hardware truth, a profile can only restrict them.
+fn narrow(travel: Limits, wanted: Limits) -> Limits {
+    let limits = Limits {
+        pan_min_deg: wanted.pan_min_deg.max(travel.pan_min_deg),
+        pan_max_deg: wanted.pan_max_deg.min(travel.pan_max_deg),
+        tilt_min_deg: wanted.tilt_min_deg.max(travel.tilt_min_deg),
+        tilt_max_deg: wanted.tilt_max_deg.min(travel.tilt_max_deg),
+    };
+    if limits != wanted {
+        tracing::warn!(
+            ?wanted,
+            ?travel,
+            ?limits,
+            "PTZ limits exceed the motor travel; narrowed"
+        );
+    }
+    limits
 }
 
 impl Drop for PresetMotor {
@@ -548,6 +575,39 @@ mod tests {
             device::DIR_V_INC,
             "top_dir 1 flipped back by invert_tilt"
         );
+    }
+
+    #[test]
+    fn configured_limits_are_narrowed_to_the_travel() {
+        let dir = TempDir::new("pm-limits");
+        std::fs::write(
+            dir.path().join("ptz-position.json"),
+            br#"{"version":1,"pan_steps":10,"tilt_steps":10,"moving":false}"#,
+        )
+        .unwrap();
+        let cfg = PresetMotorConfig {
+            limits: Some(Limits {
+                pan_min_deg: 20.0,
+                pan_max_deg: 150.0,
+                tilt_min_deg: -10.0,
+                tilt_max_deg: 500.0,
+            }),
+            ..config(&dir)
+        };
+        let (ptz, dev) = open(&dir, &cfg);
+        assert_eq!(
+            ptz.limits(),
+            Limits {
+                pan_min_deg: 20.0,
+                pan_max_deg: 150.0,
+                tilt_min_deg: 0.0,
+                tilt_max_deg: 70.0
+            }
+        );
+        ptz.goto(170.0, 0.0).unwrap();
+        std::thread::sleep(Duration::from_millis(20));
+        let arg = dev.driver().log.last().unwrap().1;
+        assert_eq!((arg.h_preset_step, arg.v_preset_step), (150, 0));
     }
 
     #[test]

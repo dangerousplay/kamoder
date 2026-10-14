@@ -3,6 +3,7 @@
 
 use crate::error::{Error, Result};
 use crate::preset::write_atomic;
+use crate::Limits;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -37,6 +38,10 @@ pub struct PresetMotorConfig {
     pub border_tilt_steps: Option<i32>,
     /// Overrides `motor_speed` (tick period − 1, ms; higher is slower).
     pub load_ms: Option<i32>,
+    /// Software travel limits in reported degrees (the board profile's
+    /// ranges). `None` uses the full driver travel, `0..=border /
+    /// steps_per_degree`; when given they are narrowed to that travel.
+    pub limits: Option<Limits>,
     /// User steps per reported degree, pan. 1.0 = report raw steps.
     pub steps_per_degree_pan: f32,
     /// User steps per reported degree, tilt.
@@ -66,14 +71,22 @@ pub struct PresetMotorConfig {
     pub close_timeout: Duration,
 }
 
+/// Built-in device node, used when neither the board profile nor the caller
+/// names one.
+pub const PRESET_MOTOR_DEVICE: &str = "/dev/preset_motor";
+
+/// Built-in module path: the patched driver the AV100 vendor firmware ships.
+pub const PRESET_MOTOR_MODULE: &str = "/ipc/patch/ko/presetmotor.ko";
+
 impl Default for PresetMotorConfig {
     fn default() -> Self {
         Self {
-            module_path: PathBuf::from("/ipc/patch/ko/presetmotor.ko"),
+            module_path: PathBuf::from(PRESET_MOTOR_MODULE),
             device_config: Some(PathBuf::from(VENDOR_DEVICE_CONFIG)),
             border_pan_steps: None,
             border_tilt_steps: None,
             load_ms: None,
+            limits: None,
             steps_per_degree_pan: 1.0,
             steps_per_degree_tilt: 1.0,
             invert_pan: false,
@@ -206,8 +219,8 @@ impl MotorSettings {
                 _ => {}
             }
         }
-        for axis in 0..2 {
-            s.reverse[axis] = dir[axis].unwrap_or(s.reverse[axis]) ^ sensor_dir;
+        for (reverse, dir) in s.reverse.iter_mut().zip(dir) {
+            *reverse = dir.unwrap_or(*reverse) ^ sensor_dir;
         }
         s
     }

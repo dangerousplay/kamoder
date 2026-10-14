@@ -1,12 +1,19 @@
 //! PTZ: the one process that owns the motor (design D4).
 //!
-//! `--ptz` resolves to an `anyka_ptz::PtzBackend` ([`open`]); `auto` probes
-//! the EV200 SDK device, then the AV100 `/dev/preset_motor`; `sim` is the
-//! in-memory backend used by itest. When a backend is present, the ONVIF PTZ
-//! service is registered ([`attach`], handlers in `ptz_soap.rs`), the media
-//! profile gains a `PTZConfiguration`, and `/tmp/anyka-ptz.sock` is served
-//! for web (`ptz_socket.rs`). Both front ends drive the same [`Ptz`],
-//! so the latest command wins, whoever sent it (PTZ-04).
+//! The board profile's `[ptz]` says which backend drives the head, its device
+//! node, kernel module, travel ranges and steps per degree; [`plan`] turns it
+//! into anyka-ptz's own [`OpenOptions`] (anyka-ptz knows nothing of boards).
+//! `--ptz` / `ANYKA_ONVIF_PTZ` overrides the backend; anything the profile
+//! leaves out keeps the backend's built-in default. A profile without
+//! `[ptz]` means no pan/tilt head: PTZ is not offered unless `--ptz` asks for
+//! it. `auto` probes the SDK device, then the preset_motor one; `sim` is the
+//! in-memory backend used by itest.
+//!
+//! When a backend is present ([`open`]), the ONVIF PTZ service is registered
+//! (handlers in `ptz_soap.rs`), the first sensor's media profile gains a
+//! `PTZConfiguration`, and `/tmp/anyka-ptz.sock` is served for web
+//! (`ptz_socket.rs`). Both front ends drive the same [`Ptz`], so the latest
+//! command wins, whoever sent it (PTZ-04).
 //!
 //! A backend that fails to open is logged and PTZ is simply not offered:
 //! losing pan/tilt must never take ONVIF discovery and streaming down with
@@ -57,16 +64,90 @@ impl PtzMode {
     }
 }
 
-/// Opens the backend for `mode`; `None` = run without PTZ.
+impl From<board::PtzBackend> for PtzMode {
+    fn from(backend: board::PtzBackend) -> Self {
+        match backend {
+            board::PtzBackend::PresetMotor => PtzMode::PresetMotor,
+            board::PtzBackend::Sdk => PtzMode::Sdk,
+            board::PtzBackend::Sim => PtzMode::Sim,
+        }
+    }
+}
+
+/// Which backend to open and with what, from `--ptz` (`cli`, which includes
+/// `ANYKA_ONVIF_PTZ`), the board's `[ptz]` and the built-in defaults, in that
+/// order of precedence. `presets` empty keeps presets in memory.
 ///
-/// Blocking: the SDK backend runs its homing sweep here, so call this before
-/// the runtime starts serving. `presets` empty keeps presets in memory.
-pub fn open(mode: PtzMode, presets: &Path) -> Option<Box<dyn PtzBackend>> {
-    let options = OpenOptions {
+/// The profile describes the board's own head, so its device, module and
+/// steps per degree apply only to the backend it names (or the one `auto`
+/// would find for it); its ranges also apply to `sim`, which then simulates
+/// that head. A `--ptz` naming another hardware backend gets that backend's
+/// built-in defaults.
+pub fn plan(
+    cli: Option<PtzMode>,
+    board: Option<&board::Ptz>,
+    presets: &Path,
+) -> (PtzMode, OpenOptions) {
+    let mode = match (cli, board) {
+        (Some(mode), _) => mode,
+        (None, Some(head)) => head.backend.into(),
+        (None, None) => PtzMode::None,
+    };
+    let mut options = OpenOptions {
         presets_path: (!presets.as_os_str().is_empty()).then(|| presets.to_path_buf()),
         ..OpenOptions::default()
     };
-    match anyka_ptz::open_auto(mode.kind(), &options) {
+    let Some(head) = board else {
+        return (mode, options);
+    };
+    let limits = Limits {
+        pan_min_deg: head.pan[0],
+        pan_max_deg: head.pan[1],
+        tilt_min_deg: head.tilt[0],
+        tilt_max_deg: head.tilt[1],
+    };
+    let target = match mode {
+        PtzMode::Auto => head.backend.into(),
+        other => other,
+    };
+    match (target, head.backend) {
+        (PtzMode::Sim, _) => options.sim.limits = limits,
+        (PtzMode::PresetMotor, board::PtzBackend::PresetMotor) => {
+            if let Some(device) = &head.device {
+                options.preset_motor_dev = device.clone();
+            }
+            if let Some(module) = &head.module {
+                options.preset_motor.module_path = module.clone();
+            }
+            options.preset_motor.steps_per_degree_pan = head.steps_per_degree;
+            options.preset_motor.steps_per_degree_tilt = head.steps_per_degree;
+            options.preset_motor.limits = Some(limits);
+        }
+        // The library loads its own driver, so `module` has no use here.
+        // `steps_per_degree` is not mapped onto `SdkConfig::angle_rate`: the
+        // profile defaults it to 1.0 while the SDK needs 2.0, and an omitted
+        // key cannot be told from an explicit 1.0.
+        (PtzMode::Sdk, board::PtzBackend::Sdk) => {
+            if let Some(device) = &head.device {
+                options.ak_motor_dev = device.clone();
+            }
+            options.sdk.limits = limits;
+        }
+        _ => tracing::info!(
+            ?mode,
+            board = ?head.backend,
+            "--ptz overrides the board's PTZ backend; using its built-in settings"
+        ),
+    }
+    (mode, options)
+}
+
+/// Opens the backend for `mode`; `None` = run without PTZ.
+///
+/// Blocking: the SDK backend runs its homing sweep here, so call this before
+/// the runtime starts serving.
+pub fn open(mode: PtzMode, options: &OpenOptions) -> Option<Box<dyn PtzBackend>> {
+    match anyka_ptz::open_auto(mode.kind(), options) {
         Ok(Some(backend)) => {
             tracing::info!(backend = backend.name(), limits = ?backend.limits(), "PTZ backend open");
             Some(backend)
@@ -267,8 +348,156 @@ pub mod tests {
     fn modes_map_to_backends() {
         assert_eq!(PtzMode::PresetMotor.kind(), BackendKind::PresetMotor);
         assert_eq!(PtzMode::None.kind(), BackendKind::None);
-        assert!(open(PtzMode::None, Path::new("")).is_none());
-        let sim = open(PtzMode::Sim, Path::new("")).expect("sim always opens");
+        let (_, options) = plan(None, None, Path::new(""));
+        assert!(open(PtzMode::None, &options).is_none());
+        let sim = open(PtzMode::Sim, &options).expect("sim always opens");
         assert_eq!(sim.name(), "sim");
+    }
+
+    fn av100_head() -> board::Ptz {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../boards/anyka-av100-ptz.toml");
+        board::load(&path)
+            .unwrap()
+            .ptz
+            .expect("the AV100 has a head")
+    }
+
+    fn head(backend: board::PtzBackend) -> board::Ptz {
+        board::Ptz {
+            backend,
+            device: Some("/dev/motor-x".into()),
+            module: Some("/lib/motor-x.ko".into()),
+            pan: [10.0, 300.0],
+            tilt: [5.0, 90.0],
+            steps_per_degree: 2.5,
+        }
+    }
+
+    const HEAD_LIMITS: Limits = Limits {
+        pan_min_deg: 10.0,
+        pan_max_deg: 300.0,
+        tilt_min_deg: 5.0,
+        tilt_max_deg: 90.0,
+    };
+
+    #[test]
+    fn the_board_profile_drives_the_backend() {
+        let (mode, options) = plan(None, Some(&av100_head()), Path::new("etc/p.json"));
+        assert_eq!(mode, PtzMode::PresetMotor);
+        assert_eq!(options.presets_path, Some("etc/p.json".into()));
+        assert_eq!(options.preset_motor_dev, Path::new("/dev/preset_motor"));
+        assert_eq!(
+            options.preset_motor.module_path,
+            Path::new("/ipc/patch/ko/presetmotor.ko")
+        );
+        assert_eq!(
+            options.preset_motor.limits,
+            Some(Limits {
+                pan_min_deg: 0.0,
+                pan_max_deg: 175.0,
+                tilt_min_deg: 0.0,
+                tilt_max_deg: 70.0,
+            })
+        );
+        assert_eq!(options.preset_motor.steps_per_degree_pan, 1.0);
+
+        let (mode, options) = plan(
+            None,
+            Some(&head(board::PtzBackend::PresetMotor)),
+            Path::new(""),
+        );
+        assert_eq!(mode, PtzMode::PresetMotor);
+        assert_eq!(options.presets_path, None);
+        assert_eq!(options.preset_motor_dev, Path::new("/dev/motor-x"));
+        assert_eq!(
+            options.preset_motor.module_path,
+            Path::new("/lib/motor-x.ko")
+        );
+        assert_eq!(options.preset_motor.limits, Some(HEAD_LIMITS));
+        assert_eq!(options.preset_motor.steps_per_degree_tilt, 2.5);
+        // Untouched: another backend's settings.
+        assert_eq!(options.sdk, anyka_ptz::SdkConfig::default());
+
+        let (mode, options) = plan(None, Some(&head(board::PtzBackend::Sdk)), Path::new(""));
+        assert_eq!(mode, PtzMode::Sdk);
+        assert_eq!(options.ak_motor_dev, Path::new("/dev/motor-x"));
+        assert_eq!(options.sdk.limits, HEAD_LIMITS);
+        assert_eq!(
+            options.preset_motor,
+            anyka_ptz::PresetMotorConfig::default()
+        );
+
+        let (mode, options) = plan(None, Some(&head(board::PtzBackend::Sim)), Path::new(""));
+        assert_eq!(mode, PtzMode::Sim);
+        assert_eq!(options.sim.limits, HEAD_LIMITS);
+    }
+
+    #[test]
+    fn missing_profile_values_keep_the_built_in_defaults() {
+        let sparse = board::Ptz {
+            device: None,
+            module: None,
+            ..head(board::PtzBackend::PresetMotor)
+        };
+        let (_, options) = plan(None, Some(&sparse), Path::new(""));
+        let defaults = OpenOptions::default();
+        assert_eq!(options.preset_motor_dev, defaults.preset_motor_dev);
+        assert_eq!(
+            options.preset_motor.module_path,
+            defaults.preset_motor.module_path
+        );
+        assert_eq!(options.preset_motor.limits, Some(HEAD_LIMITS));
+    }
+
+    #[test]
+    fn the_command_line_overrides_the_board() {
+        let board = head(board::PtzBackend::PresetMotor);
+        // `sim` simulates the board's head.
+        let (mode, options) = plan(Some(PtzMode::Sim), Some(&board), Path::new(""));
+        assert_eq!(mode, PtzMode::Sim);
+        assert_eq!(options.sim.limits, HEAD_LIMITS);
+        assert_eq!(
+            options.preset_motor_dev,
+            OpenOptions::default().preset_motor_dev
+        );
+
+        // Another hardware backend: its own built-in settings only.
+        let (mode, options) = plan(Some(PtzMode::Sdk), Some(&board), Path::new(""));
+        assert_eq!(mode, PtzMode::Sdk);
+        assert_eq!(options.sdk, anyka_ptz::SdkConfig::default());
+        assert_eq!(
+            options.preset_motor,
+            anyka_ptz::PresetMotorConfig::default()
+        );
+
+        // `auto` probes with the board's device paths.
+        let (mode, options) = plan(Some(PtzMode::Auto), Some(&board), Path::new(""));
+        assert_eq!(mode, PtzMode::Auto);
+        assert_eq!(options.preset_motor_dev, Path::new("/dev/motor-x"));
+
+        let (mode, _) = plan(Some(PtzMode::None), Some(&board), Path::new(""));
+        assert_eq!(mode, PtzMode::None);
+    }
+
+    /// No `[ptz]`: nothing is opened, so `main` registers no PTZ service,
+    /// advertises none (`service::tests::soap_end_to_end` checks the
+    /// capabilities without a motor) and serves no PTZ socket.
+    #[test]
+    fn a_board_without_ptz_runs_without_ptz() {
+        let (mode, options) = plan(None, None, Path::new("etc/p.json"));
+        assert_eq!(mode, PtzMode::None);
+        assert!(open(mode, &options).is_none());
+        // `--ptz sim` still works on such a board, with the sim's defaults.
+        let (mode, options) = plan(Some(PtzMode::Sim), None, Path::new(""));
+        assert_eq!(mode, PtzMode::Sim);
+        assert_eq!(options.sim, anyka_ptz::SimConfig::default());
+    }
+
+    /// The board's ranges reach the opened backend.
+    #[test]
+    fn sim_opens_with_the_board_limits() {
+        let (mode, options) = plan(None, Some(&head(board::PtzBackend::Sim)), Path::new(""));
+        let backend = open(mode, &options).expect("sim always opens");
+        assert_eq!(backend.limits(), HEAD_LIMITS);
     }
 }

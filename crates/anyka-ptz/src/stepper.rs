@@ -79,6 +79,23 @@ pub struct SdkConfig {
     pub home: Option<(f32, f32)>,
 }
 
+/// Pan motor node the `Auto` probe looks for to pick the SDK backend (the
+/// library opens it and `/dev/ak-motor1` itself). Built-in default of
+/// [`OpenOptions::ak_motor_dev`](crate::OpenOptions::ak_motor_dev).
+pub const SDK_MOTOR_DEVICE: &str = "/dev/ak-motor0";
+
+impl Limits {
+    /// The limits `ptz_daemon.c` enforces on EV200 heads: X 0–350, Y 0–120.
+    /// The SDK backend's built-in default, used when no board profile gives
+    /// the head's ranges.
+    pub const EV200: Limits = Limits {
+        pan_min_deg: 0.0,
+        pan_max_deg: 350.0,
+        tilt_min_deg: 0.0,
+        tilt_max_deg: 120.0,
+    };
+}
+
 impl Default for SdkConfig {
     fn default() -> Self {
         Self {

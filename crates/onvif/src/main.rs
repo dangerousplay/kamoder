@@ -125,11 +125,13 @@ struct Cli {
     /// Friendly name, shown by NVRs and in the discovery scopes.
     #[arg(long, default_value = "Anyka camera")]
     name: String,
-    /// PTZ backend. A backend that cannot be opened is logged and the
-    /// service runs without PTZ. `ANYKA_ONVIF_PTZ` sets it when the option is
-    /// not given (itest's VM has no motor and exports `sim`).
-    #[arg(long, value_enum, env = "ANYKA_ONVIF_PTZ", default_value_t = PtzMode::Auto)]
-    ptz: PtzMode,
+    /// PTZ backend; overrides the board profile's `[ptz]` backend. Not
+    /// given: the profile's backend, or no PTZ when the profile has no
+    /// `[ptz]`. A backend that cannot be opened is logged and the service
+    /// runs without PTZ. `ANYKA_ONVIF_PTZ` sets it when the option is not
+    /// given (itest's VM has no motor and exports `sim`).
+    #[arg(long, value_enum, env = "ANYKA_ONVIF_PTZ")]
+    ptz: Option<PtzMode>,
     /// PTZ preset file (JSON); empty keeps presets in memory only.
     #[arg(long, default_value = "etc/ptz-presets.json")]
     ptz_presets: String,
@@ -206,7 +208,12 @@ fn serve(cli: Cli) -> Result<()> {
     );
 
     // Before the runtime: the SDK backend blocks for its homing sweep.
-    let backend = ptz::open(cli.ptz, std::path::Path::new(&cli.ptz_presets));
+    let (ptz_mode, ptz_options) = ptz::plan(
+        cli.ptz,
+        board.profile.ptz.as_ref(),
+        std::path::Path::new(&cli.ptz_presets),
+    );
+    let backend = ptz::open(ptz_mode, &ptz_options);
     // One thread: a handful of NVR requests a minute do not need more.
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
@@ -360,7 +367,7 @@ mod cli_tests {
         assert_eq!(cli.producer, "127.0.0.1:3000");
         assert_eq!(cli.web_port, 80);
         assert_eq!(cli.snapshot_path, "/api/snapshot.jpg");
-        assert_eq!(cli.ptz, PtzMode::Auto);
+        assert_eq!(cli.ptz, None, "the board profile decides");
         assert_eq!(cli.ptz_presets, "etc/ptz-presets.json");
         assert_eq!(cli.ptz_socket, "/tmp/anyka-ptz.sock");
         assert_eq!(cli.lights_socket, "/tmp/kamoder-lights.sock");
@@ -383,7 +390,7 @@ mod cli_tests {
             "--scopes",
             "onvif://www.onvif.org/location/garage,onvif://www.onvif.org/x/y",
         ]);
-        assert_eq!(cli.ptz, PtzMode::PresetMotor);
+        assert_eq!(cli.ptz, Some(PtzMode::PresetMotor));
         assert_eq!(cli.interface.as_deref(), Some("wlan0"));
         assert_eq!(cli.scopes.len(), 2);
 
@@ -404,7 +411,7 @@ mod cli_tests {
         assert!(cli.ptz_socket.is_empty());
         assert!(cli.lights_socket.is_empty());
         assert!(cli.ptz_presets.is_empty());
-        assert_eq!(cli.ptz, PtzMode::Sim);
+        assert_eq!(cli.ptz, Some(PtzMode::Sim));
         assert!(cli.no_auth);
         assert_eq!(cli.address, Some(Ipv4Addr::new(10, 0, 2, 15)));
     }

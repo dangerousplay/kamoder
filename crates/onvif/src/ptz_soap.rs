@@ -1,7 +1,7 @@
 //! The ONVIF PTZ service (`ver20/ptz/wsdl`) on top of [`Ptz`].
 //!
 //! One node (`ptz_node`) with one configuration (`ptz_config`) attached to
-//! the single media profile. Coordinates use ONVIF's generic spaces:
+//! the first sensor's media profile (one head, however many sensors). Coordinates use ONVIF's generic spaces:
 //! positions and translations in `[-1, 1]` over the backend's limits,
 //! velocities in `[-1, 1]` (the backend's own unit), speed ignored. No zoom.
 //!
@@ -348,7 +348,8 @@ fn node() -> tt::PtzNodeType {
     }
 }
 
-/// The one `tt:PTZConfiguration`, also embedded in the media profile.
+/// The one `tt:PTZConfiguration`, also embedded in the first sensor's media
+/// profile.
 /// (`default_absolute_pant_tilt_position_space` follows the schema's own
 /// spelling, `DefaultAbsolutePantTiltPositionSpace`.)
 pub fn configuration() -> tt::PtzConfigurationType {

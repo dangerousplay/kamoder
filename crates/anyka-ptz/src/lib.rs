@@ -63,11 +63,14 @@ use os as _;
 pub use clock::{Clock, ManualClock, SystemClock};
 pub use error::{Error, Result};
 pub use preset::{Preset, PresetStore, MAX_NAME_CHARS, MAX_PRESETS};
-pub use preset_motor::{PresetMotor, PresetMotorConfig, MIN_POLL_INTERVAL, VENDOR_DEVICE_CONFIG};
+pub use preset_motor::{
+    PresetMotor, PresetMotorConfig, MIN_POLL_INTERVAL, PRESET_MOTOR_DEVICE, PRESET_MOTOR_MODULE,
+    VENDOR_DEVICE_CONFIG,
+};
 #[cfg(all(feature = "sdk", target_arch = "arm"))]
 pub use sdk::Sdk;
 pub use sim::{Sim, SimConfig};
-pub use stepper::SdkConfig;
+pub use stepper::{SdkConfig, SDK_MOTOR_DEVICE};
 
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -86,6 +89,9 @@ pub struct Position {
 }
 
 /// Software travel limits in degrees, inclusive.
+///
+/// They describe one board's head, so they come from its profile; each
+/// backend has its own built-in default (the SDK's is [`Limits::EV200`]).
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct Limits {
     pub pan_min_deg: f32,
@@ -95,14 +101,6 @@ pub struct Limits {
 }
 
 impl Limits {
-    /// The limits `ptz_daemon.c` enforces on EV200 heads: X 0–350, Y 0–120.
-    pub const EV200: Limits = Limits {
-        pan_min_deg: 0.0,
-        pan_max_deg: 350.0,
-        tilt_min_deg: 0.0,
-        tilt_max_deg: 120.0,
-    };
-
     /// Checks that both ranges are finite and non-empty.
     pub fn validate(&self) -> Result<()> {
         let ranges = [
@@ -211,8 +209,8 @@ pub(crate) fn check_velocity(pan: f32, tilt: f32) -> Result<(f32, f32)> {
 /// Which backend [`open_auto`] should use (`--ptz <kind>`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum BackendKind {
-    /// Probe `/dev/ak-motor0`, then `/dev/preset_motor` (or its module
-    /// file), else no PTZ.
+    /// Probe [`OpenOptions::ak_motor_dev`], then
+    /// [`OpenOptions::preset_motor_dev`] (or its module file), else no PTZ.
     #[default]
     Auto,
     /// EV200 vendor SDK.
@@ -273,9 +271,11 @@ pub struct OpenOptions {
     pub sim: SimConfig,
     /// Settings for [`BackendKind::Sdk`].
     pub sdk: SdkConfig,
-    /// EV200 motor device probed by `Auto`.
+    /// SDK motor device probed by `Auto`; defaults to
+    /// [`SDK_MOTOR_DEVICE`].
     pub ak_motor_dev: PathBuf,
-    /// AV100 motor device probed by `Auto`.
+    /// preset_motor device, probed by `Auto` and opened by
+    /// [`BackendKind::PresetMotor`]; defaults to [`PRESET_MOTOR_DEVICE`].
     pub preset_motor_dev: PathBuf,
     /// Settings for [`BackendKind::PresetMotor`]. Its `module_path` is also
     /// probed by `Auto` when the device node does not exist yet.
@@ -288,8 +288,8 @@ impl Default for OpenOptions {
             presets_path: None,
             sim: SimConfig::default(),
             sdk: SdkConfig::default(),
-            ak_motor_dev: PathBuf::from("/dev/ak-motor0"),
-            preset_motor_dev: PathBuf::from("/dev/preset_motor"),
+            ak_motor_dev: PathBuf::from(SDK_MOTOR_DEVICE),
+            preset_motor_dev: PathBuf::from(PRESET_MOTOR_DEVICE),
             preset_motor: PresetMotorConfig::default(),
         }
     }
@@ -325,9 +325,9 @@ pub fn open_auto(kind: BackendKind, options: &OpenOptions) -> Result<Option<Box<
     }
 }
 
-/// What `Auto` resolves to: `/dev/ak-motor0` → SDK (if compiled in); `/dev/preset_motor` or
-/// `presetmotor.ko` (not loaded yet because `ipc` never ran) → PresetMotor;
-/// else None.
+/// What `Auto` resolves to: the SDK motor device → SDK (if compiled in); the
+/// preset_motor device or its module file (not loaded yet because `ipc` never
+/// ran) → PresetMotor; else None.
 fn auto_kind(options: &OpenOptions) -> BackendKind {
     if SDK_BUILT && options.ak_motor_dev.exists() {
         BackendKind::Sdk
@@ -464,7 +464,12 @@ mod tests {
                 "fixed"
             }
             fn limits(&self) -> Limits {
-                Limits::EV200
+                Limits {
+                    pan_min_deg: 0.0,
+                    pan_max_deg: 1.0,
+                    tilt_min_deg: 0.0,
+                    tilt_max_deg: 1.0,
+                }
             }
             fn continuous_move(&self, _: f32, _: f32) -> Result<()> {
                 Ok(())
@@ -524,13 +529,19 @@ mod tests {
 
     #[test]
     fn limits_validate_and_clamp() {
-        assert!(Limits::EV200.validate().is_ok());
-        assert_eq!(Limits::EV200.clamp(-5.0, 500.0).unwrap(), (0.0, 120.0));
-        assert!(Limits::EV200.clamp(f32::NAN, 0.0).is_err());
-        assert_eq!(Limits::EV200.center(), (175.0, 60.0));
+        let limits = Limits {
+            pan_min_deg: 0.0,
+            pan_max_deg: 350.0,
+            tilt_min_deg: 0.0,
+            tilt_max_deg: 120.0,
+        };
+        assert!(limits.validate().is_ok());
+        assert_eq!(limits.clamp(-5.0, 500.0).unwrap(), (0.0, 120.0));
+        assert!(limits.clamp(f32::NAN, 0.0).is_err());
+        assert_eq!(limits.center(), (175.0, 60.0));
         let empty = Limits {
             pan_max_deg: 0.0,
-            ..Limits::EV200
+            ..limits
         };
         assert!(empty.validate().is_err());
     }
