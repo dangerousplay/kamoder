@@ -62,6 +62,8 @@ pub(crate) fn state_with(
         supervisor_socket: dir.join("sup.sock"),
         ptz_socket: dir.join("ptz.sock"),
         lights_socket: dir.join("lights.sock"),
+        rtsp_port: video_proto::DEFAULT_RTSP_PORT,
+        board: None,
         snapshot_url: "http://127.0.0.1:9/snapshot.jpg".into(),
         mjpeg_interval: Duration::from_millis(20),
         onvif_secret: dir.join("etc/onvif.secret"),

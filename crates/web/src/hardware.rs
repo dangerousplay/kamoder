@@ -1,5 +1,5 @@
-//! Hardware summary for the dashboard: SoC, memory, kernel, flash and the
-//! image sensors the kernel found.
+//! Hardware summary for the dashboard: SoC, memory, kernel, flash, the
+//! image sensors the kernel found and the board profile in use.
 //!
 //! Everything comes from procfs and sysfs, read relative to
 //! [`Config::sys_root`](crate::state::Config) so tests can point it at a
@@ -31,7 +31,10 @@ pub struct Hardware {
     pub cpu: Option<String>,
     pub bogomips: Option<f32>,
     /// Device-tree model string.
-    pub board: Option<String>,
+    pub model: Option<String>,
+    /// The board profile the services run with (BRD-06); `None` when it
+    /// could not be resolved at start-up.
+    pub board: Option<BoardInfo>,
     /// Kernel release, e.g. `4.4.282`.
     pub kernel: Option<String>,
     /// RAM Linux manages; the video reserve (ION) is not included.
@@ -41,6 +44,26 @@ pub struct Hardware {
     pub flash: Vec<FlashPartition>,
     pub cameras: Vec<Camera>,
     pub camera_count: usize,
+}
+
+/// `api.ts` `BoardInfo`: which profile was chosen and why.
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+pub struct BoardInfo {
+    /// Profile name, e.g. `anyka-av100-ptz`.
+    pub name: String,
+    /// Why it was chosen (detection match, `BOARD=` override, fallback).
+    pub reason: String,
+    pub description: Option<String>,
+}
+
+impl From<&board::Resolved> for BoardInfo {
+    fn from(resolved: &board::Resolved) -> Self {
+        Self {
+            name: resolved.name.clone(),
+            reason: resolved.reason.clone(),
+            description: resolved.profile.description.clone(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
@@ -63,6 +86,7 @@ pub struct Camera {
 }
 
 /// Reads the summary from the tree under `root` (`/` on the camera).
+/// `board` is left empty; the handler fills it from the state.
 pub fn read(root: &Path) -> Hardware {
     let text = |rel: &str| std::fs::read_to_string(root.join(rel)).ok();
     let cpuinfo = text("proc/cpuinfo").unwrap_or_default();
@@ -73,7 +97,7 @@ pub fn read(root: &Path) -> Hardware {
         cpu: field(&cpuinfo, "model name").or_else(|| field(&cpuinfo, "Processor")),
         bogomips: field(&cpuinfo, "BogoMIPS").and_then(|v| v.parse().ok()),
         // Device-tree strings are NUL-terminated.
-        board: text("proc/device-tree/model")
+        model: text("proc/device-tree/model")
             .map(|m| m.trim_end_matches('\0').trim().to_owned())
             .filter(|m| !m.is_empty()),
         kernel: text("proc/sys/kernel/osrelease").map(|r| r.trim().to_owned()),
@@ -83,6 +107,7 @@ pub fn read(root: &Path) -> Hardware {
         flash: text("proc/mtd").map(|t| flash(&t)).unwrap_or_default(),
         camera_count: cameras.len(),
         cameras,
+        board: None,
     }
 }
 
@@ -151,9 +176,10 @@ fn cameras(class: &Path) -> Vec<Camera> {
 /// `GET /api/hardware` → `Hardware`.
 async fn hardware(State(state): State<AppState>, _: AuthUser) -> Result<Json<Hardware>, ApiError> {
     let root = state.config.sys_root.clone();
-    let hardware = tokio::task::spawn_blocking(move || read(&root))
+    let mut hardware = tokio::task::spawn_blocking(move || read(&root))
         .await
         .map_err(ApiError::internal)?;
+    hardware.board = state.config.board.as_ref().map(BoardInfo::from);
     Ok(Json(hardware))
 }
 
@@ -221,7 +247,8 @@ mod tests {
         assert_eq!(hw.soc.as_deref(), Some("AK3918AV100"));
         assert_eq!(hw.cpu.as_deref(), Some("ARM926EJ-S rev 5 (v5l)"));
         assert_eq!(hw.bogomips, Some(441.34));
-        assert_eq!(hw.board.as_deref(), Some("EVB_CBDM_KM01N_V1.0.0 board"));
+        assert_eq!(hw.model.as_deref(), Some("EVB_CBDM_KM01N_V1.0.0 board"));
+        assert_eq!(hw.board, None, "filled by the handler, not from sysfs");
         assert_eq!(hw.kernel.as_deref(), Some("4.4.282"));
         assert_eq!(hw.memory_total_kb, Some(32788));
         assert_eq!(hw.memory_available_kb, Some(13368));

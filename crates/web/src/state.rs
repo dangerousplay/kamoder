@@ -57,6 +57,11 @@ pub struct Config {
     pub ptz_socket: PathBuf,
     /// `lights` ownership socket (IND-07).
     pub lights_socket: PathBuf,
+    /// Port the `rtsp` service listens on, for `/api/cameras` URLs.
+    pub rtsp_port: u16,
+    /// The board profile, resolved once at start-up (BRD-06); `None` when
+    /// resolution failed, which `/api/hardware` reports as no board.
+    pub board: Option<board::Resolved>,
     /// `jpeg_snapshot` URL proxied by `/api/snapshot.jpg` (T16).
     pub snapshot_url: String,
     /// Pause between frames of `/api/live.mjpeg`.

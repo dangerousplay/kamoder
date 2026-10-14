@@ -190,7 +190,10 @@ export interface CameraStream {
 
 export interface CameraLive {
   index: number
-  /** "running", "starting", "failed" or "unavailable". */
+  /**
+   * "running", "starting", "failed", "unavailable" (camera service has no
+   * status for it) or "missing" (the board profile expects it, nothing found).
+   */
   state: string
   width: number
   height: number
@@ -212,8 +215,12 @@ export interface CameraDetails {
   sensor: string
   bus?: string | null
   channels: number
-  /** Path on port 554: rtsp://<host>:554/<rtsp_path>. */
+  /** RTSP path, e.g. "vs0". */
   rtsp_path: string
+  /** Port the rtsp service listens on. */
+  rtsp_port: number
+  /** rtsp://<host>[:port]/<path> for the host this page was loaded from; null when unknown. */
+  rtsp_url: string | null
   live: CameraLive
 }
 
@@ -233,11 +240,21 @@ export interface Camera {
   channels: number
 }
 
+/** The board profile in use and why it was chosen. */
+export interface BoardInfo {
+  name: string
+  reason: string
+  description?: string | null
+}
+
 export interface Hardware {
   soc?: string | null
   cpu?: string | null
   bogomips?: number | null
-  board?: string | null
+  /** Device-tree model string. */
+  model?: string | null
+  /** Board profile; null when it could not be resolved. */
+  board?: BoardInfo | null
   kernel?: string | null
   memory_total_kb?: number | null
   memory_available_kb?: number | null

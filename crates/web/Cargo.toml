@@ -31,6 +31,10 @@ wifi.workspace = true
 ptz-proto.workspace = true
 # Lights socket protocol + client (no GPIO code), like ptz-proto.
 lights-proto.workspace = true
+# Producer `/status` types, RTSP naming and default port (no capture code).
+video-proto.workspace = true
+# The board profile, for `/api/hardware` and the expected sensors.
+board.workspace = true
 libc.workspace = true
 # Pulls in the `pthread_setname_np` shim the crosstool's uClibc lacks.
 os.workspace = true

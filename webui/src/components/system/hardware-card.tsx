@@ -38,7 +38,7 @@ export function HardwareCard({ hw, error }: { hw?: Hardware; error: unknown }) {
           <CpuIcon className="size-4" />
           Hardware
         </CardTitle>
-        <CardDescription>{hw?.board ?? "Camera board"}</CardDescription>
+        <CardDescription>{hw?.model ?? "Camera board"}</CardDescription>
         {hw && (
           <CardAction>
             <Badge variant="secondary" className="gap-1">

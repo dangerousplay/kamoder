@@ -1210,7 +1210,10 @@ async fn lights_routes_translate_to_the_socket() {
     assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
     assert_eq!(
         reply.json(),
-        json!({ "mode": "day", "white": false, "alarm": { "state": "off" }, "muted": true })
+        json!({
+            "mode": "day", "white": false, "alarm": { "state": "off" }, "muted": true,
+            "supported": ["ir_cut", "ir_leds", "white", "alarm", "amp"]
+        })
     );
 
     // Viewers read; only admins change anything.
@@ -1235,7 +1238,8 @@ async fn lights_routes_translate_to_the_socket() {
         reply.json(),
         json!({
             "mode": "night", "white": true,
-            "alarm": { "state": "blink", "period_ms": 500 }, "muted": false
+            "alarm": { "state": "blink", "period_ms": 500 }, "muted": false,
+            "supported": ["ir_cut", "ir_leds", "white", "alarm", "amp"]
         })
     );
     assert_eq!(
@@ -1405,4 +1409,119 @@ async fn ssh_password_and_keys() {
     assert_eq!(reply.json()["keys"], json!([]));
     let reply = send(&router, bare_req(Method::DELETE, &path, &admin)).await;
     assert_eq!(reply.status, StatusCode::NOT_FOUND);
+}
+
+/// A two-sensor board profile, as the supervisor would hand it over.
+fn sample_board() -> board::Resolved {
+    board::Resolved {
+        name: "test-dual".into(),
+        path: "boards/test-dual.toml".into(),
+        reason: "BOARD=test-dual".into(),
+        profile: board::Profile {
+            name: "test-dual".into(),
+            description: Some("Two-sensor test board".into()),
+            match_rules: board::MatchRules::default(),
+            platform: None,
+            video: board::Video {
+                backend: "test-pattern".into(),
+                sensors: vec![0, 1],
+                tuning_dir: None,
+                stream: board::Stream {
+                    width: 1280,
+                    height: 720,
+                    fps: 15,
+                    kbps: 2048,
+                    gop: 30,
+                    profile: "main".into(),
+                },
+                overrides: Vec::new(),
+                snapshot: board::Snapshot::default(),
+            },
+            lights: None,
+            wifi: None,
+            ptz: None,
+        },
+    }
+}
+
+#[tokio::test]
+async fn hardware_reports_the_board_profile() {
+    let dir = scratch("hardware-board");
+    let router = app(state_with(&dir, None, |c| c.board = Some(sample_board())));
+    let (_, viewer) = tokens(&router).await;
+    let reply = send(&router, get_req("/api/hardware", Some(&viewer))).await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    assert_eq!(
+        reply.json()["board"],
+        json!({
+            "name": "test-dual",
+            "reason": "BOARD=test-dual",
+            "description": "Two-sensor test board",
+        })
+    );
+
+    let dir = scratch("hardware-no-board");
+    let router = app(state(&dir, None));
+    let (_, viewer) = tokens(&router).await;
+    let reply = send(&router, get_req("/api/hardware", Some(&viewer))).await;
+    assert_eq!(reply.status, StatusCode::OK);
+    assert_eq!(reply.json()["board"], Value::Null);
+}
+
+fn cameras_req(token: &str, host: Option<&str>) -> Request<Body> {
+    let mut builder =
+        Request::get("/api/cameras").header(header::AUTHORIZATION, format!("Bearer {token}"));
+    if let Some(host) = host {
+        builder = builder.header(header::HOST, host);
+    }
+    builder.body(Body::empty()).unwrap()
+}
+
+#[tokio::test]
+async fn cameras_carry_rtsp_urls_and_expected_sensors() {
+    const STATUS: &str = concat!(
+        r#"[{"index":0,"state":"running","width":640,"height":360,"format":"NV12","#,
+        r#""encoding":"JPEG snapshots (software)","frames":9,"fps":15.0,"#,
+        r#""sensor_width":1920,"sensor_height":1080,"sensor_id":"0xcb3e","tuning":null,"#,
+        r#""stream":{"codec":"H.264","profile":"Main","width":1280,"height":720,"#,
+        r#""fps":15,"gop":30,"target_kbps":2048,"kbps":1987.5,"encoder":"x"},"error":null}]"#
+    );
+    let response = format!(
+        "HTTP/1.0 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\n\r\n{STATUS}",
+        STATUS.len()
+    );
+    let url = snapshot_server(Box::leak(response.into_bytes().into_boxed_slice())).await;
+    let dir = scratch("cameras-rtsp");
+    let router = app(state_with(&dir, None, |c| {
+        c.snapshot_url = url;
+        c.board = Some(sample_board());
+        c.rtsp_port = 8554;
+    }));
+    let (_, viewer) = tokens(&router).await;
+
+    let reply = send(&router, cameras_req(&viewer, Some("192.168.1.20:8080"))).await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let cams = reply.json();
+    let cams = cams.as_array().unwrap();
+    assert_eq!(cams.len(), 2, "board expects two sensors: {cams:?}");
+    assert_eq!(cams[0]["rtsp_path"], "vs0");
+    assert_eq!(cams[0]["rtsp_port"], 8554);
+    assert_eq!(cams[0]["rtsp_url"], "rtsp://192.168.1.20:8554/vs0");
+    assert_eq!(cams[0]["live"]["state"], "running");
+    assert_eq!(cams[0]["live"]["stream"]["kbps"], 1987.5);
+    assert_eq!(cams[1]["live"]["state"], "missing");
+    assert_eq!(cams[1]["rtsp_url"], "rtsp://192.168.1.20:8554/vs1");
+
+    let reply = send(&router, cameras_req(&viewer, None)).await;
+    assert_eq!(reply.json()[0]["rtsp_url"], Value::Null);
+}
+
+#[tokio::test]
+async fn cameras_without_a_board_or_producer() {
+    let dir = scratch("cameras-bare");
+    let router = app(state(&dir, None));
+    let (_, viewer) = tokens(&router).await;
+    let reply = send(&router, cameras_req(&viewer, Some("cam"))).await;
+    assert_eq!(reply.status, StatusCode::OK);
+    assert_eq!(reply.json(), json!([]), "nothing probed, nothing expected");
 }

@@ -96,6 +96,9 @@ struct Options {
     ptz_socket: PathBuf,
     #[arg(long, default_value = lights_proto::DEFAULT_SOCKET)]
     lights_socket: PathBuf,
+    /// Port of the rtsp service, for the stream URLs /api/cameras reports.
+    #[arg(long, default_value_t = video_proto::DEFAULT_RTSP_PORT)]
+    rtsp_port: u16,
     /// JPEG snapshot source proxied by /api/snapshot.jpg.
     #[arg(long, default_value = "http://127.0.0.1:3000/snapshot.jpg")]
     snapshot_url: String,
@@ -117,9 +120,10 @@ struct Options {
     /// Written when the first-run setup wizard is finished.
     #[arg(long, default_value = "etc/setup-complete")]
     setup_marker: PathBuf,
-    /// Wi-Fi interface reported by /api/wifi (as wifi --iface).
-    #[arg(long, default_value = "wlan0")]
-    wifi_iface: String,
+    /// Wi-Fi interface reported by /api/wifi (as wifi --iface); defaults to
+    /// the board profile's.
+    #[arg(long)]
+    wifi_iface: Option<String>,
     /// wpa_supplicant control socket directory (as wifi --ctrl-dir).
     #[arg(long, default_value = "/etc/Wireless")]
     wifi_ctrl_dir: PathBuf,
@@ -131,8 +135,15 @@ struct Options {
     wifi_state_dir: PathBuf,
 }
 
+/// Interface used when neither `--wifi-iface` nor the board profile names one.
+const FALLBACK_WIFI_IFACE: &str = "wlan0"; // board-literal-ok
+
 impl Options {
-    fn into_config(self) -> Config {
+    fn into_config(self, board: Option<board::Resolved>) -> Config {
+        let wifi_iface = self
+            .wifi_iface
+            .or_else(|| Some(board.as_ref()?.profile.wifi.as_ref()?.iface.clone()))
+            .unwrap_or_else(|| FALLBACK_WIFI_IFACE.to_owned());
         Config {
             listen: self.listen,
             www: self.www,
@@ -144,6 +155,8 @@ impl Options {
             supervisor_socket: self.supervisor_socket,
             ptz_socket: self.ptz_socket,
             lights_socket: self.lights_socket,
+            rtsp_port: self.rtsp_port,
+            board,
             snapshot_url: self.snapshot_url,
             mjpeg_interval: Duration::from_millis(1000 / u64::from(self.mjpeg_fps)),
             onvif_secret: self.onvif_secret,
@@ -155,7 +168,7 @@ impl Options {
             wifi: wifi::system::Paths {
                 wpa_conf: self.wifi_wpa_conf,
                 ctrl_dir: self.wifi_ctrl_dir,
-                iface: self.wifi_iface,
+                iface: wifi_iface,
                 // Unused by the status probes; wifi's default.
                 dhcp_script: PathBuf::from("/usr/share/udhcpc/default.script"),
                 state_dir: self.wifi_state_dir,
@@ -172,7 +185,7 @@ fn main() -> Result<()> {
 
     match cli.command {
         Some(Command::Hash { user, role }) => hash_command(&user, role),
-        Some(Command::Serve) | None => serve_command(cli.options.into_config()),
+        Some(Command::Serve) | None => serve_command(cli.options.into_config(current_board())),
     }
 }
 
@@ -193,6 +206,21 @@ fn hash_command(user: &str, role: Role) -> Result<()> {
     Ok(())
 }
 
+/// The board profile, resolved once; a failure only costs `/api/hardware`
+/// its board entry and the expected-sensor list, so it is not fatal.
+fn current_board() -> Option<board::Resolved> {
+    match board::current() {
+        Ok(resolved) => {
+            tracing::info!(board = %resolved.name, reason = %resolved.reason, "board profile");
+            Some(resolved)
+        }
+        Err(error) => {
+            tracing::warn!(%error, "no board profile; /api/hardware reports none");
+            None
+        }
+    }
+}
+
 fn serve_command(config: Config) -> Result<()> {
     tracing::info!(
         listen = %config.listen,
@@ -204,6 +232,8 @@ fn serve_command(config: Config) -> Result<()> {
         ptz_socket = %config.ptz_socket.display(),
         lights_socket = %config.lights_socket.display(),
         snapshot_url = %config.snapshot_url,
+        rtsp_port = config.rtsp_port,
+        wifi_iface = %config.wifi.iface,
         "starting"
     );
     let state = AppState::load(config, Tuning::default())?;
@@ -291,5 +321,22 @@ mod cli_tests {
             Some(Command::Hash { ref user, role: Role::Viewer }) if user == "bob"
         ));
         assert!(Cli::try_parse_from(["web", "--token-ttl-secs", "86400"]).is_err());
+    }
+
+    #[test]
+    fn rtsp_port_and_wifi_iface_defaults() {
+        let config = Cli::try_parse_from(["web"])
+            .unwrap()
+            .options
+            .into_config(None);
+        assert_eq!(config.rtsp_port, video_proto::DEFAULT_RTSP_PORT);
+        assert_eq!(config.wifi.iface, FALLBACK_WIFI_IFACE);
+        assert!(config.board.is_none());
+        let config = Cli::try_parse_from(["web", "--rtsp-port", "8554", "--wifi-iface", "wlan1"])
+            .unwrap()
+            .options
+            .into_config(None);
+        assert_eq!(config.rtsp_port, 8554);
+        assert_eq!(config.wifi.iface, "wlan1");
     }
 }
