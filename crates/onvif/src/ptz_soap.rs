@@ -1,7 +1,9 @@
 //! The ONVIF PTZ service (`ver20/ptz/wsdl`) on top of [`Ptz`].
 //!
 //! One node (`ptz_node`) with one configuration (`ptz_config`) attached to
-//! the first sensor's media profile (one head, however many sensors). Coordinates use ONVIF's generic spaces:
+//! every sensor's media profile: the motor turns the whole head, so each
+//! stream moves with it, and an NVR that only picked one sensor (or a board
+//! whose first sensor failed) still has PTZ. Coordinates use ONVIF's generic spaces:
 //! positions and translations in `[-1, 1]` over the backend's limits,
 //! velocities in `[-1, 1]` (the backend's own unit), speed ignored. No zoom.
 //!
@@ -88,14 +90,14 @@ const ACTIONS: &[(&str, Action)] = &[
 ];
 
 /// Registers every served PTZ action on `server`.
-pub fn register(server: &mut OnvifServer, ptz: &Arc<Ptz>, profile_token: &str) {
-    let profile: Arc<str> = Arc::from(profile_token);
+pub fn register(server: &mut OnvifServer, ptz: &Arc<Ptz>, profile_tokens: &[String]) {
+    let profiles: Arc<[String]> = Arc::from(profile_tokens);
     for (name, action) in ACTIONS {
         server.register_handler(
             name,
             Box::new(PtzAction {
                 ptz: Arc::clone(ptz),
-                profile: Arc::clone(&profile),
+                profiles: Arc::clone(&profiles),
                 action: *action,
             }),
         );
@@ -104,20 +106,25 @@ pub fn register(server: &mut OnvifServer, ptz: &Arc<Ptz>, profile_token: &str) {
 
 struct PtzAction {
     ptz: Arc<Ptz>,
-    profile: Arc<str>,
+    profiles: Arc<[String]>,
     action: Action,
 }
 
 #[async_trait::async_trait]
 impl OnvifActionHandler for PtzAction {
     async fn handle(&self, body: &str, _info: &RequestInfo) -> Result<String, OnvifError> {
-        respond(&self.ptz, &self.profile, self.action, body)
+        respond(&self.ptz, &self.profiles, self.action, body)
     }
 }
 
 /// Parses the request for `action`, carries it out and builds the response
 /// envelope.
-fn respond(ptz: &Ptz, profile: &str, action: Action, body: &str) -> Result<String, OnvifError> {
+fn respond(
+    ptz: &Ptz,
+    profiles: &[String],
+    action: Action,
+    body: &str,
+) -> Result<String, OnvifError> {
     use Action as A;
     match action {
         A::GetNodes => {
@@ -162,7 +169,7 @@ fn respond(ptz: &Ptz, profile: &str, action: Action, body: &str) -> Result<Strin
         }
         A::GetStatus => {
             let req: tptz::GetStatus = request(body)?;
-            check_profile(&req.profile_token, profile)?;
+            check_profile(&req.profile_token, profiles)?;
             let status = tptz::GetStatusResponse {
                 ptz_status: status(ptz),
             };
@@ -170,7 +177,7 @@ fn respond(ptz: &Ptz, profile: &str, action: Action, body: &str) -> Result<Strin
         }
         A::ContinuousMove => {
             let req: tptz::ContinuousMove = request(body)?;
-            check_profile(&req.profile_token, profile)?;
+            check_profile(&req.profile_token, profiles)?;
             let velocity = &req.velocity;
             let (x, y) = pan_tilt(
                 velocity.pan_tilt.as_ref(),
@@ -197,7 +204,7 @@ fn respond(ptz: &Ptz, profile: &str, action: Action, body: &str) -> Result<Strin
         }
         A::Stop => {
             let req: tptz::Stop = request(body)?;
-            check_profile(&req.profile_token, profile)?;
+            check_profile(&req.profile_token, profiles)?;
             // `PanTilt=false` asks to stop only zoom, which does not exist.
             if req.pan_tilt.unwrap_or(true) {
                 ptz.stop().map_err(backend_fault)?;
@@ -206,7 +213,7 @@ fn respond(ptz: &Ptz, profile: &str, action: Action, body: &str) -> Result<Strin
         }
         A::AbsoluteMove => {
             let req: tptz::AbsoluteMove = request(body)?;
-            check_profile(&req.profile_token, profile)?;
+            check_profile(&req.profile_token, profiles)?;
             let position = &req.position;
             let (x, y) = pan_tilt(
                 position.pan_tilt.as_ref(),
@@ -221,7 +228,7 @@ fn respond(ptz: &Ptz, profile: &str, action: Action, body: &str) -> Result<Strin
         }
         A::RelativeMove => {
             let req: tptz::RelativeMove = request(body)?;
-            check_profile(&req.profile_token, profile)?;
+            check_profile(&req.profile_token, profiles)?;
             let translation = &req.translation;
             let (dx, dy) = pan_tilt(
                 translation.pan_tilt.as_ref(),
@@ -238,7 +245,7 @@ fn respond(ptz: &Ptz, profile: &str, action: Action, body: &str) -> Result<Strin
         }
         A::GetPresets => {
             let req: tptz::GetPresets = request(body)?;
-            check_profile(&req.profile_token, profile)?;
+            check_profile(&req.profile_token, profiles)?;
             let limits = ptz.limits();
             let preset = ptz
                 .presets()
@@ -260,7 +267,7 @@ fn respond(ptz: &Ptz, profile: &str, action: Action, body: &str) -> Result<Strin
         }
         A::SetPreset => {
             let req: tptz::SetPreset = request(body)?;
-            check_profile(&req.profile_token, profile)?;
+            check_profile(&req.profile_token, profiles)?;
             let name = req.preset_name.as_deref().unwrap_or("");
             let token = req.preset_token.as_deref().filter(|t| !t.is_empty());
             let preset = ptz.set_preset(name, token).map_err(backend_fault)?;
@@ -273,21 +280,21 @@ fn respond(ptz: &Ptz, profile: &str, action: Action, body: &str) -> Result<Strin
         }
         A::GotoPreset => {
             let req: tptz::GotoPreset = request(body)?;
-            check_profile(&req.profile_token, profile)?;
+            check_profile(&req.profile_token, profiles)?;
             let token = required(&req.preset_token, "PresetToken")?;
             ptz.goto_preset(token).map_err(backend_fault)?;
             response(&tptz::GotoPresetResponse {}, "tptz:GotoPresetResponse")
         }
         A::RemovePreset => {
             let req: tptz::RemovePreset = request(body)?;
-            check_profile(&req.profile_token, profile)?;
+            check_profile(&req.profile_token, profiles)?;
             let token = required(&req.preset_token, "PresetToken")?;
             ptz.remove_preset(token).map_err(backend_fault)?;
             response(&tptz::RemovePresetResponse {}, "tptz:RemovePresetResponse")
         }
         A::GotoHomePosition => {
             let req: tptz::GotoHomePosition = request(body)?;
-            check_profile(&req.profile_token, profile)?;
+            check_profile(&req.profile_token, profiles)?;
             ptz.home().map_err(backend_fault)?;
             response(
                 &tptz::GotoHomePositionResponse {},
@@ -348,7 +355,7 @@ fn node() -> tt::PtzNodeType {
     }
 }
 
-/// The one `tt:PTZConfiguration`, also embedded in the first sensor's media
+/// The one `tt:PTZConfiguration`, also embedded in every sensor's media
 /// profile.
 /// (`default_absolute_pant_tilt_position_space` follows the schema's own
 /// spelling, `DefaultAbsolutePantTiltPositionSpace`.)
@@ -479,8 +486,8 @@ fn backend_fault(error: anyka_ptz::Error) -> OnvifError {
     }
 }
 
-fn check_profile(token: &str, profile: &str) -> Result<(), OnvifError> {
-    if token == profile {
+fn check_profile(token: &str, profiles: &[String]) -> Result<(), OnvifError> {
+    if profiles.iter().any(|p| p == token) {
         Ok(())
     } else {
         Err(sender(format!("no profile {token:?}")))

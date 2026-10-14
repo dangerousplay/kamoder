@@ -163,9 +163,8 @@ pub struct Media {
     /// Fallback address for URIs, used when the request arrived over
     /// loopback or on an unknown address (see [`resolve_server_ip`]).
     pub device_ip: String,
-    /// Token of the profile that carries the PTZ configuration; `None` =
-    /// no PTZ.
-    pub ptz_profile: Option<String>,
+    /// Every profile carries the PTZ configuration (see `ptz_soap`).
+    pub ptz: bool,
     /// The last answer came from the board, not the producer (logged on
     /// change only).
     pub on_fallback: AtomicBool,
@@ -446,7 +445,6 @@ impl Media {
     /// Sensor `stream`'s profile.
     fn profile(&self, stream: &VideoStream) -> tt::ProfileType {
         let token = profile_token(stream.index);
-        let ptz = self.ptz_profile.as_deref() == Some(token.as_str());
         tt::ProfileType {
             token: token.clone(),
             fixed: Some(true),
@@ -457,7 +455,7 @@ impl Media {
             video_encoder_configuration: Some(video_encoder_configuration(stream)),
             audio_encoder_configuration: None,
             video_analytics_configuration: None,
-            ptz_configuration: ptz.then(ptz_soap::configuration),
+            ptz_configuration: self.ptz.then(ptz_soap::configuration),
             metadata_configuration: None,
             extension: None,
         }

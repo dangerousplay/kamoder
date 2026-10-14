@@ -71,17 +71,22 @@ pub fn build(settings: &Settings) -> Result<OnvifServer, OnvifError> {
         read_timeout: std::time::Duration::from_secs(10),
         ..Default::default()
     };
-    let first = settings
+    if settings.video.is_empty() {
+        return Err(OnvifError::Internal(
+            "the board profile lists no video sensor".into(),
+        ));
+    }
+    // The motor turns the whole head, so PTZ answers on every sensor's
+    // profile (see `ptz_soap`).
+    let ptz_profiles: Vec<String> = settings
         .video
-        .first()
-        .ok_or_else(|| OnvifError::Internal("the board profile lists no video sensor".into()))?;
-    // The motor turns the whole head; its configuration hangs off the first
-    // sensor's profile, which is what single-stream clients pick.
-    let ptz_profile = media::profile_token(first.index);
+        .iter()
+        .map(|v| media::profile_token(v.index))
+        .collect();
     let mut server = OnvifServer::new(&config).with_metrics(Arc::new(Metrics));
 
     if let Some(motor) = &settings.ptz {
-        ptz_soap::register(&mut server, motor, &ptz_profile);
+        ptz_soap::register(&mut server, motor, &ptz_profiles);
     }
     let ptz = settings.ptz.is_some();
     if let Some(lights) = &settings.lights {
@@ -120,7 +125,7 @@ pub fn build(settings: &Settings) -> Result<OnvifServer, OnvifError> {
             snapshot_port: settings.web_port,
             snapshot_path: settings.snapshot_path.clone(),
             device_ip: settings.device_ip.clone(),
-            ptz_profile: ptz.then_some(ptz_profile),
+            ptz,
             on_fallback: Default::default(),
         },
     );
@@ -1169,9 +1174,9 @@ pub mod tests {
         handle.shutdown().await.unwrap();
     }
 
-    /// PTZ hangs off the first sensor's profile only.
+    /// PTZ hangs off every sensor's profile.
     #[tokio::test(flavor = "current_thread")]
-    async fn ptz_is_on_the_first_profile() {
+    async fn ptz_is_on_every_profile() {
         let (ptz, _clock) = manual_sim();
         let settings = Settings {
             ptz: Some(ptz),
@@ -1191,7 +1196,47 @@ pub mod tests {
             .iter()
             .map(|p| p.ptz_configuration.is_some())
             .collect();
-        assert_eq!(with_ptz, [true, false]);
+        assert_eq!(with_ptz, [true, true]);
+        handle.shutdown().await.unwrap();
+    }
+
+    /// With sensor 0 missing, the only listed profile still drives the motor.
+    #[tokio::test(flavor = "current_thread")]
+    async fn ptz_answers_on_the_second_sensor_alone() {
+        let statuses = vec![running(
+            1,
+            video_proto::StreamInfo {
+                codec: "H.264".into(),
+                profile: "Main".into(),
+                width: 640,
+                height: 360,
+                fps: 10,
+                gop: 20,
+                target_kbps: 512,
+                kbps: 500.0,
+                encoder: "fake".into(),
+            },
+        )];
+        let (producer, _) = crate::producer::fake::serve(statuses).await;
+        let (ptz, _clock) = manual_sim();
+        let settings = Settings {
+            ptz: Some(ptz),
+            ..av100_settings(producer)
+        };
+        let (addr, mut handle) = start(settings).await;
+        let auth = || text_header("nvr", "correct horse");
+        let (status, body) = call(addr, &auth(), "<trt:GetProfiles/>").await;
+        assert_eq!(status, 200, "{body}");
+        let profiles: trt::GetProfilesResponse = parse(&body);
+        assert_eq!(profiles.profiles.len(), 1);
+        assert!(profiles.profiles[0].ptz_configuration.is_some());
+        let (status, body) = call(
+            addr,
+            &auth(),
+            "<tptz:GetStatus><tptz:ProfileToken>Profile_vs1</tptz:ProfileToken></tptz:GetStatus>",
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
         handle.shutdown().await.unwrap();
     }
 
