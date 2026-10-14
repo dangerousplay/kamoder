@@ -11,7 +11,6 @@ Severity: H = can strand/brick a camera or ship broken; M = maintenance/correctn
 - **H — Autostart flash patch** writes `/dev/mtd6` (`tools/autostart/`). Reversible via `rollback.sh`, tested on one firmware (38.2.72, mtd6 md5 `f4c739e1…`); other firmware revisions untested.
 - **M — Wi-Fi driver wedges under load** (SSV6x5x), hence the reload/power-cycle ladder (`crates/wifi/src/lib.rs`). Large uploads can drop the link.
 - **M — 32 MB RAM budget.** Measured RSS ~1.6-3.3 MB per service (HARDWARE-FINDINGS §9, before `camera`/`rtsp` existed). Current totals with camera + rtsp not recorded in docs — unknown (to record in T20).
-- **M — Video socket index vs sensor index.** The producer resolves the subscribe line `"N\n"` and `?camera=N` as a *position* in the sensors it serves, while `rtsp` subscribes with the board's sensor index. Equal for every shipped profile (`sensors = [0, 1]`, both present); diverges for `sensors = [1]` or a missing sensor (`crates/camera/src/service.rs` `video_client`, `snapshot`; `docs/notes/VIDEO-PROTOCOL.md` "Open question").
 
 ## Board-specific values
 
@@ -51,7 +50,7 @@ Since the board-agnostic feature, board facts live in `boards/*.toml` (crate `bo
 ## Documentation drift (verify before trusting)
 
 - Fixed 2026-10-13 (board-agnostic T19): HARDWARE-FINDINGS §1/§5/§9 carry dated updates (pure-Rust video, mtd6 autostart kit); IMPLEMENTATION.md crate list and verification table; architecture.mdx (rtsp + camera on, board profiles, video data flow); services/cameras/index pages; README crate table; `tools/re/venc-protocol` reference removed from `crates/anyka-av100/src/venc.rs`. New: `docs/notes/VIDEO-PROTOCOL.md`, docs page "Adding a board".
-- Remaining: notes still refer to `cross-compile/` (sibling dir outside this self-contained repo) as historical context; `crates/web/src/video.rs` module doc still says snapshots come from the SDK-based `jpeg_snapshot` service.
+- Remaining: notes still refer to `cross-compile/` (sibling dir outside this self-contained repo) as historical context.
 - Live verification of RTSP `/vs0`+`/vs1` and ONVIF per-sensor profiles under board profiles not yet recorded (T20).
 
 ## Security posture (by design, documented)

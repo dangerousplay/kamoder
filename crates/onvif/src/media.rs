@@ -643,6 +643,33 @@ mod tests {
         );
     }
 
+    /// Statuses are matched to sensors by `index`, not by position: sparse
+    /// (sensor 0 missing) and out of order.
+    #[test]
+    fn statuses_match_by_index_not_position() {
+        let fallback = [stream(0, 1280), stream(1, 1280), stream(2, 1280)];
+        let streams = select(
+            Some(&[status(2, Some(info(640, 360))), status(1, None)]),
+            &fallback,
+        );
+        assert_eq!(
+            streams
+                .iter()
+                .map(|s| (s.index, s.width))
+                .collect::<Vec<_>>(),
+            [(1, 1280), (2, 640)]
+        );
+        // A `sensors = [1]` board: the producer's sensor 1 is profile 1.
+        let streams = select(Some(&[status(1, Some(info(640, 360)))]), &fallback[1..2]);
+        assert_eq!(
+            streams
+                .iter()
+                .map(|s| (s.index, s.width))
+                .collect::<Vec<_>>(),
+            [(1, 640)]
+        );
+    }
+
     #[test]
     fn h264_profile_names() {
         let mut s = stream(0, 1280);

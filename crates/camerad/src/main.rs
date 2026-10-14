@@ -477,6 +477,12 @@ struct App {
     quality: u8,
 }
 
+/// One camera per sensor served, each keyed by its board index: clients
+/// ask for `N` = the sensor index, whatever its position (`video_proto`).
+fn cameras_for(indices: &[u32]) -> Vec<Camera> {
+    indices.iter().map(|&i| Camera::new(i)).collect()
+}
+
 /// Captures from `backend` on its own thread and serves snapshots,
 /// `/status` and the video socket until SIGTERM/SIGINT.
 fn run<B: Backend + 'static>(
@@ -487,7 +493,7 @@ fn run<B: Backend + 'static>(
     app: App,
 ) -> Result<()> {
     let stop = Arc::new(AtomicBool::new(false));
-    let cameras: Vec<Camera> = indices.iter().map(|_| Camera::default()).collect();
+    let cameras = cameras_for(indices);
     let worker = {
         let (cameras, stop) = (cameras.clone(), Arc::clone(&stop));
         std::thread::Builder::new()
@@ -578,6 +584,19 @@ mod tests {
             ..st
         };
         assert!(venc_settings(&bad).is_err());
+    }
+
+    /// A two-sensor board whose sensor 0 failed to open serves sensor 1
+    /// only, still as camera 1.
+    #[test]
+    fn cameras_keep_their_sensor_index_when_one_is_missing() {
+        let (indices, missing) = settings::select_sensors(&[0, 1], &[1], &[]);
+        assert_eq!(missing, [0]);
+        let cameras = cameras_for(&indices);
+        assert_eq!(cameras.len(), 1);
+        assert_eq!(service::find(&cameras, 1).map(Camera::index), Some(1));
+        assert_eq!(cameras[0].status().index, 1);
+        assert!(service::find(&cameras, 0).is_none());
     }
 
     #[test]

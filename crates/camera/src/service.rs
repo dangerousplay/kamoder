@@ -9,6 +9,11 @@
 //! unix /tmp/kamoder-video.sock   "N\n" → H.264 access units of sensor N
 //! ```
 //!
+//! `N` is the board's sensor number ([`Camera::index`], `Status.index`), not
+//! a position in the list served: a board with `sensors = [1]`, or one whose
+//! sensor 0 is missing, serves camera `1` only, and asking for `0` gets a
+//! 404 or a closed socket (see `video_proto`).
+//!
 //! Capture runs continuously (the ISP's auto exposure needs a running
 //! pipeline to converge), but a frame is only copied out of the driver's
 //! buffer while someone has asked for one recently, and only encoded output
@@ -60,6 +65,8 @@ struct Slot {
 /// Shared state of one sensor.
 #[derive(Clone)]
 pub struct Camera {
+    /// Board sensor number, fixed at creation: what clients ask for.
+    index: u32,
     slot: Arc<Mutex<Slot>>,
     video: tokio::sync::broadcast::Sender<Arc<VideoPacket>>,
     /// A new subscriber asked for an IDR.
@@ -67,16 +74,36 @@ pub struct Camera {
 }
 
 impl Default for Camera {
+    /// Sensor 0.
     fn default() -> Self {
-        Camera {
-            slot: Arc::default(),
-            video: tokio::sync::broadcast::channel(VIDEO_BUFFER).0,
-            idr: Arc::default(),
-        }
+        Camera::new(0)
     }
 }
 
 impl Camera {
+    /// The camera of board sensor `index`; its status reports that index
+    /// from the start, before capture has brought anything up.
+    pub fn new(index: u32) -> Self {
+        let slot = Slot {
+            status: Status {
+                index,
+                ..Status::default()
+            },
+            ..Slot::default()
+        };
+        Camera {
+            index,
+            slot: Arc::new(Mutex::new(slot)),
+            video: tokio::sync::broadcast::channel(VIDEO_BUFFER).0,
+            idr: Arc::default(),
+        }
+    }
+
+    /// Board sensor number (`?camera=N`, the subscribe line, `vsN`).
+    pub fn index(&self) -> u32 {
+        self.index
+    }
+
     fn lock(&self) -> std::sync::MutexGuard<'_, Slot> {
         self.slot.lock().unwrap_or_else(|p| p.into_inner())
     }
@@ -176,6 +203,11 @@ pub fn snapshot_of(f: &FrameRef<'_>, max_width: u32) -> Frame {
     out
 }
 
+/// The camera of board sensor `index`, wherever it sits in `cameras`.
+pub fn find(cameras: &[Camera], index: u32) -> Option<&Camera> {
+    cameras.iter().find(|c| c.index == index)
+}
+
 /// Tunables of [`capture`]; production values by default.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CaptureOptions {
@@ -232,6 +264,9 @@ fn tag(index: u32) -> impl FnOnce(BoxError) -> BoxError {
 /// capture buffer and offered to the video socket's subscribers.
 /// Any failure tears everything down and retries with a growing pause, and
 /// is reported in each camera's status.
+///
+/// `cameras` pair with the backend's sensors by position; each must have
+/// been created for that sensor's index ([`Camera::new`]).
 pub fn capture<B: Backend>(
     mut backend: B,
     cameras: Vec<Camera>,
@@ -243,8 +278,14 @@ pub fn capture<B: Backend>(
     encoders.resize_with(expected.len(), || None);
     let mut pause = opts.retry_min;
     for (info, camera) in expected.iter().zip(&cameras) {
+        if camera.index != info.index {
+            tracing::warn!(
+                camera = camera.index,
+                sensor = info.index,
+                "camera created for another sensor than the backend's slot"
+            );
+        }
         camera.update(|s| {
-            s.index = info.index;
             s.state = "starting".into();
             s.format = "NV12".into();
             s.encoding = "JPEG snapshots (software)".into();
@@ -351,10 +392,11 @@ fn run<B: Backend>(
     Ok(())
 }
 
-/// Serves the video socket (`video_proto`): each client names a sensor slot
-/// on one line and then receives its access units, starting at the next
-/// IDR, each as a [`video_proto::PacketHeader`] followed by Annex-B data. A
-/// client that falls behind skips to the next IDR.
+/// Serves the video socket (`video_proto`): each client names a sensor (its
+/// board index, not a position) on one line and then receives its access
+/// units, starting at the next IDR, each as a [`video_proto::PacketHeader`]
+/// followed by Annex-B data. A client that falls behind skips to the next
+/// IDR.
 pub async fn serve_video(listener: tokio::net::UnixListener, cameras: Arc<Vec<Camera>>) {
     loop {
         let Ok((conn, _)) = listener.accept().await else {
@@ -375,9 +417,7 @@ async fn video_client(conn: tokio::net::UnixStream, cameras: &[Camera]) -> std::
     let (read, mut write) = conn.into_split();
     let mut line = String::new();
     BufReader::new(read).read_line(&mut line).await?;
-    let Some(camera) =
-        video_proto::parse_subscribe(&line).and_then(|i| cameras.get(usize::try_from(i).ok()?))
-    else {
+    let Some(camera) = video_proto::parse_subscribe(&line).and_then(|i| find(cameras, i)) else {
         return Err(std::io::Error::other(format!(
             "no camera {:?}",
             line.trim()
@@ -419,7 +459,8 @@ pub struct AppState {
 
 #[derive(Debug, Deserialize)]
 pub struct CameraQuery {
-    camera: Option<usize>,
+    /// Board sensor index; absent = the first camera served.
+    camera: Option<u32>,
 }
 
 pub fn router(state: AppState) -> Router {
@@ -434,10 +475,15 @@ fn unavailable(message: String) -> Response {
 }
 
 async fn snapshot(State(state): State<AppState>, Query(q): Query<CameraQuery>) -> Response {
-    let index = q.camera.unwrap_or(0);
-    let Some(camera) = state.cameras.get(index).cloned() else {
-        return (StatusCode::NOT_FOUND, format!("no camera {index}")).into_response();
+    let camera = match q.camera {
+        Some(index) => find(&state.cameras, index),
+        None => state.cameras.first(),
     };
+    let Some(camera) = camera.cloned() else {
+        let which = q.camera.map_or_else(|| "served".into(), |i| i.to_string());
+        return (StatusCode::NOT_FOUND, format!("no camera {which}")).into_response();
+    };
+    let index = camera.index;
     // The first request after a quiet spell only switches copying on; wait
     // for the next picture.
     let deadline = tokio::time::Instant::now() + WAIT;
@@ -495,7 +541,7 @@ mod tests {
 
     #[tokio::test]
     async fn serves_the_latest_picture_per_camera() {
-        let cams = vec![Camera::default(), Camera::default()];
+        let cams = vec![Camera::new(0), Camera::new(1)];
         cams[1].publish(frame());
         let app = router(AppState {
             cameras: Arc::new(cams),
@@ -522,6 +568,63 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(missing.status(), StatusCode::NOT_FOUND);
+    }
+
+    async fn get(app: &Router, uri: &str) -> StatusCode {
+        app.clone()
+            .oneshot(Request::get(uri).body(Body::empty()).unwrap())
+            .await
+            .unwrap()
+            .status()
+    }
+
+    /// `?camera=N` is the board sensor index, not a position: a producer
+    /// serving sensor 1 only (a `sensors = [1]` board, or sensor 0 missing)
+    /// answers `camera=1` and has no camera 0.
+    #[tokio::test]
+    async fn camera_is_the_sensor_index_not_a_position() {
+        let cams = vec![Camera::new(1)];
+        cams[0].publish(frame());
+        let app = router(AppState {
+            cameras: Arc::new(cams),
+            quality: 80,
+        });
+        assert_eq!(get(&app, "/snapshot.jpg?camera=1").await, StatusCode::OK);
+        assert_eq!(
+            get(&app, "/snapshot.jpg?camera=0").await,
+            StatusCode::NOT_FOUND
+        );
+        // No `camera`: the first one served.
+        assert_eq!(get(&app, "/snapshot.jpg").await, StatusCode::OK);
+        let r = app
+            .clone()
+            .oneshot(Request::get("/status").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        let body = axum::body::to_bytes(r.into_body(), 1 << 16).await.unwrap();
+        let body = std::str::from_utf8(&body).unwrap();
+        assert!(body.starts_with(r#"[{"index":1,"#), "{body}");
+        assert_eq!(body.matches(r#""index""#).count(), 1, "{body}");
+    }
+
+    /// Sparse and out of order: each camera is found by its own index.
+    #[tokio::test(start_paused = true)]
+    async fn sparse_cameras_are_found_by_index() {
+        let cams = vec![Camera::new(2), Camera::new(0)];
+        cams[1].publish(frame());
+        let app = router(AppState {
+            cameras: Arc::new(cams),
+            quality: 80,
+        });
+        assert_eq!(get(&app, "/snapshot.jpg?camera=0").await, StatusCode::OK);
+        assert_eq!(
+            get(&app, "/snapshot.jpg?camera=1").await,
+            StatusCode::NOT_FOUND
+        );
+        assert_eq!(
+            get(&app, "/snapshot.jpg?camera=2").await,
+            StatusCode::SERVICE_UNAVAILABLE
+        );
     }
 
     #[tokio::test(start_paused = true)]
@@ -618,7 +721,7 @@ mod capture_tests {
         encoders: Vec<Option<Box<dyn Encoder>>>,
         opts: CaptureOptions,
     ) -> Running {
-        let cameras: Vec<Camera> = (0..backend.sensors).map(|_| Camera::default()).collect();
+        let cameras: Vec<Camera> = backend.indices.iter().map(|&i| Camera::new(i)).collect();
         let stop = Arc::new(AtomicBool::new(false));
         let thread = {
             let (cameras, stop) = (cameras.clone(), Arc::clone(&stop));
@@ -706,7 +809,7 @@ mod capture_tests {
         };
         // Subscribed before the first picture: both see the same units.
         let r = {
-            let cameras = vec![Camera::default(), Camera::default()];
+            let cameras = vec![Camera::new(0), Camera::new(1)];
             let mut a = cameras[0].subscribe();
             let mut b = cameras[0].subscribe();
             let mut other = cameras[1].subscribe();
@@ -902,5 +1005,50 @@ mod capture_tests {
         tokio::time::timeout(Duration::from_secs(10), test)
             .await
             .expect("video socket test timed out");
+    }
+
+    /// A board listing sensors `[0, 1]` whose sensor 0 failed to open (or a
+    /// `sensors = [1]` board): the producer serves sensor 1 only, and the
+    /// subscribe line names the sensor index, not the position.
+    #[tokio::test(flavor = "current_thread")]
+    async fn video_socket_subscribes_by_sensor_index() {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        use video_proto::{subscribe_line, PacketHeader, HEADER_LEN};
+
+        let (enc, _) = encoder(32, 16, 1_000_000);
+        let r = run(
+            FakeBackend::with_indices(vec![1], 32, 16),
+            vec![enc],
+            quick(),
+        );
+        assert_eq!(r.cameras[0].index(), 1);
+        let dir = TempDir::new();
+        let path = dir.0.join("video.sock");
+        let listener = tokio::net::UnixListener::bind(&path).unwrap();
+        tokio::spawn(serve_video(listener, Arc::new(r.cameras.clone())));
+
+        let test = async {
+            // Position 0 is not sensor 0: refused.
+            let mut bad = tokio::net::UnixStream::connect(&path).await.unwrap();
+            bad.write_all(subscribe_line(0).as_bytes()).await.unwrap();
+            let mut rest = Vec::new();
+            bad.read_to_end(&mut rest).await.unwrap();
+            assert!(rest.is_empty());
+
+            let mut conn = tokio::net::UnixStream::connect(&path).await.unwrap();
+            conn.write_all(subscribe_line(1).as_bytes()).await.unwrap();
+            let mut head = [0u8; HEADER_LEN];
+            conn.read_exact(&mut head).await.unwrap();
+            let h = PacketHeader::decode(&head);
+            assert!(h.keyframe, "stream starts at an IDR");
+            let mut data = vec![0; h.len as usize];
+            conn.read_exact(&mut data).await.unwrap();
+            assert!(data.starts_with(FAKE_PARAMETER_SETS));
+        };
+        tokio::time::timeout(Duration::from_secs(10), test)
+            .await
+            .expect("video socket test timed out");
+        let st = r.cameras[0].status();
+        assert_eq!((st.index, st.tuning.as_deref()), (1, Some("fake1.conf")));
     }
 }

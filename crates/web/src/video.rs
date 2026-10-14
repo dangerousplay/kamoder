@@ -1,7 +1,10 @@
 //! Snapshot and MJPEG live view (T16, VID-01/02).
 //!
-//! The camera's JPEGs come from the SDK-based `jpeg_snapshot` service
-//! (default `http://127.0.0.1:3000/snapshot.jpg`); this module only proxies.
+//! The camera's JPEGs come from the video producer, the `camera` service
+//! (`bin/camera`, `GET /snapshot.jpg[?camera=N]` on
+//! [`video_proto::DEFAULT_PRODUCER`]); this module only proxies. `N` is the
+//! board sensor index, the same number as `index` in `/api/cameras` and
+//! `vsN`, passed through unchanged.
 //! The client is a few lines of HTTP/1.0 over a `TcpStream` rather than a
 //! crate: one GET to localhost, `Connection: close`, body read to EOF — an
 //! HTTP client dependency would be far more code than the protocol needs.
@@ -42,15 +45,16 @@ pub fn routes() -> Router<AppState> {
         .route("/live.mjpeg", get(live))
 }
 
-/// `?camera=N`: which image sensor, on boards with more than one.
+/// `?camera=N`: which image sensor (board sensor index, not a position),
+/// on boards with more than one.
 #[derive(Debug, Default, serde::Deserialize)]
 pub struct CameraQuery {
-    pub camera: Option<u8>,
+    pub camera: Option<u32>,
 }
 
 /// The snapshot URL for `camera`: the service's own `camera` query
 /// parameter, appended so a configured URL with a query keeps it.
-pub fn camera_url(base: &str, camera: Option<u8>) -> String {
+pub fn camera_url(base: &str, camera: Option<u32>) -> String {
     match camera {
         None => base.to_owned(),
         Some(n) if base.contains('?') => format!("{base}&camera={n}"),
@@ -327,6 +331,36 @@ mod tests {
             camera_url("http://h/s?q=1", Some(0)),
             "http://h/s?q=1&camera=0"
         );
+    }
+
+    /// The sensor index goes to the producer unchanged: one serving sensor 1
+    /// only (`sensors = [1]`, or sensor 0 missing) answers `camera=1` and
+    /// 404s `camera=0`, and the proxy reports which.
+    #[tokio::test(flavor = "current_thread")]
+    async fn camera_index_passes_through_to_the_producer() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let base = format!("http://{}/snapshot.jpg", listener.local_addr().unwrap());
+        tokio::spawn(async move {
+            loop {
+                let (mut conn, _) = listener.accept().await.unwrap();
+                let mut buf = vec![0; 1024];
+                let n = conn.read(&mut buf).await.unwrap();
+                let request = String::from_utf8_lossy(&buf[..n]).into_owned();
+                let reply: &[u8] = if request.starts_with("GET /snapshot.jpg?camera=1 ") {
+                    b"HTTP/1.0 200 OK\r\nContent-Type: image/jpeg\r\n\r\njpeg"
+                } else {
+                    b"HTTP/1.0 404 Not Found\r\n\r\nno camera 0"
+                };
+                conn.write_all(reply).await.unwrap();
+            }
+        });
+        let timeout = Duration::from_secs(5);
+        let one = fetch(&camera_url(&base, Some(1)), timeout).await.unwrap();
+        assert_eq!(&one.body[..], b"jpeg");
+        let zero = fetch(&camera_url(&base, Some(0)), timeout)
+            .await
+            .unwrap_err();
+        assert!(zero.contains("404"), "{zero}");
     }
 
     #[test]

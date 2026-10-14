@@ -22,10 +22,11 @@ pub struct FakeBackendStats {
     pub frames: AtomicUsize,
 }
 
-/// `sensors` sensors of `width`×`height` NV12, one picture per `interval`.
+/// Sensors `indices` (board numbers, one slot each) of `width`×`height`
+/// NV12, one picture per `interval`.
 #[derive(Debug, Clone)]
 pub struct FakeBackend {
-    pub sensors: usize,
+    pub indices: Vec<u32>,
     pub width: u32,
     pub height: u32,
     pub interval: Duration,
@@ -37,9 +38,16 @@ pub struct FakeBackend {
 }
 
 impl FakeBackend {
+    /// Sensors `0..sensors`.
     pub fn new(sensors: usize, width: u32, height: u32) -> Self {
+        Self::with_indices((0..sensors as u32).collect(), width, height)
+    }
+
+    /// Sensors numbered `indices`, e.g. `[1]` for a board whose sensor 0 is
+    /// absent.
+    pub fn with_indices(indices: Vec<u32>, width: u32, height: u32) -> Self {
         FakeBackend {
-            sensors,
+            indices,
             width,
             height,
             interval: Duration::from_millis(2),
@@ -50,13 +58,14 @@ impl FakeBackend {
     }
 
     fn info(&self, slot: usize) -> SensorInfo {
+        let index = self.indices[slot];
         SensorInfo {
-            index: slot as u32,
+            index,
             width: self.width,
             height: self.height,
             active: None,
             id: None,
-            tuning: Some(format!("fake{slot}.conf")),
+            tuning: Some(format!("fake{index}.conf")),
         }
     }
 }
@@ -65,7 +74,7 @@ impl Backend for FakeBackend {
     type Session = FakeSession;
 
     fn sensors(&self) -> Vec<SensorInfo> {
-        (0..self.sensors).map(|i| self.info(i)).collect()
+        (0..self.indices.len()).map(|i| self.info(i)).collect()
     }
 
     fn start(&mut self) -> Result<FakeSession, BoxError> {
@@ -73,10 +82,10 @@ impl Backend for FakeBackend {
         if n <= self.fail_starts {
             return Err(format!("fake: start failed (attempt {n})").into());
         }
-        let sensors = (0..self.sensors)
+        let sensors = (0..self.indices.len())
             .map(|i| SensorInfo {
                 active: Some((self.width * 2, self.height * 2)),
-                id: Some(format!("{:#06x}", 0xfa00 + i)),
+                id: Some(format!("{:#06x}", 0xfa00 + self.indices[i])),
                 ..self.info(i)
             })
             .collect();

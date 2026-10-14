@@ -56,6 +56,9 @@ writes one record per access unit until either side closes:
 - **Timestamps** only have meaning relative to each other. A consumer takes
   the first one it sees as its zero.
 - **Unknown index.** The producer does not answer; it closes the connection.
+  An index is unknown when no camera the producer serves has that board
+  sensor number, whatever the number of cameras (see "Which index is
+  which").
   (The subscribe line is parsed with `parse_subscribe`: surrounding
   whitespace is ignored, anything that is not a decimal number is unknown.)
 
@@ -162,14 +165,14 @@ producer is down. `web` merges it into `/api/cameras`.
 
 ### `GET /snapshot.jpg[?camera=N]`
 
-A JPEG of the latest picture of camera `N` (default `0`), at most
-`MAX_AGE` (3 s) old.
+A JPEG of the latest picture of sensor `N` (the board sensor index; without
+`camera`, the first camera the producer serves), at most `MAX_AGE` (3 s) old.
 
 | Status | When |
 | --- | --- |
 | `200 image/jpeg` | A fresh picture was available or arrived within 1.5 s. `Cache-Control: no-store`. |
 | `503` | That sensor has no picture yet (still starting, or `failed`; the body says which and why). |
-| `404` | No camera `N`. |
+| `404` | The producer serves no sensor `N`. |
 | `500` | JPEG encoding failed. |
 
 Snapshots are demand-gated: pictures are only copied out of the capture
@@ -183,14 +186,21 @@ advertises the `web` URL as the snapshot URI.
 
 ## Which index is which
 
-`N` on the video socket and in `?camera=N` selects a camera by its
-**position** in the list the producer serves, which is the board's
-`video.sensors` minus any sensor the kernel does not have. The board
-profiles shipped today list sensors `0..n` and all of them are present, so
-position and sensor index coincide; `/status` reports the real sensor
-number in `index`. A board whose sensors are not numbered from `0`, or a
-camera with a sensor missing, would make the two diverge (see the open
-question below).
+`N` is the board's **sensor index** everywhere: on the video socket, in
+`?camera=N`, in `Status.index`, in the RTSP path `vsN` and the ONVIF
+profile `Profile_vsN`. It is never a position in a list.
+
+The producer serves the board's `video.sensors` minus any sensor the kernel
+does not have (`camerad` `select_sensors`), and keys each camera by its
+sensor index (`camera::service::Camera::index`, `find`). A board with
+`sensors = [1]`, or a two-sensor board whose sensor 0 failed to open, serves
+camera `1` only: `"1\n"` and `?camera=1` work, `"0\n"` gets a closed socket
+and `?camera=0` a 404.
+
+Consumers do the same: `rtsp` subscribes with the index it mounts
+(`vsN=camera:N`); `web` and `onvif` match `/status` entries to sensors by
+their `index` field, never by array position, so a sparse or reordered
+`/status` is fine.
 
 ## Stream naming and the RTSP port
 
@@ -207,10 +217,3 @@ entry of the board profile's `video.sensors`. `onvif` and `web` build their
 URLs from `stream_path` and the configured port; `web` returns them as
 `rtsp_url` / `rtsp_port` in `/api/cameras`, and the web UI uses those instead
 of hard-coding `554` or `vs`.
-
-## Open question
-
-The position-versus-index mapping above is fine for every shipped profile but
-not for a board with `sensors = [1]` or a missing sensor: `rtsp` subscribes
-with the sensor index, the producer resolves it as a position. Mapping the
-subscribe line to `Status.index` on the producer side would close this.

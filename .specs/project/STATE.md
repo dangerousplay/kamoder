@@ -23,8 +23,7 @@
 - ~~`crates/camera/src/venc.rs` references missing `tools/re/venc-protocol`.~~ Done 2026-10-13: reference removed from `crates/anyka-av100/src/venc.rs` (traces not in repo; constants are the record).
 - `sdk/v8` provenance (NDA mirror) vs public GPL repo — licensing risk.
 - CI test gate: partly done — `checks.yml` runs `check-boards` + `check-literals` on push/PR, and `./x ci` includes `./x test`; no workflow runs `./x test`/clippy/deny yet (needs crosstool + nightly build-std).
-- Video socket subscribe index is a slot position, not the board sensor index (equal for shipped profiles); map it to `Status.index` before a board with non-contiguous sensors (`docs/notes/VIDEO-PROTOCOL.md`).
-- `crates/web/src/video.rs` module doc still describes the SDK `jpeg_snapshot` service.
+- ~~Video socket subscribe index is a slot position, not the board sensor index.~~ Done 2026-10-14: `N` is the sensor index everywhere; the producer looks cameras up by `Camera::index` (`docs/notes/VIDEO-PROTOCOL.md` "Which index is which").
 
 ## Deferred Ideas
 

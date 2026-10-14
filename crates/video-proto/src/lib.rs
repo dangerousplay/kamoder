@@ -59,6 +59,17 @@
 //!   "error":null}]
 //! ```
 //!
+//! # Sensor index
+//!
+//! `N` is the board's sensor index everywhere: the subscribe line,
+//! `?camera=N`, [`Status::index`], [`stream_path`]`(N)` and ONVIF's
+//! `Profile_vsN`. It is never a position in the producer's list. A board
+//! with `sensors = [1]`, or one whose sensor 0 is missing, has camera `1`
+//! only: `"0\n"` is an unknown index and `?camera=0` a 404. Consumers match
+//! `/status` entries by `index`, not by array position; the array may be
+//! sparse and in any order. Without `camera`, `/snapshot.jpg` serves the
+//! first camera the producer has.
+//!
 //! # RTSP naming
 //!
 //! The `rtsp` service mounts sensor N at [`stream_path`]`(N)` = `vsN` on

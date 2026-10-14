@@ -274,6 +274,49 @@ mod tests {
         assert_eq!(merged[0].rtsp_url, None);
     }
 
+    /// Statuses are matched by `index`, never by position: the producer
+    /// may list them sparse (sensor 0 missing) and in any order.
+    #[test]
+    fn statuses_match_by_index_not_position() {
+        let at = rtsp(Some("cam"), 554);
+        let live = |index, fps| Status {
+            index,
+            state: "running".into(),
+            fps,
+            ..Status::default()
+        };
+        let merged = merge(
+            &[sc2331(0), sc2331(1), sc2331(2)],
+            &[0, 1, 2],
+            Ok(vec![live(2, 10.0), live(1, 15.0)]),
+            &at,
+        );
+        let got: Vec<_> = merged
+            .iter()
+            .map(|c| {
+                (
+                    c.index,
+                    c.live.state.as_str(),
+                    c.live.fps,
+                    c.rtsp_path.as_str(),
+                )
+            })
+            .collect();
+        assert_eq!(
+            got,
+            [
+                (0, "unavailable", 0.0, "vs0"),
+                (1, "running", 15.0, "vs1"),
+                (2, "running", 10.0, "vs2"),
+            ]
+        );
+        // A `sensors = [1]` board: one camera, number 1.
+        let merged = merge(&[sc2331(1)], &[1], Ok(vec![live(1, 15.0)]), &at);
+        assert_eq!(merged.len(), 1);
+        assert_eq!((merged[0].index, merged[0].live.fps), (1, 15.0));
+        assert_eq!(merged[0].rtsp_url.as_deref(), Some("rtsp://cam/vs1"));
+    }
+
     #[test]
     fn rtsp_url_from_host_and_port() {
         assert_eq!(

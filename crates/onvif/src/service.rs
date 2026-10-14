@@ -1079,6 +1079,64 @@ pub mod tests {
         handle.shutdown().await.unwrap();
     }
 
+    /// A two-sensor board whose sensor 0 failed to open: the producer
+    /// reports sensor 1 only, and its profile, stream and snapshot all say 1.
+    #[tokio::test(flavor = "current_thread")]
+    async fn profiles_use_the_sensor_index_when_one_is_missing() {
+        let statuses = vec![running(
+            1,
+            video_proto::StreamInfo {
+                codec: "H.264".into(),
+                profile: "Main".into(),
+                width: 640,
+                height: 360,
+                fps: 10,
+                gop: 20,
+                target_kbps: 512,
+                kbps: 500.0,
+                encoder: "fake".into(),
+            },
+        )];
+        let (producer, _) = crate::producer::fake::serve(statuses).await;
+        let (addr, mut handle) = start(av100_settings(producer)).await;
+        let auth = || text_header("nvr", "correct horse");
+
+        let (status, body) = call(addr, &auth(), "<trt:GetProfiles/>").await;
+        assert_eq!(status, 200, "{body}");
+        let profiles: trt::GetProfilesResponse = parse(&body);
+        assert_eq!(
+            summary(&profiles),
+            [(
+                "Profile_vs1".to_owned(),
+                640,
+                360,
+                10,
+                512,
+                20,
+                "Main".to_owned()
+            )]
+        );
+        let (status, body) = call(addr, &auth(),
+            "<trt:GetSnapshotUri><trt:ProfileToken>Profile_vs1</trt:ProfileToken></trt:GetSnapshotUri>",
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
+        let uri: trt::GetSnapshotUriResponse = parse(&body);
+        assert_eq!(
+            uri.media_uri.uri,
+            "http://192.0.2.10:80/api/snapshot.jpg?camera=1"
+        );
+        let (status, body) = call(addr, &auth(),
+            "<trt:GetStreamUri><trt:StreamSetup><tt:Stream>RTP-Unicast</tt:Stream><tt:Transport><tt:Protocol>RTSP</tt:Protocol></tt:Transport></trt:StreamSetup><trt:ProfileToken>Profile_vs1</trt:ProfileToken></trt:GetStreamUri>",
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
+        let uri: trt::GetStreamUriResponse = parse(&body);
+        assert_eq!(uri.media_uri.uri, "rtsp://192.0.2.10:554/vs1");
+
+        handle.shutdown().await.unwrap();
+    }
+
     /// PRO-04: with the producer down, the board's streams are described
     /// and the URIs still answer.
     #[tokio::test(flavor = "current_thread")]
