@@ -1,6 +1,6 @@
 //! The camera service: one capture thread for every image sensor, which
-//! hardware-encodes each picture to H.264 and keeps the latest one for
-//! snapshots; a small HTTP server on loopback; and the video socket the
+//! encodes each picture to H.264 (the board's [`Encoder`]) and keeps the
+//! latest one for snapshots; a small HTTP server on loopback; and the video socket the
 //! `rtsp` service reads H.264 from.
 //!
 //! ```text
@@ -14,18 +14,18 @@
 //! buffer while someone has asked for one recently, and only encoded output
 //! that a client is subscribed to leaves the capture thread.
 
-use crate::device::{ChannelSpec, Frame, FrameRef, Options, Sensor};
+use crate::backend::{Backend, BoxError, Encoder, Frame, FrameRef, Session};
 use crate::jpeg;
-use crate::venc::{self, Encoder, Settings};
 use axum::extract::{Query, State};
 use axum::http::{header, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::routing::get;
 use axum::{Json, Router};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
+pub use video_proto::{Status, StreamInfo};
 
 /// A picture older than this is not served.
 pub const MAX_AGE: Duration = Duration::from_secs(3);
@@ -33,21 +33,8 @@ pub const MAX_AGE: Duration = Duration::from_secs(3);
 pub const DEMAND_WINDOW: Duration = Duration::from_secs(10);
 /// How long a request waits for a fresh picture.
 const WAIT: Duration = Duration::from_millis(1500);
-
-/// The H.264 stream of one sensor.
-#[derive(Debug, Clone, Serialize, Default, PartialEq)]
-pub struct StreamInfo {
-    pub codec: &'static str,
-    pub profile: &'static str,
-    pub width: u32,
-    pub height: u32,
-    pub fps: u32,
-    pub gop: u32,
-    pub target_kbps: u32,
-    /// Measured over the last second or so.
-    pub kbps: f32,
-    pub encoder: String,
-}
+/// Snapshots wider than this are halved (until they are not), by default.
+pub const SNAPSHOT_MAX_WIDTH: u32 = 640;
 
 /// One encoded access unit on its way to the video socket.
 #[derive(Debug)]
@@ -60,32 +47,6 @@ pub struct VideoPacket {
 
 /// Access units queued per subscriber before it is considered behind.
 pub const VIDEO_BUFFER: usize = 16;
-
-#[derive(Debug, Clone, Serialize, Default)]
-pub struct Status {
-    pub index: u32,
-    /// `starting`, `running`, `failed`.
-    pub state: &'static str,
-    /// Preview (sub channel) size.
-    pub width: u32,
-    pub height: u32,
-    /// Pixel format of the captured pictures.
-    pub format: &'static str,
-    /// How snapshots are encoded.
-    pub encoding: &'static str,
-    pub frames: u64,
-    /// Measured over the last second or so.
-    pub fps: f32,
-    /// Sensor active area and chip id, once brought up.
-    pub sensor_width: u32,
-    pub sensor_height: u32,
-    pub sensor_id: Option<String>,
-    /// ISP tuning file in use.
-    pub tuning: Option<String>,
-    /// Hardware H.264, when encoding.
-    pub stream: Option<StreamInfo>,
-    pub error: Option<String>,
-}
 
 #[derive(Default)]
 struct Slot {
@@ -203,187 +164,197 @@ pub fn half(f: &FrameRef<'_>) -> Frame {
     }
 }
 
+/// The snapshot copy of a picture: halved while wider than `max_width`.
+pub fn snapshot_of(f: &FrameRef<'_>, max_width: u32) -> Frame {
+    if f.width <= max_width || f.width < 2 {
+        return Frame::copy_of(f);
+    }
+    let mut out = half(f);
+    while out.width > max_width && out.width >= 2 {
+        out = half(&out.view());
+    }
+    out
+}
+
+/// Tunables of [`capture`]; production values by default.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CaptureOptions {
+    /// Snapshots are halved while wider than this.
+    pub snapshot_max_width: u32,
+    /// A sensor that delivers nothing this long counts as failed.
+    pub frame_timeout: Duration,
+    /// First pause after a failure; doubled per failed bring-up up to
+    /// `retry_max`, reset by any picture.
+    pub retry_min: Duration,
+    pub retry_max: Duration,
+}
+
+impl Default for CaptureOptions {
+    fn default() -> Self {
+        CaptureOptions {
+            snapshot_max_width: SNAPSHOT_MAX_WIDTH,
+            frame_timeout: Duration::from_secs(2),
+            retry_min: Duration::from_secs(2),
+            retry_max: Duration::from_secs(60),
+        }
+    }
+}
+
+/// An encoder failure, tagged with its sensor.
+#[derive(Debug)]
+struct SensorError {
+    index: u32,
+    source: BoxError,
+}
+
+impl std::fmt::Display for SensorError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "sensor {}: {}", self.index, self.source)
+    }
+}
+
+impl std::error::Error for SensorError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        Some(&*self.source)
+    }
+}
+
+fn tag(index: u32) -> impl FnOnce(BoxError) -> BoxError {
+    move |source| Box::new(SensorError { index, source })
+}
+
 /// Capture loop for every sensor; returns when `stop` is set.
 ///
-/// The sensors are brought up and started together, then read in turn. A
-/// dual-sensor board runs its ISPs in dual mode, where neither delivers a
-/// picture until both are streaming, so they cannot be retried one by one.
-/// With encoder `channels` (one per sensor, created once at start-up and
-/// kept across capture retries, see [`open_channels`]), every picture is
-/// H.264-encoded in hardware straight from the capture buffer and offered to
-/// the video socket's subscribers.
+/// The backend brings its sensors up and starts them together, then they are
+/// read in turn (a dual-sensor board cannot retry them one by one). With
+/// `encoders` (one per sensor slot, created once at start-up and kept across
+/// capture retries), every picture is H.264-encoded straight from the
+/// capture buffer and offered to the video socket's subscribers.
 /// Any failure tears everything down and retries with a growing pause, and
 /// is reported in each camera's status.
-pub fn capture(
-    sensors: Vec<(Options, usize)>,
+pub fn capture<B: Backend>(
+    mut backend: B,
     cameras: Vec<Camera>,
-    encoder: Option<(Arc<Encoder>, Settings)>,
-    mut channels: Vec<Option<venc::Channel>>,
+    mut encoders: Vec<Option<Box<dyn Encoder>>>,
     stop: Arc<AtomicBool>,
+    opts: CaptureOptions,
 ) {
-    channels.resize_with(sensors.len(), || None);
-    let mut pause = Duration::from_secs(2);
-    for ((opts, _), camera) in sensors.iter().zip(&cameras) {
+    let expected = backend.sensors();
+    encoders.resize_with(expected.len(), || None);
+    let mut pause = opts.retry_min;
+    for (info, camera) in expected.iter().zip(&cameras) {
         camera.update(|s| {
-            s.index = opts.index;
-            s.state = "starting";
-            s.format = "NV12";
-            s.encoding = "JPEG snapshots (software)";
-            s.tuning = opts
-                .conf
-                .file_name()
-                .map(|n| n.to_string_lossy().into_owned());
+            s.index = info.index;
+            s.state = "starting".into();
+            s.format = "NV12".into();
+            s.encoding = "JPEG snapshots (software)".into();
+            s.tuning = info.tuning.clone();
         });
     }
     while !stop.load(Ordering::Relaxed) {
-        let result = (|| {
-            let mut open = Vec::new();
-            for (opts, _) in &sensors {
-                open.push(Sensor::open(opts)?);
-            }
-            for sensor in &mut open {
-                sensor.start()?;
-            }
-            for (((opts, preview), camera), sensor) in sensors.iter().zip(&cameras).zip(&open) {
-                let spec = opts.channels[*preview];
-                camera.update(|s| {
-                    s.state = "running";
-                    s.sensor_width = sensor.width;
-                    s.sensor_height = sensor.height;
-                    s.sensor_id = Some(format!("{:#06x}", sensor.sensor_id));
-                    s.width = spec.width;
-                    s.height = spec.height;
-                    s.error = None;
-                    s.stream = encoder.as_ref().map(|(e, st)| StreamInfo {
-                        codec: "H.264",
-                        profile: match st.profile {
-                            venc::PROFILE_BASELINE => "Baseline",
-                            venc::PROFILE_HIGH => "High",
-                            _ => "Main",
-                        },
-                        width: st.width,
-                        height: st.height,
-                        fps: st.fps,
-                        gop: st.gop,
-                        target_kbps: st.kbps,
-                        kbps: 0.0,
-                        encoder: e.version.clone(),
-                    });
-                });
-            }
-            tracing::info!(
-                sensors = open.len(),
-                encoding = encoder.is_some(),
-                "capturing"
-            );
-            while !stop.load(Ordering::Relaxed) {
-                for (((sensor, (opts, preview)), camera), chan) in open
-                    .iter_mut()
-                    .zip(&sensors)
-                    .zip(&cameras)
-                    .zip(channels.iter_mut())
-                {
-                    let wanted = camera.wanted();
-                    let encoded = sensor.with_frame(*preview, Duration::from_secs(2), |f| {
-                        if wanted {
-                            camera.publish(if f.width > 640 {
-                                half(&f)
-                            } else {
-                                Frame {
-                                    width: f.width,
-                                    height: f.height,
-                                    data: f.data.to_vec(),
-                                    timestamp_ms: f.timestamp_ms,
-                                }
-                            });
-                        }
-                        let Some(chan) = chan.as_mut() else {
-                            return Ok::<usize, venc::Error>(0);
-                        };
-                        if camera.idr.swap(false, Ordering::Relaxed) {
-                            chan.request_idr()?;
-                        }
-                        let subscribed = camera.video.receiver_count() > 0;
-                        chan.encode(&f, |pkt| {
-                            if subscribed {
-                                let _ = camera.video.send(Arc::new(VideoPacket {
-                                    data: pkt.data.to_vec(),
-                                    keyframe: pkt.keyframe,
-                                    timestamp_ms: f.timestamp_ms,
-                                }));
-                            }
-                            pkt.data.len()
-                        })
-                    })?;
-                    let encoded = encoded.map_err(|e| crate::device::Error::Encoder {
-                        index: opts.index,
-                        source: e,
-                    })?;
-                    // Only a picture proves the pipeline works; a bring-up
-                    // that never delivers one keeps backing off.
-                    pause = Duration::from_secs(2);
-                    camera.count_frame(encoded);
-                    metrics::counter!("kamoder_camera_frames_total", "camera" => opts.index.to_string())
-                        .increment(1);
-                }
-            }
-            Ok::<_, crate::device::Error>(())
-        })();
+        let result = run(
+            &mut backend,
+            &cameras,
+            &mut encoders,
+            &stop,
+            &opts,
+            &mut pause,
+        );
         if let Err(e) = result {
             tracing::warn!(error = %e, retry_in = ?pause, "capture failed");
             for camera in &cameras {
                 camera.update(|s| {
-                    s.state = "failed";
+                    s.state = "failed".into();
                     s.fps = 0.0;
                     s.error = Some(e.to_string());
                 });
             }
             let until = Instant::now() + pause;
-            while Instant::now() < until && !stop.load(Ordering::Relaxed) {
-                std::thread::sleep(Duration::from_millis(200));
+            while !stop.load(Ordering::Relaxed) {
+                let left = until.saturating_duration_since(Instant::now());
+                if left.is_zero() {
+                    break;
+                }
+                std::thread::sleep(left.min(Duration::from_millis(200)));
             }
-            pause = (pause * 2).min(Duration::from_secs(60));
+            pause = (pause * 2).min(opts.retry_max);
         }
     }
 }
 
-/// Writes `value` to a procfs knob, ignoring failure (not root, no such knob).
-fn proc_write(path: &str, value: &str) {
-    if let Err(e) = std::fs::write(path, value) {
-        tracing::debug!(path, error = %e, "procfs write failed");
+/// One bring-up and the capture until `stop` or the first failure.
+fn run<B: Backend>(
+    backend: &mut B,
+    cameras: &[Camera],
+    encoders: &mut [Option<Box<dyn Encoder>>],
+    stop: &AtomicBool,
+    opts: &CaptureOptions,
+    pause: &mut Duration,
+) -> Result<(), BoxError> {
+    let mut session = backend.start()?;
+    let sensors = session.sensors();
+    for ((info, camera), enc) in sensors.iter().zip(cameras).zip(encoders.iter()) {
+        camera.update(|s| {
+            s.state = "running".into();
+            (s.sensor_width, s.sensor_height) = info.active.unwrap_or_default();
+            s.sensor_id = info.id.clone();
+            s.width = info.width;
+            s.height = info.height;
+            s.error = None;
+            s.stream = enc.as_ref().map(|e| e.info());
+        });
     }
-}
-
-/// Frees and defragments memory for the encoder driver, whose channel
-/// set-up allocates 16 KiB contiguous blocks and, in `ak_venc_adapter`
-/// V1.0.74, oopses instead of failing when it cannot get them.
-pub fn make_room_for_encoder() {
-    proc_write("/proc/sys/vm/drop_caches", "3");
-    proc_write("/proc/sys/vm/compact_memory", "1");
-}
-
-/// Opens one channel per sensor, once, right after the encoder: channels
-/// are never closed and re-created while the service runs, because each
-/// creation risks the driver oops above on a fragmented system.
-pub fn open_channels(
-    encoder: &Encoder,
-    settings: Settings,
-    count: usize,
-) -> Result<Vec<Option<venc::Channel>>, venc::Error> {
-    let dev = std::path::Path::new("/dev");
-    let mut channels = Vec::new();
-    for _ in 0..count {
-        make_room_for_encoder();
-        channels.push(Some(encoder.channel(dev, settings)?));
+    tracing::info!(
+        sensors = sensors.len(),
+        encoding = encoders.iter().any(Option::is_some),
+        "capturing"
+    );
+    while !stop.load(Ordering::Relaxed) {
+        for (slot, ((info, camera), enc)) in sensors
+            .iter()
+            .zip(cameras)
+            .zip(encoders.iter_mut())
+            .enumerate()
+        {
+            let wanted = camera.wanted();
+            let index = info.index;
+            let encoded = session.with_frame(slot, opts.frame_timeout, &mut |f| {
+                if wanted {
+                    camera.publish(snapshot_of(f, opts.snapshot_max_width));
+                }
+                let Some(enc) = enc.as_mut() else {
+                    return Ok(0);
+                };
+                if camera.idr.swap(false, Ordering::Relaxed) {
+                    enc.request_idr().map_err(tag(index))?;
+                }
+                let subscribed = camera.video.receiver_count() > 0;
+                enc.encode(f, &mut |pkt| {
+                    if subscribed {
+                        let _ = camera.video.send(Arc::new(VideoPacket {
+                            data: pkt.data.to_vec(),
+                            keyframe: pkt.keyframe,
+                            timestamp_ms: f.timestamp_ms,
+                        }));
+                    }
+                })
+                .map_err(tag(index))
+            })?;
+            // Only a picture proves the pipeline works; a bring-up that
+            // never delivers one keeps backing off.
+            *pause = opts.retry_min;
+            camera.count_frame(encoded);
+            metrics::counter!("kamoder_camera_frames_total", "camera" => index.to_string())
+                .increment(1);
+        }
     }
-    Ok(channels)
+    Ok(())
 }
 
-/// Serves the video socket: each client names a sensor index on one line
-/// and then receives its access units, starting at the next IDR, as a
-/// 13-byte header (`u32` BE length, `u8` flags bit 0 = IDR, `u64` BE capture
-/// time in ms) followed by Annex-B data. A client that falls behind skips
-/// to the next IDR.
+/// Serves the video socket (`video_proto`): each client names a sensor slot
+/// on one line and then receives its access units, starting at the next
+/// IDR, each as a [`video_proto::PacketHeader`] followed by Annex-B data. A
+/// client that falls behind skips to the next IDR.
 pub async fn serve_video(listener: tokio::net::UnixListener, cameras: Arc<Vec<Camera>>) {
     loop {
         let Ok((conn, _)) = listener.accept().await else {
@@ -404,11 +375,8 @@ async fn video_client(conn: tokio::net::UnixStream, cameras: &[Camera]) -> std::
     let (read, mut write) = conn.into_split();
     let mut line = String::new();
     BufReader::new(read).read_line(&mut line).await?;
-    let Some(camera) = line
-        .trim()
-        .parse::<usize>()
-        .ok()
-        .and_then(|i| cameras.get(i))
+    let Some(camera) =
+        video_proto::parse_subscribe(&line).and_then(|i| cameras.get(usize::try_from(i).ok()?))
     else {
         return Err(std::io::Error::other(format!(
             "no camera {:?}",
@@ -433,48 +401,14 @@ async fn video_client(conn: tokio::net::UnixStream, cameras: &[Camera]) -> std::
             continue;
         }
         synced = true;
-        let mut head = [0u8; 13];
-        head[0..4].copy_from_slice(&(packet.data.len() as u32).to_be_bytes());
-        head[4] = u8::from(packet.keyframe);
-        head[5..13].copy_from_slice(&packet.timestamp_ms.to_be_bytes());
-        write.write_all(&head).await?;
+        let head = video_proto::PacketHeader {
+            len: packet.data.len() as u32,
+            keyframe: packet.keyframe,
+            timestamp_ms: packet.timestamp_ms,
+        };
+        write.write_all(&head.encode()).await?;
         write.write_all(&packet.data).await?;
     }
-}
-
-/// Builds the per-sensor capture options.
-pub fn options(
-    index: u32,
-    conf: std::path::PathBuf,
-    dual: bool,
-    main: Option<(u32, u32)>,
-    preview: (u32, u32),
-) -> (Options, usize) {
-    let mut channels = Vec::new();
-    if let Some((w, h)) = main {
-        channels.push(ChannelSpec {
-            node: 0,
-            width: w,
-            height: h,
-            buffers: 3,
-        });
-    }
-    channels.push(ChannelSpec {
-        node: 1,
-        width: preview.0,
-        height: preview.1,
-        buffers: 2,
-    });
-    let preview_index = channels.len() - 1;
-    let opts = Options {
-        index,
-        conf,
-        slot: 0,
-        dual,
-        channels,
-        dev: "/dev".into(),
-    };
-    (opts, preview_index)
 }
 
 #[derive(Clone)]
@@ -617,8 +551,9 @@ mod half_tests {
         let f = FrameRef {
             width: w as u32,
             height: h as u32,
+            format: crate::backend::PixelFormat::Nv12,
             data: &data,
-            phys: 0,
+            phys: None,
             timestamp_ms: 7,
         };
         let half = half(&f);
@@ -626,5 +561,345 @@ mod half_tests {
         assert_eq!(&half.data[..8], &[0, 2, 4, 6, 16, 18, 20, 22]);
         // One chroma row of 4 bytes: pairs 0 and 2 of chroma row 0.
         assert_eq!(&half.data[8..], &[100, 101, 104, 105]);
+    }
+
+    #[test]
+    fn snapshot_halves_while_wider_than_max() {
+        let big = Frame {
+            width: 128,
+            height: 64,
+            data: vec![9; 128 * 64 * 3 / 2],
+            timestamp_ms: 3,
+        };
+        let s = snapshot_of(&big.view(), 40);
+        assert_eq!((s.width, s.height, s.data.len()), (32, 16, 32 * 16 * 3 / 2));
+        let s = snapshot_of(&big.view(), 64);
+        assert_eq!((s.width, s.height), (64, 32));
+        let s = snapshot_of(&big.view(), 640);
+        assert_eq!((s.width, s.height, s.data.len()), (128, 64, big.data.len()));
+    }
+}
+
+/// CAM-05: the capture loop, the snapshot path and the video socket driven
+/// by `fake` instead of hardware.
+#[cfg(test)]
+mod capture_tests {
+    use super::*;
+    use crate::fake::{FakeBackend, FakeEncoder, FakeEncoderStats, FAKE_PARAMETER_SETS};
+    use std::sync::atomic::AtomicU64;
+
+    /// Short pauses so failure tests take milliseconds, not seconds.
+    fn quick() -> CaptureOptions {
+        CaptureOptions {
+            retry_min: Duration::from_millis(100),
+            retry_max: Duration::from_millis(400),
+            ..CaptureOptions::default()
+        }
+    }
+
+    /// A capture thread, stopped and joined on drop.
+    struct Running {
+        cameras: Vec<Camera>,
+        stop: Arc<AtomicBool>,
+        thread: Option<std::thread::JoinHandle<()>>,
+    }
+
+    impl Drop for Running {
+        fn drop(&mut self) {
+            self.stop.store(true, Ordering::Relaxed);
+            if let Some(t) = self.thread.take() {
+                t.join().unwrap();
+            }
+        }
+    }
+
+    fn run(
+        backend: FakeBackend,
+        encoders: Vec<Option<Box<dyn Encoder>>>,
+        opts: CaptureOptions,
+    ) -> Running {
+        let cameras: Vec<Camera> = (0..backend.sensors).map(|_| Camera::default()).collect();
+        let stop = Arc::new(AtomicBool::new(false));
+        let thread = {
+            let (cameras, stop) = (cameras.clone(), Arc::clone(&stop));
+            std::thread::spawn(move || capture(backend, cameras, encoders, stop, opts))
+        };
+        Running {
+            cameras,
+            stop,
+            thread: Some(thread),
+        }
+    }
+
+    fn encoder(w: u32, h: u32, gop: u64) -> (Option<Box<dyn Encoder>>, Arc<FakeEncoderStats>) {
+        let e = FakeEncoder::new(w, h, gop);
+        let stats = Arc::clone(&e.stats);
+        (Some(Box::new(e)), stats)
+    }
+
+    /// Polls `cond` for up to 5 s.
+    fn wait_for(what: &str, mut cond: impl FnMut() -> bool) {
+        let until = Instant::now() + Duration::from_secs(5);
+        while !cond() {
+            assert!(Instant::now() < until, "timed out waiting for {what}");
+            std::thread::sleep(Duration::from_millis(1));
+        }
+    }
+
+    fn frames(c: &Camera) -> u64 {
+        c.status().frames
+    }
+
+    #[test]
+    fn status_reports_sensor_and_stream() {
+        let (enc, _) = encoder(64, 32, 30);
+        let r = run(FakeBackend::new(1, 64, 32), vec![enc], quick());
+        wait_for("frames", || frames(&r.cameras[0]) >= 3);
+        let st = r.cameras[0].status();
+        assert_eq!(st.state, "running");
+        assert_eq!((st.width, st.height), (64, 32));
+        assert_eq!((st.sensor_width, st.sensor_height), (128, 64));
+        assert_eq!(st.sensor_id.as_deref(), Some("0xfa00"));
+        assert_eq!(st.tuning.as_deref(), Some("fake0.conf"));
+        assert_eq!((st.format.as_str(), st.error), ("NV12", None));
+        let stream = st.stream.unwrap();
+        assert_eq!(
+            (stream.codec.as_str(), stream.encoder.as_str()),
+            ("H.264", "fake")
+        );
+    }
+
+    #[test]
+    fn snapshot_is_copied_only_on_demand_and_downscaled() {
+        let r = run(
+            FakeBackend::new(1, 128, 64),
+            Vec::new(),
+            CaptureOptions {
+                snapshot_max_width: 40,
+                ..quick()
+            },
+        );
+        let cam = &r.cameras[0];
+        wait_for("frames", || frames(cam) >= 10);
+        assert!(cam.lock().latest.is_none(), "no copy without a request");
+        // The first request only switches copying on.
+        let mut got = cam.latest();
+        wait_for("a snapshot", || {
+            got = cam.latest();
+            got.is_some()
+        });
+        let f = got.unwrap();
+        // 128 → 64 → 32, the first width not above 40.
+        assert_eq!((f.width, f.height, f.data.len()), (32, 16, 32 * 16 * 3 / 2));
+        // Frames run with or without encoders; a sensor without one has no
+        // stream in its status.
+        assert!(cam.status().stream.is_none());
+    }
+
+    #[test]
+    fn packets_fan_out_to_every_subscriber() {
+        let (enc0, _) = encoder(32, 16, 30);
+        let (enc1, _) = encoder(32, 16, 30);
+        let backend = FakeBackend {
+            interval: Duration::from_millis(5),
+            ..FakeBackend::new(2, 32, 16)
+        };
+        // Subscribed before the first picture: both see the same units.
+        let r = {
+            let cameras = vec![Camera::default(), Camera::default()];
+            let mut a = cameras[0].subscribe();
+            let mut b = cameras[0].subscribe();
+            let mut other = cameras[1].subscribe();
+            let stop = Arc::new(AtomicBool::new(false));
+            let thread = {
+                let (cameras, stop) = (cameras.clone(), Arc::clone(&stop));
+                std::thread::spawn(move || {
+                    capture(backend, cameras, vec![enc0, enc1], stop, quick())
+                })
+            };
+            for n in 0..5 {
+                let (pa, pb) = (a.blocking_recv().unwrap(), b.blocking_recv().unwrap());
+                assert!(Arc::ptr_eq(&pa, &pb), "same unit to both");
+                assert_eq!(pa.keyframe, n == 0);
+                assert!(other.blocking_recv().is_ok());
+            }
+            Running {
+                cameras,
+                stop,
+                thread: Some(thread),
+            }
+        };
+        assert!(frames(&r.cameras[1]) >= 5);
+    }
+
+    #[test]
+    fn subscribing_requests_an_idr() {
+        let (enc, stats) = encoder(32, 16, 1_000_000);
+        let r = run(FakeBackend::new(1, 32, 16), vec![enc], quick());
+        let cam = &r.cameras[0];
+        wait_for("frames", || stats.encoded.load(Ordering::Relaxed) >= 5);
+        assert_eq!(stats.keyframes.load(Ordering::Relaxed), 1, "only the first");
+        assert_eq!(stats.idr_requests.load(Ordering::Relaxed), 0);
+        let mut rx = cam.subscribe();
+        // A picture already being encoded may come first; the IDR follows.
+        let key = (0..3).any(|_| rx.blocking_recv().unwrap().keyframe);
+        assert!(key, "a keyframe right after subscribing");
+        assert_eq!(stats.idr_requests.load(Ordering::Relaxed), 1);
+        assert!(stats.keyframes.load(Ordering::Relaxed) >= 2);
+    }
+
+    #[test]
+    fn lagging_subscriber_gets_a_new_idr() {
+        let (enc, stats) = encoder(32, 16, 1_000_000);
+        let backend = FakeBackend {
+            interval: Duration::from_millis(1),
+            ..FakeBackend::new(1, 32, 16)
+        };
+        let r = run(backend, vec![enc], quick());
+        let cam = &r.cameras[0];
+        let mut rx = cam.subscribe();
+        wait_for("lag", || {
+            stats.encoded.load(Ordering::Relaxed) > VIDEO_BUFFER as u64 * 2
+        });
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .build()
+            .unwrap();
+        let lagged = rt.block_on(rx.recv());
+        assert!(matches!(
+            lagged,
+            Err(tokio::sync::broadcast::error::RecvError::Lagged(_))
+        ));
+        // What `video_client` does on lag.
+        cam.idr.store(true, Ordering::Relaxed);
+        wait_for("IDR", || stats.idr_requests.load(Ordering::Relaxed) >= 2);
+    }
+
+    #[test]
+    fn start_failure_is_reported_then_recovers() {
+        let backend = FakeBackend {
+            fail_starts: 2,
+            ..FakeBackend::new(2, 32, 16)
+        };
+        let stats = Arc::clone(&backend.stats);
+        let r = run(backend, Vec::new(), quick());
+        wait_for("failed", || r.cameras[0].status().state == "failed");
+        for cam in &r.cameras {
+            let st = cam.status();
+            assert_eq!(st.state, "failed");
+            assert!(
+                st.error.as_deref().unwrap().contains("start failed"),
+                "{:?}",
+                st.error
+            );
+        }
+        wait_for("recovery", || {
+            r.cameras.iter().all(|c| {
+                let st = c.status();
+                st.state == "running" && st.error.is_none() && st.frames > 0
+            })
+        });
+        assert_eq!(stats.starts.load(Ordering::Relaxed), 3);
+    }
+
+    #[test]
+    fn frame_failure_restarts_every_sensor_with_encoders_kept() {
+        let (enc, estats) = encoder(32, 16, 1_000_000);
+        let backend = FakeBackend {
+            fail_frame: Some(4),
+            ..FakeBackend::new(2, 32, 16)
+        };
+        let stats = Arc::clone(&backend.stats);
+        let r = run(backend, vec![enc], quick());
+        wait_for("failed", || r.cameras[1].status().state == "failed");
+        assert_eq!(
+            r.cameras[1].status().error.as_deref(),
+            Some("fake: sensor 0: no frame")
+        );
+        wait_for("recovery", || {
+            r.cameras[0].status().state == "running" && stats.starts.load(Ordering::Relaxed) == 2
+        });
+        // Same encoder before and after: it was not re-created.
+        let before = estats.encoded.load(Ordering::Relaxed);
+        wait_for("encoding", || {
+            estats.encoded.load(Ordering::Relaxed) > before
+        });
+    }
+
+    #[test]
+    fn encoder_errors_name_the_sensor() {
+        // Encoder expects a different size than the sensor delivers.
+        let (enc, _) = encoder(64, 32, 30);
+        let r = run(FakeBackend::new(1, 32, 16), vec![enc], quick());
+        wait_for("failed", || r.cameras[0].status().state == "failed");
+        let e = r.cameras[0].status().error.unwrap();
+        assert!(e.starts_with("sensor 0: fake encoder: frame is"), "{e}");
+    }
+
+    /// A fresh directory under the system temp dir, removed on drop.
+    struct TempDir(std::path::PathBuf);
+
+    impl TempDir {
+        fn new() -> TempDir {
+            static N: AtomicU64 = AtomicU64::new(0);
+            let p = std::env::temp_dir().join(format!(
+                "camera-test-{}-{}",
+                std::process::id(),
+                N.fetch_add(1, Ordering::Relaxed)
+            ));
+            let _ = std::fs::remove_dir_all(&p);
+            std::fs::create_dir_all(&p).unwrap();
+            TempDir(p)
+        }
+    }
+
+    impl Drop for TempDir {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn video_socket_end_to_end() {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        use video_proto::{subscribe_line, PacketHeader, HEADER_LEN};
+
+        let (enc, _) = encoder(32, 16, 1_000_000);
+        let r = run(FakeBackend::new(1, 32, 16), vec![enc], quick());
+        let dir = TempDir::new();
+        let path = dir.0.join("video.sock");
+        let listener = tokio::net::UnixListener::bind(&path).unwrap();
+        tokio::spawn(serve_video(listener, Arc::new(r.cameras.clone())));
+
+        let test = async {
+            // An unknown sensor is refused: the server closes the connection.
+            let mut bad = tokio::net::UnixStream::connect(&path).await.unwrap();
+            bad.write_all(subscribe_line(7).as_bytes()).await.unwrap();
+            let mut rest = Vec::new();
+            bad.read_to_end(&mut rest).await.unwrap();
+            assert!(rest.is_empty());
+
+            let mut conn = tokio::net::UnixStream::connect(&path).await.unwrap();
+            conn.write_all(subscribe_line(0).as_bytes()).await.unwrap();
+            let mut last_ts = None;
+            for n in 0..4 {
+                let mut head = [0u8; HEADER_LEN];
+                conn.read_exact(&mut head).await.unwrap();
+                let h = PacketHeader::decode(&head);
+                let mut data = vec![0; h.len as usize];
+                conn.read_exact(&mut data).await.unwrap();
+                assert_eq!(&data[..4], &[0, 0, 0, 1], "Annex-B");
+                if n == 0 {
+                    assert!(h.keyframe, "stream starts at an IDR");
+                    assert!(data.starts_with(FAKE_PARAMETER_SETS));
+                }
+                if let Some(t) = last_ts {
+                    assert!(h.timestamp_ms > t);
+                }
+                last_ts = Some(h.timestamp_ms);
+            }
+        };
+        tokio::time::timeout(Duration::from_secs(10), test)
+            .await
+            .expect("video socket test timed out");
     }
 }

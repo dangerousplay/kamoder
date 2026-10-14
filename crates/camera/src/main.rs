@@ -13,8 +13,10 @@
 // the crosstool's uClibc does not export but Rust's thread startup references.
 extern crate os;
 
+use camera::av100::{self, Av100Backend, Av100Encoder};
+use camera::backend::Encoder;
 use camera::device::{self, Sensor};
-use camera::service::{self, AppState, Camera};
+use camera::service::{self, AppState, Camera, CaptureOptions};
 use clap::{Args, Parser, Subcommand};
 use eyre::{bail, Context, Result};
 use std::net::SocketAddr;
@@ -166,7 +168,7 @@ fn probe(p: Probe) -> Result<()> {
             Some(c) => c.clone(),
             None => conf_for(&p.common.conf_dir, index)?,
         };
-        let (opts, c) = service::options(index, conf, dual, p.common.main.0, preview);
+        let (opts, c) = av100::options(index, conf, dual, p.common.main.0, preview);
         ch = if p.from_main { 0 } else { c };
         sensors.push(Sensor::open(&opts)?);
     }
@@ -281,25 +283,6 @@ fn encode_probe(
     Ok(())
 }
 
-/// Opens `/dev/venc`. Its kernel init allocates 16 KiB contiguous blocks;
-/// when memory is fragmented that fails, so drop the page cache, compact,
-/// and try once more.
-fn open_encoder() -> Result<camera::venc::Encoder> {
-    let dev = Path::new("/dev");
-    // A larger free reserve keeps some higher-order blocks around for the
-    // driver (the stock kernel keeps only 256 KiB).
-    let _ = std::fs::write("/proc/sys/vm/min_free_kbytes", "1024");
-    service::make_room_for_encoder();
-    match camera::venc::Encoder::open(dev) {
-        Ok(e) => Ok(e),
-        Err(first) => {
-            tracing::warn!(error = %first, "encoder open failed; compacting memory and retrying");
-            service::make_room_for_encoder();
-            Ok(camera::venc::Encoder::open(dev)?)
-        }
-    }
-}
-
 fn serve(s: Serve) -> Result<()> {
     let found = device::sensors(Path::new(SYSFS));
     let indices: Vec<u32> = if s.sensors.is_empty() {
@@ -314,7 +297,7 @@ fn serve(s: Serve) -> Result<()> {
     // plentiful at boot and scarce once the system has been running a while.
     let encoder = match s.stream.0 {
         Some((width, height)) => Some((
-            Arc::new(open_encoder()?),
+            Arc::new(av100::open_encoder()?),
             camera::venc::Settings {
                 width,
                 height,
@@ -336,9 +319,12 @@ fn serve(s: Serve) -> Result<()> {
             .ok_or_else(|| eyre::eyre!("--preview cannot be off"))?,
     };
     // Channels right away too, before capture buffers and clients fragment
-    // memory (see `service::open_channels`).
-    let channels = match &encoder {
-        Some((e, st)) => service::open_channels(e, *st, indices.len())?,
+    // memory (see `Av100Encoder::open_all`).
+    let encoders: Vec<Option<Box<dyn Encoder>>> = match &encoder {
+        Some((e, st)) => Av100Encoder::open_all(e, *st, indices.len())?
+            .into_iter()
+            .map(|c| Some(Box::new(c) as Box<dyn Encoder>))
+            .collect(),
         None => Vec::new(),
     };
     let dual = indices.len() > 1;
@@ -348,19 +334,21 @@ fn serve(s: Serve) -> Result<()> {
     for &index in &indices {
         cameras.push(Camera::default());
         let conf = conf_for(&s.common.conf_dir, index)?;
-        sensors.push(service::options(
-            index,
-            conf,
-            dual,
-            s.common.main.0,
-            preview,
-        ));
+        sensors.push(av100::options(index, conf, dual, s.common.main.0, preview));
     }
     let worker = {
         let (cameras, stop) = (cameras.clone(), Arc::clone(&stop));
         std::thread::Builder::new()
             .name("capture".into())
-            .spawn(move || service::capture(sensors, cameras, encoder, channels, stop))?
+            .spawn(move || {
+                service::capture(
+                    Av100Backend::new(sensors),
+                    cameras,
+                    encoders,
+                    stop,
+                    CaptureOptions::default(),
+                )
+            })?
     };
     tracing::info!(sensors = ?indices, listen = %s.listen, "camera service starting");
 

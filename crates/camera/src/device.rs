@@ -31,11 +31,6 @@ pub enum Error {
         what: String,
         source: io::Error,
     },
-    #[snafu(display("sensor {index}: {source}"))]
-    Encoder {
-        index: u32,
-        source: crate::venc::Error,
-    },
     #[snafu(display("sensor {index}: no frame within {timeout:?}"))]
     Timeout { index: u32, timeout: Duration },
 }
@@ -137,16 +132,8 @@ pub struct FrameRef<'a> {
     pub timestamp_ms: u64,
 }
 
-/// One NV12 picture copied out of a capture buffer.
-#[derive(Debug, Clone)]
-pub struct Frame {
-    pub width: u32,
-    pub height: u32,
-    /// Y plane (`width*height`, stride = width) then interleaved CbCr.
-    pub data: Vec<u8>,
-    /// Driver timestamp in milliseconds.
-    pub timestamp_ms: u64,
-}
+/// One NV12 picture copied out of a capture buffer (the service's type).
+pub use crate::backend::Frame;
 
 /// A brought-up sensor. Dropping it stops streaming and releases everything.
 pub struct Sensor {

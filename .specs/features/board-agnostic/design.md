@@ -90,18 +90,23 @@ Shell side (PKG-03): `supervisor board --shell` prints `KAMODER_BOARD_NAME=…`,
 ## Camera core traits (CAM-01)
 
 ```rust
-// crates/camera/src/backend.rs
+// crates/camera/src/backend.rs  (as built in T5)
 pub type BoxError = Box<dyn std::error::Error + Send + Sync>;
 
 pub enum PixelFormat { Nv12 }
 pub struct FrameRef<'a> { pub width: u32, pub height: u32, pub format: PixelFormat,
                           pub data: &'a [u8], pub phys: Option<u32>, pub timestamp_ms: u64 }
-pub struct SensorInfo { pub index: u32, pub width: u32, pub height: u32,
+pub struct Frame { pub width: u32, pub height: u32, pub data: Vec<u8>, pub timestamp_ms: u64 }
+                          // owned copy (snapshots, JPEG); moved from device.rs
+pub struct SensorInfo { pub index: u32,
+                        pub width: u32, pub height: u32,      // size of lent pictures (/status width/height)
+                        pub active: Option<(u32, u32)>,       // sensor active area, once started
                         pub id: Option<String>, pub tuning: Option<String> }
 
 /// All sensors of a board, brought up together (AV100 dual mode).
 pub trait Backend: Send {
     type Session: Session;
+    fn sensors(&self) -> Vec<SensorInfo>;                      // known before start (index, size, tuning)
     fn start(&mut self) -> Result<Self::Session, BoxError>;   // drop Session = teardown
 }
 pub trait Session {
@@ -114,13 +119,14 @@ pub trait Session {
 /// life of the process (AV100 driver oopses on re-create: CAM-03).
 pub trait Encoder: Send {
     fn info(&self) -> video_proto::StreamInfo;          // codec/profile/size/fps/gop/kbps/encoder
+    /// Returns the encoded size in bytes.
     fn encode(&mut self, frame: &FrameRef<'_>, out: &mut dyn FnMut(Packet<'_>)) -> Result<usize, BoxError>;
     fn request_idr(&mut self) -> Result<(), BoxError>;
 }
 pub struct Packet<'a> { pub data: &'a [u8], pub keyframe: bool }
 ```
 
-`service::capture<B: Backend>(backend, cameras, encoders: Vec<Option<Box<dyn Encoder>>>, stop)` is today's loop with `Sensor`/`venc::Channel` replaced by the traits; snapshot downscale uses `video.snapshot.max_width` (halve while wider).
+`service::capture<B: Backend>(backend, cameras, encoders: Vec<Option<Box<dyn Encoder>>>, stop, opts: CaptureOptions)` is today's loop with `Sensor`/`venc::Channel` replaced by the traits. `CaptureOptions { snapshot_max_width (640), frame_timeout (2 s), retry_min (2 s), retry_max (60 s) }` (defaults = production values; tests shorten the pauses); snapshot downscale halves while wider than `snapshot_max_width` (`video.snapshot.max_width`). Encoder errors are reported as `sensor N: <error>` as before.
 
 Backends shipped:
 - `camera::fake::{FakeBackend, FakeEncoder}` (cfg(test) + `test-support` feature): scripted frames/failures, fake Annex-B packets with IDR on request. Used by CAM-05 tests.

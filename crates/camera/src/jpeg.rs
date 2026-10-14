@@ -1,7 +1,7 @@
 //! NV12 → JPEG in software (`jpeg-encoder`, pure Rust). A 640×360 picture
 //! takes about 65 ms on the 400 MHz ARM926, which is what the preview needs.
 
-use crate::device::Frame;
+use crate::backend::Frame;
 use jpeg_encoder::{Encoder, EncodingError, ImageBuffer, JpegColorType, SamplingFactor};
 
 struct Nv12<'a>(&'a Frame);

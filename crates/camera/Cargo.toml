@@ -12,6 +12,7 @@ publish = false
 # Pulls in the `pthread_setname_np` shim the crosstool's uClibc lacks.
 os.workspace = true
 telemetry.workspace = true
+video-proto.workspace = true
 clap.workspace = true
 eyre.workspace = true
 snafu.workspace = true
@@ -23,6 +24,10 @@ libc.workspace = true
 jpeg-encoder = { version = "0.7", default-features = false, features = ["std"] }
 axum = { version = "0.8", default-features = false, features = ["http1", "tokio", "json", "query"] }
 tokio = { version = "1", features = ["rt", "net", "io-util", "macros", "time", "signal", "sync"] }
+
+[features]
+# `camera::fake` (scripted backend + encoder) for other crates' tests.
+test-support = []
 
 [dev-dependencies]
 tokio = { version = "1", features = ["test-util"] }
