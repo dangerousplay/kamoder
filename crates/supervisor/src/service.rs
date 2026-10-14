@@ -715,6 +715,7 @@ mod tests {
             enabled: true,
             restart: Restart::Always,
             critical: false,
+            when: None,
             backoff_initial_ms: initial_ms,
             backoff_max_ms: max_ms,
             max_restarts: 3,

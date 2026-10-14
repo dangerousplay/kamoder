@@ -13,12 +13,20 @@
 //! ```sh
 //! supervisor --config /mnt/anyka_rust/supervisor.toml
 //! supervisor --config ... --check    # validate and exit
+//! supervisor board --shell            # board facts for init.sh to eval
 //! ```
+//!
+//! At start the board profile is resolved once (`--board`/`BOARD`, else
+//! detection), written to `--board-handoff` and passed to every service in
+//! `KAMODER_BOARD`. A board that cannot be resolved is logged and the
+//! services run without it: the watchdog feeder and Wi-Fi never depend on
+//! `boards/` being right.
 //!
 //! Individual services can be inspected, stopped, started and restarted
 //! through a Unix control socket; see [`supervisor::control`].
 
 mod banner;
+mod board_select;
 mod config;
 mod console;
 mod hardware;
@@ -32,7 +40,7 @@ mod supervisor;
 // uClibc does not export but Rust's thread startup references.
 extern crate os;
 
-use clap::Parser;
+use clap::{Parser, Subcommand};
 use config::Config;
 use eyre::{bail, Result, WrapErr};
 use kameo::actor::Actor;
@@ -67,6 +75,50 @@ struct Args {
     /// Print the boot banner to stdout and exit.
     #[arg(long)]
     banner: bool,
+    /// Board profile directory. Default: `boards/` next to the config.
+    #[arg(long, env = "KAMODER_BOARDS_DIR")]
+    boards_dir: Option<PathBuf>,
+    /// Board profile name, skipping detection (init.sh exports `BOARD`
+    /// from camera.conf).
+    #[arg(long, env = "BOARD")]
+    board: Option<String>,
+    /// Where the resolved board is written for the services.
+    #[arg(long, default_value = board::DEFAULT_HANDOFF_PATH)]
+    board_handoff: PathBuf,
+    #[command(subcommand)]
+    command: Option<Command>,
+}
+
+#[derive(Subcommand)]
+enum Command {
+    /// Print the board this camera resolves to, and exit (non-zero if it
+    /// cannot be resolved). Needs no supervisor config.
+    Board {
+        /// Print `KAMODER_BOARD_NAME`, `VENDOR_PROCESSES` and
+        /// `WATCHDOG_WAIT` as shell assignments, for init.sh to `eval`.
+        #[arg(long)]
+        shell: bool,
+        /// Board profile directory. Default: `../boards` from the binary.
+        #[arg(long, env = "KAMODER_BOARDS_DIR")]
+        boards_dir: Option<PathBuf>,
+        /// Board profile name, skipping detection.
+        #[arg(long, env = "BOARD")]
+        board: Option<String>,
+    },
+}
+
+/// `supervisor board`: stdout carries only the answer, so `eval` never sees
+/// a log line; errors go to stderr.
+fn board_command(shell: bool, boards_dir: Option<PathBuf>, board: Option<&str>) -> Result<()> {
+    let dir = boards_dir.unwrap_or_else(board_select::default_boards_dir);
+    let resolved = board_select::resolve(&dir, board)
+        .wrap_err_with(|| format!("cannot resolve the board from {}", dir.display()))?;
+    if shell {
+        print!("{}", board_select::shell(&resolved));
+    } else {
+        print!("{}", board_select::human(&resolved));
+    }
+    Ok(())
 }
 
 fn describe_metrics() {
@@ -125,6 +177,14 @@ fn main() -> Result<()> {
     let start = ready::StartTime::now();
     // Before telemetry, so `--help` does not open log files.
     let args = Args::parse();
+    if let Some(Command::Board {
+        shell,
+        boards_dir,
+        board,
+    }) = args.command
+    {
+        return board_command(shell, boards_dir, board.as_deref());
+    }
     let console_level =
         console::Level::parse_threshold(&args.console_level).map_err(|error| eyre::eyre!(error))?;
     let one_shot = args.banner || args.check_only;
@@ -152,7 +212,47 @@ fn main() -> Result<()> {
     let _telemetry = telemetry::install_with_console("supervisor", console_sink)?;
     describe_metrics();
 
-    let config = Config::load(&args.config)?;
+    let mut config = Config::load(&args.config)?;
+    // Counted before the board can switch anything off: an empty config is
+    // a mistake, a board without optional hardware is not.
+    let configured = config.enabled_services().count();
+
+    // The board is only looked at when the services are about to run (or
+    // for the banner that describes them); `--check` validates the file.
+    let board = if args.check_only {
+        None
+    } else {
+        let dir = args
+            .boards_dir
+            .clone()
+            .unwrap_or_else(|| config.base_dir.join("boards"));
+        match board_select::resolve(&dir, args.board.as_deref()) {
+            Ok(resolved) => {
+                tracing::info!(
+                    board = %resolved.name,
+                    reason = %resolved.reason,
+                    profile = %resolved.path.display(),
+                    "board resolved"
+                );
+                Some(resolved)
+            }
+            Err(error) => {
+                tracing::error!(
+                    %error,
+                    boards_dir = %dir.display(),
+                    "cannot resolve the board; services resolve it themselves, conditional services all start"
+                );
+                None
+            }
+        }
+    };
+    for (service, capability) in config.apply_board(board.as_ref().map(|b| &b.profile)) {
+        tracing::info!(
+            service,
+            %capability,
+            "service skipped: the board lacks its capability"
+        );
+    }
     let enabled = config.enabled_services().count();
     if args.banner {
         print!("{}", banner::render(&config, &args.config, &start));
@@ -166,12 +266,34 @@ fn main() -> Result<()> {
         for service in config.enabled_services() {
             let program = config.resolve(&service.command);
             let exists = if program.is_file() { "" } else { "  [MISSING]" };
-            println!("  {:<16} {}{}", service.name, program.display(), exists);
+            let when = service
+                .when
+                .map(|capability| format!("  (when {capability})"))
+                .unwrap_or_default();
+            println!(
+                "  {:<16} {}{}{}",
+                service.name,
+                program.display(),
+                exists,
+                when
+            );
         }
         return Ok(());
     }
-    if enabled == 0 {
+    if configured == 0 {
         bail!("{}: no services are enabled", args.config.display());
+    }
+
+    // Children read the board from the handoff; without one (resolution or
+    // the write failed) they fall back to resolving it themselves.
+    if let Some(resolved) = &board {
+        match board::write_handoff(&args.board_handoff, resolved) {
+            Ok(()) => {
+                let path = args.board_handoff.to_string_lossy();
+                config.inject_env(board::HANDOFF_ENV, &path);
+            }
+            Err(error) => tracing::error!(%error, "cannot write the board handoff"),
+        }
     }
 
     match &console {
@@ -220,11 +342,6 @@ fn main() -> Result<()> {
             .find(|s| s.name == "wifi" || s.command.file_name().is_some_and(|f| f == "wifi"))
             .map(|s| s.args.clone())
             .unwrap_or_default();
-        // Resolved here for now; the supervisor will resolve the board once
-        // at start and hand it to every service (BRD-05).
-        let board = board::current()
-            .inspect_err(|error| tracing::warn!(%error, "no board profile for the ready report"))
-            .ok();
         let wifi_iface = ready::wifi_iface(
             &wifi_args,
             board.as_ref().and_then(|b| b.profile.wifi.as_ref()),
