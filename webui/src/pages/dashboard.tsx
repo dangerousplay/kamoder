@@ -29,7 +29,9 @@ import { CameraView } from "@/components/video/camera-view"
 import { usePolling } from "@/hooks/use-polling"
 import {
   api,
+  cameraRtspUrl,
   errorMessage,
+  type CameraDetails,
   type ServiceState,
   type ServiceStatus,
   type WifiStatus,
@@ -179,7 +181,7 @@ function WifiCard({ wifi, error }: { wifi?: WifiStatus; error: unknown }) {
           )}
           Wi-Fi
         </CardTitle>
-        <CardDescription>{wifi?.iface ?? "wlan0"}</CardDescription>
+        <CardDescription>{wifi?.iface || "—"}</CardDescription>
         {wifi?.healthy != null && (
           <CardAction>
             <Badge variant={wifi.healthy ? "secondary" : "destructive"}>
@@ -210,8 +212,9 @@ function WifiCard({ wifi, error }: { wifi?: WifiStatus; error: unknown }) {
   )
 }
 
-function RtspUrl({ index }: { index: number }) {
-  const url = `rtsp://${window.location.hostname}:554/vs${index}`
+function RtspUrl({ cam }: { cam: CameraDetails }) {
+  const index = cam.index
+  const url = cameraRtspUrl(cam)
   const [copied, setCopied] = React.useState(false)
 
   async function copy() {
@@ -248,7 +251,15 @@ function RtspUrl({ index }: { index: number }) {
 }
 
 /** One H.264 RTSP URL per image sensor (ONVIF account credentials). */
-function RtspCard({ count }: { count: number }) {
+function RtspCard({
+  cameras,
+  error,
+}: {
+  cameras?: CameraDetails[]
+  error: unknown
+}) {
+  // A sensor the board profile expects but nothing found has no stream.
+  const streams = cameras?.filter((c) => c.live.state !== "missing")
   return (
     <Card>
       <CardHeader>
@@ -258,9 +269,18 @@ function RtspCard({ count }: { count: number }) {
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-2">
-        {Array.from({ length: Math.max(1, count) }, (_, i) => (
-          <RtspUrl key={i} index={i} />
+        {!cameras && !error && <Skeleton className="h-9 w-full" />}
+        {!cameras && !!error && (
+          <p className="text-sm text-destructive">{errorMessage(error)}</p>
+        )}
+        {streams?.map((cam) => (
+          <RtspUrl key={cam.index} cam={cam} />
         ))}
+        {streams?.length === 0 && (
+          <p className="text-sm text-muted-foreground">
+            No image sensor found.
+          </p>
+        )}
       </CardContent>
     </Card>
   )
@@ -272,6 +292,7 @@ export default function DashboardPage() {
   const wifi = usePolling(api.wifi, 10000)
   const config = usePolling(api.config, null)
   const hardware = usePolling(api.hardware, 60000)
+  const cameras = usePolling(api.cameras, 60000)
 
   const telnet = isTruthy(config.data?.values.start_telnetd)
   const byName = (n: string) => services.data?.find((s) => s.name === n)
@@ -319,7 +340,9 @@ export default function DashboardPage() {
         </React.Suspense>
         <HardwareCard hw={hardware.data} error={hardware.error} />
         <LightsCard />
-        {rtspRunning && <RtspCard count={hardware.data?.camera_count ?? 1} />}
+        {rtspRunning && (
+          <RtspCard cameras={cameras.data} error={cameras.error} />
+        )}
       </div>
     </div>
   )

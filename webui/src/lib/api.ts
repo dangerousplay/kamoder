@@ -215,7 +215,7 @@ export interface CameraDetails {
   sensor: string
   bus?: string | null
   channels: number
-  /** RTSP path, e.g. "vs0". */
+  /** RTSP path of the stream, as the server names it. */
   rtsp_path: string
   /** Port the rtsp service listens on. */
   rtsp_port: number
@@ -292,7 +292,7 @@ export interface PtzPreset {
 
 export interface PtzStatus {
   available: boolean
-  /** Backend name, e.g. "av100" or "sim". */
+  /** Backend name: "preset_motor", "sdk" or "sim". */
   backend?: string
   pan: number
   tilt: number
@@ -333,10 +333,18 @@ export interface LightsState {
   alarm: LightsAlarm
   /** Speaker amplifier off. */
   muted: boolean
+  /**
+   * Roles this board has (board profile); controls of the others are hidden.
+   * Absent from owners older than the field: read as every role.
+   */
+  supported?: LightRole[]
 }
 
+/** A lights line role of the board profile (`lights-proto` `Role`). */
+export type LightRole = "ir_cut" | "ir_leds" | "white" | "alarm" | "amp"
+
 /** `PUT /api/lights` (admin): any subset; answers the full state. */
-export type LightsUpdate = Partial<LightsState>
+export type LightsUpdate = Partial<Omit<LightsState, "supported">>
 
 export interface User {
   name: string
@@ -576,6 +584,19 @@ export function snapshotUrl(streamToken: string, bust = Date.now()): string {
 export function liveMjpegUrl(streamToken: string, camera?: number): string {
   const cam = camera == null ? "" : `&camera=${camera}`
   return `${API_BASE}/live.mjpeg?token=${enc(streamToken)}${cam}`
+}
+
+/**
+ * RTSP URL of a camera: the server's `rtsp_url`, else built from the host this
+ * page was loaded from and the served port and path.
+ */
+export function cameraRtspUrl(
+  cam: Pick<CameraDetails, "rtsp_url" | "rtsp_port" | "rtsp_path">
+): string {
+  return (
+    cam.rtsp_url ??
+    `rtsp://${window.location.hostname}:${cam.rtsp_port}/${cam.rtsp_path}`
+  )
 }
 
 /** Human-readable message for toasts. */

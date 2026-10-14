@@ -16,7 +16,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { usePolling } from "@/hooks/use-polling"
-import { api, errorMessage, type CameraDetails } from "@/lib/api"
+import { api, cameraRtspUrl, errorMessage, type CameraDetails } from "@/lib/api"
 import { copyText } from "@/lib/format"
 
 function Row({
@@ -37,6 +37,13 @@ function Row({
 }
 
 function stateBadge(state: string) {
+  // Expected by the board profile but not found: muted, not an error colour.
+  if (state === "missing")
+    return (
+      <Badge variant="outline" className="text-muted-foreground">
+        missing
+      </Badge>
+    )
   const variant =
     state === "running"
       ? "secondary"
@@ -46,8 +53,8 @@ function stateBadge(state: string) {
   return <Badge variant={variant}>{state}</Badge>
 }
 
-function RtspUrl({ path }: { path: string }) {
-  const url = `rtsp://${window.location.hostname}:554/${path}`
+function RtspUrl({ cam }: { cam: CameraDetails }) {
+  const url = cameraRtspUrl(cam)
   const [copied, setCopied] = React.useState(false)
   async function copy() {
     if (await copyText(url)) {
@@ -128,7 +135,7 @@ function CameraCard({ cam }: { cam: CameraDetails }) {
         {l.error && <p className="text-sm text-destructive">{l.error}</p>}
         <div className="flex flex-col gap-1.5">
           <span className="text-sm font-medium">RTSP stream</span>
-          <RtspUrl path={cam.rtsp_path} />
+          <RtspUrl cam={cam} />
         </div>
       </CardContent>
     </Card>

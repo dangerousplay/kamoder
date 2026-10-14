@@ -28,7 +28,7 @@ function Row({
   )
 }
 
-/** SoC, memory, flash and the image sensors (`/api/hardware`). */
+/** Board profile, SoC, memory, flash and the image sensors (`/api/hardware`). */
 export function HardwareCard({ hw, error }: { hw?: Hardware; error: unknown }) {
   const flash = hw?.flash.reduce((sum, p) => sum + p.size_bytes, 0) ?? 0
   return (
@@ -55,6 +55,31 @@ export function HardwareCard({ hw, error }: { hw?: Hardware; error: unknown }) {
         )}
         {hw && (
           <dl className="divide-y text-sm">
+            <Row label="Board">
+              {hw.board ? (
+                <span title={hw.board.reason}>
+                  <span className="font-mono">{hw.board.name}</span>
+                  {hw.board.description && (
+                    <span className="text-muted-foreground">
+                      {" "}
+                      · {hw.board.description}
+                    </span>
+                  )}
+                </span>
+              ) : (
+                <span className="text-muted-foreground">not resolved</span>
+              )}
+            </Row>
+            {hw.board?.reason && (
+              <Row label="Chosen by">
+                <span
+                  title={hw.board.reason}
+                  className="text-xs font-normal text-muted-foreground"
+                >
+                  {hw.board.reason}
+                </span>
+              </Row>
+            )}
             <Row label="SoC">{hw.soc ?? "—"}</Row>
             <Row label="CPU">
               {hw.cpu ?? "—"}

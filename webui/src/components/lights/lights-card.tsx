@@ -18,6 +18,7 @@ import {
   ApiError,
   api,
   errorMessage,
+  type LightRole,
   type LightsAlarm,
   type LightsState,
   type LightsUpdate,
@@ -106,10 +107,16 @@ const ALARMS: Choice<LightsAlarm["state"]>[] = [
   { value: "blink", label: "Blink" },
 ]
 
+/** Whether the board has `role`; an owner without `supported` has them all. */
+function has(state: LightsState, role: LightRole): boolean {
+  return state.supported?.includes(role) ?? true
+}
+
 /**
  * Lights owned by the `lights` service: day/night (IR-cut filter + IR LEDs),
  * white light, red/blue alarm lights and the speaker amp. Hidden when the
  * service is not running (503); viewers see the state, admins change it.
+ * Controls for roles the board profile lacks (`supported`) are hidden.
  */
 export function LightsCard() {
   const { isAdmin } = useAuth()
@@ -130,6 +137,13 @@ export function LightsCard() {
   }
 
   const disabled = !isAdmin || pending
+  const ir = !!data && (has(data, "ir_cut") || has(data, "ir_leds"))
+  const none =
+    !!data &&
+    !ir &&
+    !has(data, "white") &&
+    !has(data, "alarm") &&
+    !has(data, "amp")
 
   return (
     <Card>
@@ -139,9 +153,11 @@ export function LightsCard() {
           Lights
         </CardTitle>
         <CardDescription>
-          {isAdmin
-            ? "Night removes the IR-cut filter and turns the IR LEDs on."
-            : "Only admins can change the lights."}
+          {!isAdmin
+            ? "Only admins can change the lights."
+            : data && !ir
+              ? "Change the lights of this board."
+              : "Night removes the IR-cut filter and turns the IR LEDs on."}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
@@ -151,34 +167,47 @@ export function LightsCard() {
         )}
         {data && (
           <>
-            <Segmented
-              label="Mode"
-              value={data.mode}
-              choices={MODES}
-              disabled={disabled}
-              onChange={(mode) => update({ mode })}
-            />
-            <Toggle
-              id="lights-white"
-              label="White light"
-              checked={data.white}
-              disabled={disabled}
-              onChange={(white) => update({ white })}
-            />
-            <Segmented
-              label="Red / blue"
-              value={data.alarm.state}
-              choices={ALARMS}
-              disabled={disabled}
-              onChange={(state) => update({ alarm: { state } })}
-            />
-            <Toggle
-              id="lights-muted"
-              label="Speaker muted"
-              checked={data.muted}
-              disabled={disabled}
-              onChange={(muted) => update({ muted })}
-            />
+            {ir && (
+              <Segmented
+                label="Mode"
+                value={data.mode}
+                choices={MODES}
+                disabled={disabled}
+                onChange={(mode) => update({ mode })}
+              />
+            )}
+            {has(data, "white") && (
+              <Toggle
+                id="lights-white"
+                label="White light"
+                checked={data.white}
+                disabled={disabled}
+                onChange={(white) => update({ white })}
+              />
+            )}
+            {has(data, "alarm") && (
+              <Segmented
+                label="Red / blue"
+                value={data.alarm.state}
+                choices={ALARMS}
+                disabled={disabled}
+                onChange={(state) => update({ alarm: { state } })}
+              />
+            )}
+            {has(data, "amp") && (
+              <Toggle
+                id="lights-muted"
+                label="Speaker muted"
+                checked={data.muted}
+                disabled={disabled}
+                onChange={(muted) => update({ muted })}
+              />
+            )}
+            {none && (
+              <p className="text-sm text-muted-foreground">
+                This board has no controllable lights.
+              </p>
+            )}
           </>
         )}
       </CardContent>
