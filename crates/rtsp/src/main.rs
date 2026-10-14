@@ -1,6 +1,7 @@
 //! RTSP server for the camera's H.264 stream.
 //!
 //! ```text
+//! rtsp --port 554 --secret etc/onvif.secret
 //! rtsp --port 554 --secret etc/onvif.secret --stream vs0=camera:0 --stream vs1=camera:1
 //! rtsp --port 554 --secret etc/onvif.secret --source file:clip.h264
 //! ```
@@ -10,7 +11,10 @@
 //! Digest with the ONVIF account. Sources: `camera:N`, the hardware H.264 of
 //! image sensor N from the `camera` service, or `file:PATH`, an Annex-B file
 //! played in a loop. `--path`/`--source` describe a single stream;
-//! `--stream PATH=SOURCE`, repeated, replaces them.
+//! `--stream PATH=SOURCE`, repeated, replaces them. With neither, the board
+//! profile decides (PKG-02): one `vsN=camera:N` per sensor in
+//! `video.sensors`, so the same command line serves a one- or two-sensor
+//! board.
 //!
 //! - **Credentials**: `etc/onvif.secret`, the same `user:password` file
 //!   `onvif` reads, so an NVR uses one account for both. Without it the
@@ -50,14 +54,15 @@ struct Cli {
     /// Stream path (the URL is rtsp://<host>:<port>/<path>).
     #[arg(long, default_value = "vs0")]
     path: String,
-    /// Video source of `--path`: `camera:N` or `file:PATH`.
-    #[arg(long, required_unless_present = "stream")]
+    /// Video source of `--path`: `camera:N` or `file:PATH`. Without it or
+    /// `--stream`, one `vsN=camera:N` per sensor of the board profile.
+    #[arg(long)]
     source: Option<SourceSpec>,
     /// A stream `PATH=SOURCE`, e.g. `vs1=camera:1`; repeat for several.
     #[arg(long, value_parser = parse_stream)]
     stream: Vec<(String, SourceSpec)>,
     /// The camera service's video socket, for `camera:N` sources.
-    #[arg(long, default_value = rtsp::source::DEFAULT_VIDEO_SOCKET)]
+    #[arg(long, default_value = video_proto::DEFAULT_SOCKET)]
     video_socket: PathBuf,
     /// Frame rate of a file source.
     #[arg(long, default_value_t = 25)]
@@ -93,6 +98,44 @@ fn parse_stream(text: &str) -> Result<(String, SourceSpec), String> {
     ))
 }
 
+/// The streams to mount, in order of precedence: the explicit `--stream`s,
+/// else `--source` at `--path`, else one [`video_proto::stream_path`]`(N)` =
+/// `camera:N` per sensor the board lists. `sensors` is only called in the
+/// last case, so a board that cannot be resolved does not matter when the
+/// command line says what to serve.
+fn plan_streams(
+    explicit: &[(String, SourceSpec)],
+    path: &str,
+    source: Option<&SourceSpec>,
+    sensors: impl FnOnce() -> Result<Vec<u32>>,
+) -> Result<Vec<(String, SourceSpec)>> {
+    if !explicit.is_empty() {
+        return Ok(explicit.to_vec());
+    }
+    if let Some(source) = source {
+        return Ok(vec![(path.trim_matches('/').to_owned(), source.clone())]);
+    }
+    let sensors = sensors()?;
+    eyre::ensure!(
+        !sensors.is_empty(),
+        "the board profile lists no video sensors; pass --stream PATH=SOURCE"
+    );
+    Ok(sensors
+        .into_iter()
+        .map(|n| (video_proto::stream_path(n), SourceSpec::Camera(n)))
+        .collect())
+}
+
+/// Sensor indices of the board this runs on.
+fn board_sensors() -> Result<Vec<u32>> {
+    let board = board::current().wrap_err(
+        "no --stream or --source given and the board profile cannot be resolved \
+         (set KAMODER_BOARD/BOARD, or pass --stream PATH=SOURCE)",
+    )?;
+    tracing::info!(board = %board.name, reason = %board.reason, "streams from the board profile");
+    Ok(board.profile.video.sensors)
+}
+
 fn parse_ports(text: &str) -> Result<std::ops::Range<u16>, String> {
     let (first, last) = text.split_once('-').ok_or("expected FIRST-LAST")?;
     let first: u16 = first.trim().parse().map_err(|_| "bad first port")?;
@@ -124,12 +167,7 @@ fn serve(cli: Cli) -> Result<()> {
         .enable_all()
         .build()?;
     runtime.block_on(async move {
-        let streams = if cli.stream.is_empty() {
-            let source = cli.source.clone().expect("clap requires --source without --stream");
-            vec![(cli.path.trim_matches('/').to_owned(), source)]
-        } else {
-            cli.stream.clone()
-        };
+        let streams = plan_streams(&cli.stream, &cli.path, cli.source.as_ref(), board_sensors)?;
         let mut mounts = Vec::new();
         let mut pumps = tokio::task::JoinSet::new();
         for (path, spec) in streams {
@@ -214,7 +252,6 @@ mod cli_tests {
 
     #[test]
     fn rejects_bad_sources_and_port_ranges() {
-        assert!(Cli::try_parse_from(["rtsp"]).is_err());
         assert!(Cli::try_parse_from(["rtsp", "--source", "venc:0"]).is_err());
         for ports in ["7000", "7000-6970", "0-10", "a-b"] {
             assert!(
@@ -222,5 +259,56 @@ mod cli_tests {
                 "{ports}"
             );
         }
+    }
+
+    #[test]
+    fn no_stream_or_source_is_left_to_the_board() {
+        let cli = Cli::parse_from(["rtsp"]);
+        assert!(cli.stream.is_empty());
+        assert_eq!(cli.source, None);
+    }
+
+    fn no_board() -> Result<Vec<u32>> {
+        eyre::bail!("board not consulted")
+    }
+
+    #[test]
+    fn default_mounts_follow_the_board_sensors() {
+        let streams = plan_streams(&[], "vs0", None, || Ok(vec![0, 1])).unwrap();
+        assert_eq!(
+            streams,
+            vec![
+                ("vs0".into(), SourceSpec::Camera(0)),
+                ("vs1".into(), SourceSpec::Camera(1))
+            ]
+        );
+        let one = plan_streams(&[], "vs0", None, || Ok(vec![0])).unwrap();
+        assert_eq!(one, vec![("vs0".into(), SourceSpec::Camera(0))]);
+    }
+
+    #[test]
+    fn explicit_streams_and_source_win_over_the_board() {
+        let explicit = vec![("main".to_owned(), SourceSpec::Camera(1))];
+        assert_eq!(
+            plan_streams(&explicit, "vs0", None, no_board).unwrap(),
+            explicit
+        );
+        let file = SourceSpec::File("clip.h264".into());
+        assert_eq!(
+            plan_streams(&explicit, "vs0", Some(&file), no_board).unwrap(),
+            explicit,
+            "--stream replaces --path/--source"
+        );
+        assert_eq!(
+            plan_streams(&[], "/live/", Some(&file), no_board).unwrap(),
+            vec![("live".into(), file)]
+        );
+    }
+
+    #[test]
+    fn unresolvable_board_without_streams_is_an_error() {
+        let err = plan_streams(&[], "vs0", None, no_board).unwrap_err();
+        assert!(err.to_string().contains("board not consulted"), "{err}");
+        assert!(plan_streams(&[], "vs0", None, || Ok(vec![])).is_err());
     }
 }

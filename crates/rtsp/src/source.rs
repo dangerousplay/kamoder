@@ -12,6 +12,7 @@ use snafu::{ensure, ResultExt, Snafu};
 use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
+use video_proto::{subscribe_line, PacketHeader, HEADER_LEN, MAX_PACKET_LEN};
 
 /// The RTP clock rate for video (RFC 6184 § 8.2.1).
 pub const CLOCK_RATE: u64 = 90_000;
@@ -142,17 +143,14 @@ impl VideoSource for FileSource {
     }
 }
 
-/// Default path of the camera service's video socket.
-pub const DEFAULT_VIDEO_SOCKET: &str = "/tmp/kamoder-video.sock";
-
 /// Live H.264 for one sensor from the `camera` service.
 ///
-/// Protocol: connect to the Unix socket, send the sensor index and `\n`;
-/// the service then sends each access unit as a 13-byte header (`u32` BE
-/// length, `u8` flags with bit 0 = IDR, `u64` BE capture time in ms) followed
-/// by the Annex-B data, starting at an IDR. The service being down or
-/// restarting is not an error here: the source waits and reconnects, so
-/// RTSP clients see a stall rather than the server exiting.
+/// Speaks the video-socket protocol of [`video_proto`]: connect to the Unix
+/// socket ([`video_proto::DEFAULT_SOCKET`] by default), send
+/// [`video_proto::subscribe_line`], then read one [`PacketHeader`] and its
+/// Annex-B access unit at a time, starting at an IDR. The service being down
+/// or restarting is not an error here (PRO-04): the source waits and
+/// reconnects, so RTSP clients see a stall rather than the server exiting.
 pub struct CameraSource {
     socket: PathBuf,
     index: u32,
@@ -173,17 +171,18 @@ impl CameraSource {
 
     async fn read_frame(conn: &mut tokio::net::UnixStream) -> std::io::Result<(Bytes, bool, u64)> {
         use tokio::io::AsyncReadExt;
-        let mut head = [0u8; 13];
+        let mut head = [0u8; HEADER_LEN];
         conn.read_exact(&mut head).await?;
-        let len = u32::from_be_bytes(head[0..4].try_into().unwrap()) as usize;
-        if len == 0 || len > 4 << 20 {
-            return Err(std::io::Error::other(format!("bad frame length {len}")));
+        let header = PacketHeader::decode(&head);
+        if header.len == 0 || header.len > MAX_PACKET_LEN {
+            return Err(std::io::Error::other(format!(
+                "bad frame length {}",
+                header.len
+            )));
         }
-        let key = head[4] & 1 != 0;
-        let ts = u64::from_be_bytes(head[5..13].try_into().unwrap());
-        let mut data = vec![0; len];
+        let mut data = vec![0; header.len as usize];
         conn.read_exact(&mut data).await?;
-        Ok((Bytes::from(data), key, ts))
+        Ok((Bytes::from(data), header.keyframe, header.timestamp_ms))
     }
 }
 
@@ -194,7 +193,7 @@ impl VideoSource for CameraSource {
             if self.conn.is_none() {
                 match tokio::net::UnixStream::connect(&self.socket).await {
                     Ok(mut c) => {
-                        if c.write_all(format!("{}\n", self.index).as_bytes())
+                        if c.write_all(subscribe_line(self.index).as_bytes())
                             .await
                             .is_ok()
                         {
@@ -271,6 +270,79 @@ mod tests {
             }
         }
         assert_eq!(keyframes, [0, 25, 50, 75, 100]);
+    }
+
+    /// The producer side of the video socket, per `video_proto`: answers
+    /// the subscribe line with framed access units.
+    async fn send_unit(conn: &mut tokio::net::UnixStream, header: PacketHeader, data: &[u8]) {
+        use tokio::io::AsyncWriteExt;
+        conn.write_all(&header.encode()).await.unwrap();
+        conn.write_all(data).await.unwrap();
+    }
+
+    async fn read_subscribe(conn: &mut tokio::net::UnixStream) -> Option<u32> {
+        use tokio::io::AsyncReadExt;
+        let mut line = Vec::new();
+        let mut byte = [0u8; 1];
+        while byte[0] != b'\n' {
+            conn.read_exact(&mut byte).await.unwrap();
+            line.push(byte[0]);
+        }
+        video_proto::parse_subscribe(std::str::from_utf8(&line).unwrap())
+    }
+
+    #[tokio::test]
+    async fn camera_source_reads_video_proto_frames_and_reconnects() {
+        let dir = std::env::temp_dir().join(format!(
+            "rtsp-camera-source-{}-{:?}",
+            std::process::id(),
+            std::time::SystemTime::now()
+        ));
+        std::fs::create_dir_all(&dir).unwrap();
+        let socket = dir.join("video.sock");
+        let listener = tokio::net::UnixListener::bind(&socket).unwrap();
+        let idr: &[u8] = &[0, 0, 0, 1, 0x65, 0x88];
+        let p: &[u8] = &[0, 0, 0, 1, 0x41, 0x9a];
+        let producer = tokio::spawn(async move {
+            // First connection: two units, then a corrupt header (len 0).
+            let (mut conn, _) = listener.accept().await.unwrap();
+            assert_eq!(read_subscribe(&mut conn).await, Some(1));
+            let unit = |len: usize, keyframe, timestamp_ms| PacketHeader {
+                len: len as u32,
+                keyframe,
+                timestamp_ms,
+            };
+            send_unit(&mut conn, unit(idr.len(), true, 1000), idr).await;
+            send_unit(&mut conn, unit(p.len(), false, 1040), p).await;
+            send_unit(&mut conn, unit(0, false, 1080), &[]).await;
+            // The source drops the stream and subscribes again.
+            let (mut conn, _) = listener.accept().await.unwrap();
+            assert_eq!(read_subscribe(&mut conn).await, Some(1));
+            send_unit(&mut conn, unit(idr.len(), true, 1120), idr).await;
+            conn
+        });
+
+        let mut source = CameraSource::new(socket, 1);
+        let mut frames = Vec::new();
+        for _ in 0..3 {
+            let frame = tokio::time::timeout(Duration::from_secs(10), source.next_frame())
+                .await
+                .expect("frame in time")
+                .unwrap()
+                .unwrap();
+            frames.push((frame.data.to_vec(), frame.keyframe, frame.pts));
+        }
+        let _conn = producer.await.unwrap();
+        std::fs::remove_dir_all(&dir).ok();
+        assert_eq!(
+            frames,
+            [
+                (idr.to_vec(), true, 0),
+                (p.to_vec(), false, 40 * 90),
+                // The RTP clock keeps its zero across the reconnect.
+                (idr.to_vec(), true, 120 * 90),
+            ]
+        );
     }
 
     #[test]

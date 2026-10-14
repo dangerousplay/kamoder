@@ -35,6 +35,10 @@ auth.workspace = true
 # Pulls in the `pthread_setname_np` shim the crosstool's uClibc lacks.
 os.workspace = true
 telemetry.workspace = true
+# Video-socket framing and stream naming shared with the camera service.
+video-proto.workspace = true
+# The board profile: which sensors to mount when no --stream is given.
+board.workspace = true
 snafu.workspace = true
 eyre.workspace = true
 tracing.workspace = true

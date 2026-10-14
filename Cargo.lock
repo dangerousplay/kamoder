@@ -469,6 +469,7 @@ dependencies = [
  "tokio",
  "tower",
  "tracing",
+ "video-proto",
 ]
 
 [[package]]
@@ -2778,6 +2779,7 @@ version = "0.1.0"
 dependencies = [
  "auth",
  "base64",
+ "board",
  "bytes",
  "clap",
  "eyre",
@@ -2796,6 +2798,7 @@ dependencies = [
  "tracing",
  "ttpkit-auth",
  "url",
+ "video-proto",
 ]
 
 [[package]]
@@ -3930,6 +3933,7 @@ version = "0.1.0"
 dependencies = [
  "auth",
  "axum",
+ "board",
  "clap",
  "eyre",
  "futures-util",
@@ -3948,6 +3952,7 @@ dependencies = [
  "tower",
  "tower-http",
  "tracing",
+ "video-proto",
  "wifi",
 ]
 
