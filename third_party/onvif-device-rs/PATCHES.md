@@ -7,7 +7,7 @@ registry and wired into the workspace through `[patch.crates-io]` in the root
 
 **This fork is temporary.** Drop it (delete this directory and the
 `[patch.crates-io]` entry, bump the `onvif-device-rs` version in
-`onvif/Cargo.toml`) as soon as upstream releases the fix. The proposed upstream
+`crates/onvif/Cargo.toml`) as soon as upstream releases the fix. The proposed upstream
 PR, with the full diff against 0.8.0, is in `UPSTREAM-PR.md`.
 
 ## 1. Keep inherited namespace declarations on the extracted Body child

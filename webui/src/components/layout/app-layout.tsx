@@ -1,5 +1,5 @@
 import * as React from "react"
-import { Outlet, useLocation } from "react-router"
+import { Outlet, useLocation, useNavigate } from "react-router"
 
 import { AppSidebar } from "@/components/layout/app-sidebar"
 import { NAV_ITEMS } from "@/components/layout/nav"
@@ -7,14 +7,40 @@ import { ThemeToggle } from "@/components/layout/theme-toggle"
 import { UserMenu } from "@/components/layout/user-menu"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
+import { api } from "@/lib/api"
+import { useAuth } from "@/lib/auth"
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 
+/**
+ * Sends an admin to the first-run wizard until it has been finished or
+ * skipped. Checked once per sign-in; viewers are never redirected.
+ */
+function useSetupGate() {
+  const { isAdmin, user } = useAuth()
+  const navigate = useNavigate()
+  const { pathname } = useLocation()
+  const checked = React.useRef<string | null>(null)
+
+  React.useEffect(() => {
+    if (!isAdmin || !user || checked.current === user) return
+    checked.current = user
+    if (pathname === "/setup") return
+    api
+      .setup()
+      .then((s) => {
+        if (!s.completed) navigate("/setup", { replace: true })
+      })
+      .catch(() => {})
+  }, [isAdmin, user, pathname, navigate])
+}
+
 function usePageTitle() {
   const { pathname } = useLocation()
+  if (pathname === "/setup") return "First-run setup"
   const match = NAV_ITEMS.find((i) =>
     i.to === "/" ? pathname === "/" : pathname.startsWith(i.to)
   )
@@ -22,6 +48,7 @@ function usePageTitle() {
 }
 
 export function AppLayout() {
+  useSetupGate()
   const title = usePageTitle()
   return (
     <SidebarProvider>

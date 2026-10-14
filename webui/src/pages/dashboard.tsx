@@ -10,6 +10,7 @@ import { Link } from "react-router"
 import { toast } from "sonner"
 
 import { LightsCard } from "@/components/lights/lights-card"
+import { HardwareCard } from "@/components/system/hardware-card"
 import { ServiceStateBadge } from "@/components/services/service-state-badge"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -24,7 +25,7 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
-import { SnapshotView } from "@/components/video/snapshot-view"
+import { CameraView } from "@/components/video/camera-view"
 import { usePolling } from "@/hooks/use-polling"
 import {
   api,
@@ -36,6 +37,13 @@ import {
 import { useAuth } from "@/lib/auth"
 import { copyText, isTruthy } from "@/lib/format"
 import { cn } from "@/lib/utils"
+
+// ECharts is the largest dependency; load it only with the dashboard graphs.
+const SystemMetricsCard = React.lazy(() =>
+  import("@/components/system/system-metrics-card").then((m) => ({
+    default: m.SystemMetricsCard,
+  }))
+)
 
 const SUMMARY: { state: ServiceState; label: string; className: string }[] = [
   {
@@ -202,8 +210,8 @@ function WifiCard({ wifi, error }: { wifi?: WifiStatus; error: unknown }) {
   )
 }
 
-function RtspCard() {
-  const url = `rtsp://${window.location.hostname}:554/vs0`
+function RtspUrl({ index }: { index: number }) {
+  const url = `rtsp://${window.location.hostname}:554/vs${index}`
   const [copied, setCopied] = React.useState(false)
 
   async function copy() {
@@ -216,27 +224,43 @@ function RtspCard() {
   }
 
   return (
+    <div className="flex items-center gap-2">
+      <span className="w-20 shrink-0 text-sm text-muted-foreground">
+        Camera {index + 1}
+      </span>
+      <Input
+        readOnly
+        value={url}
+        aria-label={`RTSP URL of camera ${index + 1}`}
+        className="font-mono text-xs"
+        onFocus={(e) => e.currentTarget.select()}
+      />
+      <Button
+        variant="outline"
+        size="icon"
+        onClick={copy}
+        aria-label={`Copy RTSP URL of camera ${index + 1}`}
+      >
+        {copied ? <CheckIcon /> : <CopyIcon />}
+      </Button>
+    </div>
+  )
+}
+
+/** One H.264 RTSP URL per image sensor (ONVIF account credentials). */
+function RtspCard({ count }: { count: number }) {
+  return (
     <Card>
       <CardHeader>
-        <CardTitle>RTSP stream</CardTitle>
-        <CardDescription>For VLC, Frigate, Home Assistant…</CardDescription>
+        <CardTitle>RTSP streams</CardTitle>
+        <CardDescription>
+          H.264 for VLC, Frigate, Home Assistant… Log in with the ONVIF account.
+        </CardDescription>
       </CardHeader>
-      <CardContent className="flex gap-2">
-        <Input
-          readOnly
-          value={url}
-          aria-label="RTSP URL"
-          className="font-mono text-xs"
-          onFocus={(e) => e.currentTarget.select()}
-        />
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={copy}
-          aria-label="Copy RTSP URL"
-        >
-          {copied ? <CheckIcon /> : <CopyIcon />}
-        </Button>
+      <CardContent className="flex flex-col gap-2">
+        {Array.from({ length: Math.max(1, count) }, (_, i) => (
+          <RtspUrl key={i} index={i} />
+        ))}
       </CardContent>
     </Card>
   )
@@ -247,6 +271,7 @@ export default function DashboardPage() {
   const services = usePolling(api.services, 5000)
   const wifi = usePolling(api.wifi, 10000)
   const config = usePolling(api.config, null)
+  const hardware = usePolling(api.hardware, 60000)
 
   const telnet = isTruthy(config.data?.values.start_telnetd)
   const byName = (n: string) => services.data?.find((s) => s.name === n)
@@ -275,17 +300,26 @@ export default function DashboardPage() {
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="lg:row-span-2">
           <CardHeader>
-            <CardTitle>Snapshot</CardTitle>
-            <CardDescription>Refreshes every 5 s</CardDescription>
+            <CardTitle>Video</CardTitle>
+            <CardDescription>
+              Snapshot every 5 s, or switch on live view
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <SnapshotView logFile={snapshotLog} />
+            <CameraView
+              cameras={hardware.data?.cameras}
+              logFile={snapshotLog}
+            />
           </CardContent>
         </Card>
         <ServicesCard services={services.data} error={services.error} />
         <WifiCard wifi={wifi.data} error={wifi.error} />
+        <React.Suspense fallback={<Skeleton className="h-96 w-full" />}>
+          <SystemMetricsCard />
+        </React.Suspense>
+        <HardwareCard hw={hardware.data} error={hardware.error} />
         <LightsCard />
-        {rtspRunning && <RtspCard />}
+        {rtspRunning && <RtspCard count={hardware.data?.camera_count ?? 1} />}
       </div>
     </div>
   )

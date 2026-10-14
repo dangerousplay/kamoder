@@ -32,6 +32,7 @@ const BINARIES: &[&str] = &[
     "web",
     "onvif",
     "rtsp",
+    "camera",
 ];
 
 pub fn help() {
@@ -41,7 +42,7 @@ pub fn help() {
     println!("  clippy [cargo args...]  lint, warnings denied");
     println!("  fmt [--check]           format, or verify formatting");
     println!("  test                    run host-side unit tests");
-    println!("  gen-onvif [--check]     regenerate onvif-schema/src/generated from the vendored WSDL/XSD,");
+    println!("  gen-onvif [--check]     regenerate crates/onvif-schema/src/generated from the vendored WSDL/XSD,");
     println!("                          or verify the committed files are up to date");
     println!("  deny                    cargo-deny: advisories, licences, bans, sources");
     println!("  webui                   build the web admin UI (webui/, npm) into webui/dist");
@@ -223,6 +224,7 @@ const HOST_TESTABLE: &[&str] = &[
     "anyka-v8",
     "wifi",
     "anyka-itest-support",
+    "camera",
 ];
 
 pub fn test(extra: &[String]) -> Result<()> {

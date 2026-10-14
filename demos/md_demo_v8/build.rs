@@ -1,7 +1,7 @@
 //! Selects the SDK objects this binary links.
 //!
 //! `V8VideoIn` resolves to `sdk/v8/lib`, a different SDK generation from every
-//! other demo here — see `anyka-link` and `docs/SDK-SOURCES.md`.
+//! other demo here — see `anyka-link` and `docs/notes/SDK-SOURCES.md`.
 
 use anyka_link::Module;
 

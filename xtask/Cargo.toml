@@ -16,7 +16,7 @@ eyre = "0.6"
 # `./x gen-onvif` (src/gen_onvif.rs): the ONVIF type generator. Host-only on
 # purpose: xsd-parser and its ~80 crates stay out of every camera build, which
 # only needs the generated code and `xsd-parser-types` (see onvif-schema).
-# Exact pins, because the committed output in onvif-schema/src/generated must
+# Exact pins, because the committed output in crates/onvif-schema/src/generated must
 # not change under a semver-compatible update; bump them together, regenerate
 # and review the diff. `xsd-parser-types` must match onvif-schema's pin.
 xsd-parser = "=1.5.2"

@@ -19,7 +19,7 @@ the scripts here — edit the sources in `rust-cross-compile/tools/` and rerun
    `wifi`, `sshd`, `web`, `onvif`.
 
 **The AK3918AV100 stock firmware runs nothing from the SD card at boot**
-(verified 2026-09-27; see `docs/HARDWARE-FINDINGS.md` §9). The
+(verified 2026-09-27; see `docs/notes/HARDWARE-FINDINGS.md` §9). The
 `Factory/config.sh` hook only exists on the AK3918EV200. On the AV100, after
 every boot, run from telnet, UART or ssh:
 

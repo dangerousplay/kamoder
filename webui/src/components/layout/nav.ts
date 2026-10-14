@@ -1,5 +1,6 @@
 import {
   ActivityIcon,
+  CameraIcon,
   LayoutDashboardIcon,
   MoveIcon,
   ScrollTextIcon,
@@ -17,6 +18,7 @@ export interface NavItem {
 
 export const NAV_ITEMS: NavItem[] = [
   { title: "Dashboard", to: "/", icon: LayoutDashboardIcon },
+  { title: "Cameras", to: "/cameras", icon: CameraIcon },
   { title: "Services", to: "/services", icon: ActivityIcon },
   { title: "Logs", to: "/logs", icon: ScrollTextIcon },
   { title: "PTZ", to: "/ptz", icon: MoveIcon },

@@ -9,11 +9,13 @@ import LoginPage from "@/pages/login"
 
 // Pages are split into their own chunks; the camera serves them on demand.
 const DashboardPage = React.lazy(() => import("@/pages/dashboard"))
+const CamerasPage = React.lazy(() => import("@/pages/cameras"))
 const ServicesPage = React.lazy(() => import("@/pages/services"))
 const LogsPage = React.lazy(() => import("@/pages/logs"))
 const PtzPage = React.lazy(() => import("@/pages/ptz"))
 const SettingsPage = React.lazy(() => import("@/pages/settings"))
 const UsersPage = React.lazy(() => import("@/pages/users"))
+const SetupPage = React.lazy(() => import("@/pages/setup"))
 const NotFoundPage = React.lazy(() => import("@/pages/not-found"))
 
 const router = createBrowserRouter([
@@ -26,6 +28,7 @@ const router = createBrowserRouter([
     ),
     children: [
       { index: true, element: <DashboardPage /> },
+      { path: "cameras", element: <CamerasPage /> },
       { path: "services", element: <ServicesPage /> },
       { path: "logs", element: <LogsPage /> },
       { path: "ptz", element: <PtzPage /> },
@@ -34,6 +37,14 @@ const router = createBrowserRouter([
         element: (
           <RequireAdmin>
             <SettingsPage />
+          </RequireAdmin>
+        ),
+      },
+      {
+        path: "setup",
+        element: (
+          <RequireAdmin>
+            <SetupPage />
           </RequireAdmin>
         ),
       },

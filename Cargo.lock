@@ -441,6 +441,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fc652a48c352aef3ea3aed32080501cf3ef6ed5da78602a020c991775b0aff04"
 
 [[package]]
+name = "camera"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "clap",
+ "eyre",
+ "jpeg-encoder",
+ "libc",
+ "metrics",
+ "os",
+ "serde",
+ "serde_json",
+ "snafu",
+ "telemetry",
+ "tokio",
+ "tower",
+ "tracing",
+]
+
+[[package]]
 name = "cbc"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1656,6 +1676,12 @@ checksum = "875a5a69ac2bab1a891711cf5eccbec1ce0341ea805560dcd90b7a2e925132e8"
 dependencies = [
  "jiff-tzdb",
 ]
+
+[[package]]
+name = "jpeg-encoder"
+version = "0.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a0370574b86f7eca156b9f298392b5e69a23f8c86f3f865add60bbc2e79467a6"
 
 [[package]]
 name = "jpeg_snapshot"

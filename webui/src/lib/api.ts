@@ -162,6 +162,91 @@ export interface ConfigUpdateResult {
   restart?: string[]
 }
 
+export interface SystemStats {
+  /** Seconds since boot; the time base for rates. */
+  uptime: number
+  /** Cumulative CPU jiffies: busy and total. */
+  cpu_busy: number
+  cpu_total: number
+  load1: number
+  mem_total_kb: number
+  mem_available_kb: number
+  mem_free_kb: number
+  interfaces: { name: string; rx_bytes: number; tx_bytes: number }[]
+}
+
+export interface CameraStream {
+  codec: string
+  profile: string
+  width: number
+  height: number
+  fps: number
+  gop: number
+  target_kbps: number
+  /** Measured bitrate. */
+  kbps: number
+  encoder: string
+}
+
+export interface CameraLive {
+  index: number
+  /** "running", "starting", "failed" or "unavailable". */
+  state: string
+  width: number
+  height: number
+  format: string
+  encoding: string
+  frames: number
+  fps: number
+  sensor_width: number
+  sensor_height: number
+  sensor_id?: string | null
+  tuning?: string | null
+  /** Hardware H.264 stream (RTSP), when encoding. */
+  stream?: CameraStream | null
+  error?: string | null
+}
+
+export interface CameraDetails {
+  index: number
+  sensor: string
+  bus?: string | null
+  channels: number
+  /** Path on port 554: rtsp://<host>:554/<rtsp_path>. */
+  rtsp_path: string
+  live: CameraLive
+}
+
+export interface FlashPartition {
+  device: string
+  name: string
+  size_bytes: number
+}
+
+/** One image sensor (`v4l-subdevN`) and its capture channels. */
+export interface Camera {
+  index: number
+  /** Sensor driver, e.g. "sc2331". */
+  sensor: string
+  /** I²C location, e.g. "0-0030". */
+  bus?: string | null
+  channels: number
+}
+
+export interface Hardware {
+  soc?: string | null
+  cpu?: string | null
+  bogomips?: number | null
+  board?: string | null
+  kernel?: string | null
+  memory_total_kb?: number | null
+  memory_available_kb?: number | null
+  uptime_s?: number | null
+  flash: FlashPartition[]
+  cameras: Camera[]
+  camera_count: number
+}
+
 export interface WifiStatus {
   iface: string
   connected: boolean
@@ -255,6 +340,28 @@ export interface UpdateUser {
 export interface ChangePassword {
   current: string
   new: string
+}
+
+export interface SetupStatus {
+  /** The first-run wizard was finished (or skipped) by an admin. */
+  completed: boolean
+  onvif_configured: boolean
+  onvif_user?: string | null
+  ssh_password_set: boolean
+  ssh_keys: number
+}
+
+export interface SshKey {
+  algorithm: string
+  comment: string
+  /** `SHA256:…`, as `ssh-keygen -l` prints it. */
+  fingerprint: string
+}
+
+export interface SshStatus {
+  user: string
+  password_set: boolean
+  keys: SshKey[]
 }
 
 export interface OnvifCredentials {
@@ -363,14 +470,26 @@ export const api = {
   wifi: (signal?: AbortSignal) =>
     request<WifiStatus>("GET", "/wifi", { signal }),
   reboot: () => request<void>("POST", "/system/reboot"),
+  stats: (signal?: AbortSignal) =>
+    request<SystemStats>("GET", "/system/stats", { signal }),
+  cameras: (signal?: AbortSignal) =>
+    request<CameraDetails[]>("GET", "/cameras", { signal }),
+  hardware: (signal?: AbortSignal) =>
+    request<Hardware>("GET", "/hardware", { signal }),
   /** Unauthenticated liveness probe (used to detect the end of a reboot). */
   health: (signal?: AbortSignal) =>
     request<unknown>("GET", "/health", { signal, anonymous: true }),
 
   // video
   /** Fetches one JPEG with the bearer header; 503 when video is down. */
-  snapshot: async (signal?: AbortSignal): Promise<Blob> =>
-    (await send("GET", "/snapshot.jpg", { signal })).blob(),
+  snapshot: async (signal?: AbortSignal, camera?: number): Promise<Blob> =>
+    (
+      await send(
+        "GET",
+        camera == null ? "/snapshot.jpg" : `/snapshot.jpg?camera=${camera}`,
+        { signal }
+      )
+    ).blob(),
 
   // ptz
   ptz: (signal?: AbortSignal) => request<PtzStatus>("GET", "/ptz", { signal }),
@@ -408,6 +527,21 @@ export const api = {
   // onvif
   setOnvifCredentials: (body: OnvifCredentials) =>
     request<void>("PUT", "/onvif/credentials", { body }),
+
+  // first-run setup
+  setup: (signal?: AbortSignal) =>
+    request<SetupStatus>("GET", "/setup", { signal }),
+  completeSetup: () => request<SetupStatus>("POST", "/setup"),
+  reopenSetup: () => request<SetupStatus>("DELETE", "/setup"),
+
+  // ssh
+  ssh: (signal?: AbortSignal) => request<SshStatus>("GET", "/ssh", { signal }),
+  setSshPassword: (password: string) =>
+    request<SshStatus>("PUT", "/ssh/password", { body: { password } }),
+  addSshKey: (key: string) =>
+    request<SshStatus>("POST", "/ssh/keys", { body: { key } }),
+  removeSshKey: (fingerprint: string) =>
+    request<SshStatus>("DELETE", `/ssh/keys?fingerprint=${enc(fingerprint)}`),
 }
 
 // ------------------------------------------------------------ URL helpers ----
@@ -422,8 +556,9 @@ export function snapshotUrl(streamToken: string, bust = Date.now()): string {
   return `${API_BASE}/snapshot.jpg?token=${enc(streamToken)}&t=${bust}`
 }
 
-export function liveMjpegUrl(streamToken: string): string {
-  return `${API_BASE}/live.mjpeg?token=${enc(streamToken)}`
+export function liveMjpegUrl(streamToken: string, camera?: number): string {
+  const cam = camera == null ? "" : `&camera=${camera}`
+  return `${API_BASE}/live.mjpeg?token=${enc(streamToken)}${cam}`
 }
 
 /** Human-readable message for toasts. */

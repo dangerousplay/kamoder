@@ -1,12 +1,12 @@
 [workspace]
 resolver = "2"
 members = [
-    "anyka-sys",
-    "os",
-    "anyka-link",
-    "telemetry",
-    "anyka",
-    "anyka-v8",
+    "crates/anyka-sys",
+    "crates/os",
+    "crates/anyka-link",
+    "crates/telemetry",
+    "crates/anyka",
+    "crates/anyka-v8",
     "demos/wdt_feeder",
     "demos/ai_demo",
     "demos/aenc_demo",
@@ -15,18 +15,19 @@ members = [
     "demos/md_demo_v8",
     "demos/rtsp_demo",
     "demos/jpeg_snapshot",
-    "sshd",
-    "supervisor",
-    "wifi",
-    "auth",
-    "anyka-ptz",
-    "ptz-proto",
-    "lights-proto",
-    "lights",
-    "onvif-schema",
-    "onvif",
-    "rtsp",
-    "web",
+    "crates/sshd",
+    "crates/supervisor",
+    "crates/wifi",
+    "crates/auth",
+    "crates/anyka-ptz",
+    "crates/ptz-proto",
+    "crates/lights-proto",
+    "crates/lights",
+    "crates/onvif-schema",
+    "crates/onvif",
+    "crates/rtsp",
+    "crates/web",
+    "crates/camera",
     "itest/support",
 ]
 # xtask builds for the host, not the camera, so it is kept out of the
@@ -41,19 +42,19 @@ edition = "2021"
 license = "GPL-3.0-or-later"
 
 [workspace.dependencies]
-anyka-sys = { path = "anyka-sys" }
-os = { path = "os" }
-anyka-link = { path = "anyka-link" }
-telemetry = { path = "telemetry" }
-anyka = { path = "anyka" }
-anyka-v8 = { path = "anyka-v8" }
-auth = { path = "auth" }
-anyka-ptz = { path = "anyka-ptz" }
-ptz-proto = { path = "ptz-proto" }
-lights-proto = { path = "lights-proto" }
-onvif-schema = { path = "onvif-schema" }
-supervisor = { path = "supervisor" }
-wifi = { path = "wifi" }
+anyka-sys = { path = "crates/anyka-sys" }
+os = { path = "crates/os" }
+anyka-link = { path = "crates/anyka-link" }
+telemetry = { path = "crates/telemetry" }
+anyka = { path = "crates/anyka" }
+anyka-v8 = { path = "crates/anyka-v8" }
+auth = { path = "crates/auth" }
+anyka-ptz = { path = "crates/anyka-ptz" }
+ptz-proto = { path = "crates/ptz-proto" }
+lights-proto = { path = "crates/lights-proto" }
+onvif-schema = { path = "crates/onvif-schema" }
+supervisor = { path = "crates/supervisor" }
+wifi = { path = "crates/wifi" }
 
 # Shared by the control sockets, the web API and the ONVIF service.
 serde = { version = "1", features = ["derive"] }

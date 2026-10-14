@@ -5,7 +5,7 @@ from the SD card. It started as the Anyka SDK demos rewritten in Rust and grew
 into a vendor-free stack: supervisor, watchdog, Wi-Fi with recovery, SSH, web
 admin UI, ONVIF and RTSP.
 
-📖 **Documentation:** the `website/` site, published to GitHub Pages (getting
+📖 **Documentation:** the `docs/` site, published to GitHub Pages (getting
 started, supported cameras, architecture, verifying signed releases).
 Everything cross-compiles to the camera's ARMv5TE CPU and links against the
 vendored Anyka SDK through safe wrappers.
@@ -19,14 +19,14 @@ vendored Anyka SDK through safe wrappers.
 ./x help                 # every task
 ```
 
-Two longer documents alongside this one:
+Longer engineering notes in `docs/notes/`:
 
-* [`docs/HARDWARE-FINDINGS.md`](docs/HARDWARE-FINDINGS.md) — what a live camera
+* [`docs/notes/HARDWARE-FINDINGS.md`](docs/notes/HARDWARE-FINDINGS.md) — what a live camera
   showed, including why the ISP and audio paths do not work on that unit and
   which failures are pre-existing rather than caused by this port.
-* [`docs/IMPLEMENTATION.md`](docs/IMPLEMENTATION.md) — the design of each
+* [`docs/notes/IMPLEMENTATION.md`](docs/notes/IMPLEMENTATION.md) — the design of each
   crate and the reasoning behind the awkward parts.
-* [`docs/SDK-SOURCES.md`](docs/SDK-SOURCES.md) — the camera is an
+* [`docs/notes/SDK-SOURCES.md`](docs/notes/SDK-SOURCES.md) — the camera is an
   **AK3918AV100**, not the EV200 this repo was built around. Where the matching
   SDK is, proof that it matches, and what porting to it involves.
 
@@ -62,23 +62,23 @@ some crates outright — see [Telemetry](#telemetry) below.
 
 ## Layout
 
-| Crate | What it is |
+| Path | What it is |
 | --- | --- |
-| `anyka-sys` | Generated FFI bindings. `bindgen` runs over `sdk/include` at build time. |
-| `anyka` | Safe wrappers: handles that close on drop, frame guards that release on drop. |
-| `os` | Kernel-only helpers (watchdog character device, signals). Links no SDK library. |
-| `telemetry` | `tracing` setup and a Prometheus recorder. |
-| `onvif-schema` | ONVIF Device/Media/PTZ types generated from the vendored official WSDL/XSD (`./x gen-onvif`; output committed, `--check` in `./x ci`). |
+| `crates/anyka-sys` | Generated FFI bindings. `bindgen` runs over `sdk/include` at build time. |
+| `crates/anyka` | Safe wrappers: handles that close on drop, frame guards that release on drop. |
+| `crates/os` | Kernel-only helpers (watchdog character device, signals). Links no SDK library. |
+| `crates/telemetry` | `tracing` setup and a Prometheus recorder. |
+| `crates/onvif-schema` | ONVIF Device/Media/PTZ types generated from the vendored official WSDL/XSD (`./x gen-onvif`; output committed, `--check` in `./x ci`). |
 | `demos/*` | The seven SDK demos, ported. |
-| `rtsp` | RTSP 1.0 server: H.264 over TCP-interleaved or UDP, Digest auth with the ONVIF account. No vendor library. See [rtsp](#rtsp). |
-| `sshd` | Password-authenticated SSH server. |
-| `supervisor` | Event-driven process supervisor. Replaces the polling shell script. |
+| `crates/rtsp` | RTSP 1.0 server: H.264 over TCP-interleaved or UDP, Digest auth with the ONVIF account. No vendor library. See [rtsp](#rtsp). |
+| `crates/sshd` | Password-authenticated SSH server. |
+| `crates/supervisor` | Event-driven process supervisor. Replaces the polling shell script. |
 | `xtask` | Build, lint and packaging tasks. Runs on the host. |
 | `sdk/` | Vendored Anyka SDK headers and shared objects. |
 | `card/` | Files at the root of the SD card: `autorun.sh`, `Factory/config.sh`. |
 | `tools/autostart/` | Optional AV100 flash patch so the stack starts at boot (with rollback). |
 | `tools/qemu-armv5/` | Builds the VM for `./x itest` from your own camera's flash dump. |
-| `website/` | Documentation site (Fumadocs). |
+| `docs/` | Documentation site (Fumadocs); engineering notes in `docs/notes/`. |
 
 ## The safe wrappers
 
@@ -204,7 +204,7 @@ ours: the method handlers, the session table and its timeout, and the fan-out.
   played in a loop at `--fps`; the AV100 encoder (`/dev/venc`) is the Phase C
   implementation, which is why the supervisor service is still disabled.
 
-`./x test -p rtsp` plays `rtsp/tests/data/clip.h264` to the `retina` client
+`./x test -p rtsp` plays `crates/rtsp/tests/data/clip.h264` to the `retina` client
 over TCP and UDP and checks the received NAL units against the file.
 
 ## supervisor
@@ -349,7 +349,7 @@ they are worth knowing before changing the build.
    platform libraries. No `-l` ordering resolves that — they have to be in one
    `--start-group`. Cargo cannot express it (`rustc-link-arg` keeps order but
    does not propagate to downstream binaries; `rustc-link-lib` propagates but
-   loses order), so `anyka-sys/build.rs` generates a GNU **ld script** named
+   loses order), so `crates/anyka-sys/build.rs` generates a GNU **ld script** named
    `libanyka_sdk.so` that expands to a `GROUP (...)` of the whole SDK, and
    every binary links it as one ordinary `-lanyka_sdk`.
 2. **No SONAME, no run path.** The objects reference each other by DT_NEEDED but

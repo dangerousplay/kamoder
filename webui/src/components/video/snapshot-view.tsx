@@ -10,6 +10,8 @@ interface SnapshotViewProps {
   /** Log file of the snapshot service, linked when video is unavailable. */
   logFile?: string
   intervalMs?: number
+  /** Image sensor index on multi-sensor boards; the service default if unset. */
+  camera?: number
   /** Render nothing (instead of the "unavailable" panel) on 503. */
   hideWhenUnavailable?: boolean
   className?: string
@@ -29,6 +31,7 @@ type State =
 export function SnapshotView({
   logFile = "snapshot.log",
   intervalMs = 5000,
+  camera,
   hideWhenUnavailable = false,
   className,
 }: SnapshotViewProps) {
@@ -51,7 +54,7 @@ export function SnapshotView({
       busy = true
       let next = intervalMs
       try {
-        const blob = await api.snapshot(ctrl.signal)
+        const blob = await api.snapshot(ctrl.signal, camera)
         const url = URL.createObjectURL(blob)
         if (objectUrl) URL.revokeObjectURL(objectUrl)
         objectUrl = url
@@ -94,7 +97,7 @@ export function SnapshotView({
       document.removeEventListener("visibilitychange", onVisibility)
       if (objectUrl) URL.revokeObjectURL(objectUrl)
     }
-  }, [intervalMs, hideWhenUnavailable])
+  }, [intervalMs, hideWhenUnavailable, camera])
 
   const hidden =
     hideWhenUnavailable &&

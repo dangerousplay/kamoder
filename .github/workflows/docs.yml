@@ -1,4 +1,4 @@
-# Build the Fumadocs site (website/) as a static export and deploy it to
+# Build the Fumadocs site (docs/) as a static export and deploy it to
 # GitHub Pages. Pull requests only build it.
 #
 # One-time setup: Settings → Pages → Source: "GitHub Actions".
@@ -7,9 +7,9 @@ name: docs
 on:
   push:
     branches: [main]
-    paths: ['website/**', '.github/workflows/docs.yml']
+    paths: ['docs/**', '.github/workflows/docs.yml']
   pull_request:
-    paths: ['website/**', '.github/workflows/docs.yml']
+    paths: ['docs/**', '.github/workflows/docs.yml']
   workflow_dispatch:
 
 permissions:
@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-24.04
     defaults:
       run:
-        working-directory: website
+        working-directory: docs
     steps:
       - uses: actions/checkout@v5
 
@@ -32,7 +32,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: website/package-lock.json
+          cache-dependency-path: docs/package-lock.json
 
       - name: Configure Pages
         id: pages
@@ -51,7 +51,7 @@ jobs:
       - uses: actions/upload-pages-artifact@v4
         if: github.event_name != 'pull_request'
         with:
-          path: website/out
+          path: docs/out
 
   deploy:
     if: github.event_name != 'pull_request'

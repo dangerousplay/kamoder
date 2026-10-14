@@ -3,7 +3,7 @@
 These are the vendor objects and headers for the SoC this camera actually has.
 The set one level up (`sdk/include`, `sdk/lib`) is for a **different** part
 (AK3918EV200) and is kept because the already-verified binaries build against
-it. See `../../docs/SDK-SOURCES.md`.
+it. See `../../docs/notes/SDK-SOURCES.md`.
 
 ## Source
 
