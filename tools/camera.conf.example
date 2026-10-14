@@ -15,6 +15,18 @@ run_rust=1
 # fails to start, so leave it on until SSH has been proven on this camera.
 start_telnetd=1
 
+# Board profile: the file name, without .toml, of one of the profiles in
+# boards/ beside this file (e.g. anyka-av100-ptz, generic-v4l2). Empty =
+# detect the board from the hardware, which is the normal setting. The
+# profile decides which services run (no lights or PTZ where the board has
+# none), the vendor processes stopped below, and the video, Wi-Fi and GPIO
+# settings. An unknown name (or a broken boards/) is an error: init.sh keeps
+# the built-in AV100 vendor process list, and the watchdog feeder, wifi,
+# sshd and web still start, but the board-driven services (camera, rtsp,
+# onvif, lights) fail. `bin/supervisor board` shows what this camera
+# resolves to; check it after changing this line.
+BOARD=
+
 # 1 = stop the vendor IPC process (/ipc/ipc and its watchers) before starting
 # the Rust stack, like the old quiet-console script: the console goes quiet
 # and the ISP, ADC and /dev/watchdog are freed for the Rust binaries. The

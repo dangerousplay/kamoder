@@ -217,16 +217,17 @@ fn main() -> Result<()> {
     // a mistake, a board without optional hardware is not.
     let configured = config.enabled_services().count();
 
-    // The board is only looked at when the services are about to run (or
-    // for the banner that describes them); `--check` validates the file.
-    let board = if args.check_only {
-        None
-    } else {
-        let dir = args
-            .boards_dir
-            .clone()
-            .unwrap_or_else(|| config.base_dir.join("boards"));
-        match board_select::resolve(&dir, args.board.as_deref()) {
+    // `--check` resolves the board too, so it shows which services this
+    // board would skip; a board that cannot be resolved never fails the
+    // check (init.sh's preflight must not fall back to the feeder alone
+    // because of `boards/`).
+    let boards_dir = args
+        .boards_dir
+        .clone()
+        .unwrap_or_else(|| config.base_dir.join("boards"));
+    let board = {
+        let dir = &boards_dir;
+        match board_select::resolve(dir, args.board.as_deref()) {
             Ok(resolved) => {
                 tracing::info!(
                     board = %resolved.name,
@@ -246,7 +247,8 @@ fn main() -> Result<()> {
             }
         }
     };
-    for (service, capability) in config.apply_board(board.as_ref().map(|b| &b.profile)) {
+    let skipped = config.apply_board(board.as_ref().map(|b| &b.profile));
+    for (service, capability) in &skipped {
         tracing::info!(
             service,
             %capability,
@@ -263,6 +265,13 @@ fn main() -> Result<()> {
             "{}: ok, {enabled} service(s) enabled",
             args.config.display()
         );
+        match &board {
+            Some(resolved) => println!("  board: {} ({})", resolved.name, resolved.reason),
+            None => println!(
+                "  board: unresolved from {} (conditional services all start)",
+                boards_dir.display()
+            ),
+        }
         for service in config.enabled_services() {
             let program = config.resolve(&service.command);
             let exists = if program.is_file() { "" } else { "  [MISSING]" };
@@ -277,6 +286,9 @@ fn main() -> Result<()> {
                 exists,
                 when
             );
+        }
+        for (service, capability) in &skipped {
+            println!("  {service:<16} skipped: board lacks {capability}");
         }
         return Ok(());
     }

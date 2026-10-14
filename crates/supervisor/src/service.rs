@@ -274,28 +274,7 @@ impl ServiceActor {
             let mut snapshot = lock(&self.args.status);
             snapshot.spawns = snapshot.spawns.saturating_add(1);
         }
-        let service = &self.args.service;
-        let mut command = Command::new(&self.args.program);
-        command
-            .args(&service.args)
-            .current_dir(&self.args.working_dir)
-            .stdin(Stdio::null())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped());
-        // The supervisor's own log file must not be inherited. Every Rust
-        // service reads ANYKA_LOG_FILE, so passing it on made all of them
-        // append to — and rotate — supervisor.log concurrently, while their
-        // own <service>.log stayed empty. Without it they log to stderr,
-        // which is piped into the per-service rotating sink below. A service
-        // that really wants its own file can still set it in `env`.
-        command.env_remove(telemetry::LOG_FILE_ENV);
-        for (key, value) in &service.env {
-            command.env(key, value);
-        }
-        // Give the child its own process group so a stray `kill` on the group
-        // cannot take the supervisor with it, and so signals can be sent to
-        // the whole tree later if that is ever needed.
-        command.process_group(0);
+        let mut command = build_command(&self.args);
 
         let mut child = match command.spawn() {
             Ok(child) => child,
@@ -700,10 +679,84 @@ where
     });
 }
 
+/// The child's command line, working directory, stdio and environment.
+fn build_command(args: &ServiceArgs) -> Command {
+    let service = &args.service;
+    let mut command = Command::new(&args.program);
+    command
+        .args(&service.args)
+        .current_dir(&args.working_dir)
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    // The supervisor's own log file must not be inherited. Every Rust
+    // service reads ANYKA_LOG_FILE, so passing it on made all of them
+    // append to — and rotate — supervisor.log concurrently, while their
+    // own <service>.log stayed empty. Without it they log to stderr,
+    // which is piped into the per-service rotating sink below. A service
+    // that really wants its own file can still set it in `env`.
+    command.env_remove(telemetry::LOG_FILE_ENV);
+    // Nor a KAMODER_BOARD the supervisor itself inherited: the only valid
+    // handoff is the one this supervisor wrote, which `inject_env` puts in
+    // `service.env` below. When resolving the board or writing the handoff
+    // failed, a stale value from the environment (an old file in /tmp, a
+    // different board) must not reach the services; they resolve the board
+    // themselves instead.
+    command.env_remove(board::HANDOFF_ENV);
+    for (key, value) in &service.env {
+        command.env(key, value);
+    }
+    // Give the child its own process group so a stray `kill` on the group
+    // cannot take the supervisor with it, and so signals can be sent to
+    // the whole tree later if that is ever needed.
+    command.process_group(0);
+    command
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::config::Restart;
+    use std::ffi::OsStr;
+
+    /// What the child's environment does with `key`: `None` = inherited
+    /// untouched, `Some(None)` = removed, `Some(Some(v))` = set to `v`.
+    fn env_of(service: Service, key: &str) -> Option<Option<String>> {
+        let args = actor(service, 0).args;
+        let command = build_command(&args);
+        command
+            .as_std()
+            .get_envs()
+            .filter(|(k, _)| *k == OsStr::new(key))
+            .last()
+            .map(|(_, v)| v.map(|v| v.to_string_lossy().into_owned()))
+    }
+
+    #[test]
+    fn inherited_board_handoff_is_dropped() {
+        // No handoff injected (board resolution failed): removed, so a
+        // stale KAMODER_BOARD in the supervisor's environment is not seen.
+        assert_eq!(env_of(service(100, 1_000), board::HANDOFF_ENV), Some(None));
+    }
+
+    #[test]
+    fn injected_board_handoff_reaches_the_child() {
+        let mut cfg = service(100, 1_000);
+        cfg.env
+            .push((board::HANDOFF_ENV.into(), "/tmp/kamoder-board.json".into()));
+        assert_eq!(
+            env_of(cfg, board::HANDOFF_ENV),
+            Some(Some("/tmp/kamoder-board.json".into()))
+        );
+    }
+
+    #[test]
+    fn inherited_log_file_is_dropped() {
+        assert_eq!(
+            env_of(service(100, 1_000), telemetry::LOG_FILE_ENV),
+            Some(None)
+        );
+    }
 
     fn service(initial_ms: u64, max_ms: u64) -> Service {
         Service {

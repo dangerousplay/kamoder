@@ -48,7 +48,19 @@ FALLBACK_FEEDER=$BASE/bin/wdt_feeder
 # disappears go first, then the IPC binary itself.
 # `main` and `anyka_ipc` are what the AK3918AV100 firmware runs (the old
 # quite_console.sh killed exactly those two); the rest are from other builds.
-VENDOR_PROCESSES="daemon gwellupdater.sh soft_reboot.sh ipc anyka_ipc main"
+#
+# This literal is the fallback: resolve_board replaces it with the board
+# profile's [platform] vendor_processes (boards/<name>.toml), and keeps it
+# whenever the board cannot be resolved. It must stay identical to
+# boards/anyka-av100-ptz.toml, so a broken boards/ on the AV100 changes
+# nothing.
+DEFAULT_VENDOR_PROCESSES="daemon gwellupdater.sh soft_reboot.sh ipc anyka_ipc main"
+VENDOR_PROCESSES=$DEFAULT_VENDOR_PROCESSES
+# Board facts from `supervisor board --shell`; these are the fallbacks.
+KAMODER_BOARD_NAME=
+# Whether the board's vendor app holds /dev/watchdog at boot. Logged only:
+# wdt_feeder always gets -w (harmless where nothing holds the device).
+WATCHDOG_WAIT=1
 # The vendor stack starts *after* the SD hook on the AV100, so a one-shot kill
 # at boot finds nothing. A guard loop keeps killing it; this is its pid file.
 GUARD_PID_FILE=/tmp/anyka_rust.guard.pid
@@ -148,6 +160,9 @@ load_settings() {
     onvif_user=admin
     onvif_password=
     stop_vendor_ipc=1
+    # Board profile name (boards/<name>.toml); empty = detect. An inherited
+    # BOARD is kept unless camera.conf sets one.
+    BOARD=${BOARD:-}
     # shellcheck source=/dev/null
     [ -f "$CAMERA_CONF" ] && . "$CAMERA_CONF"
     return 0
@@ -267,6 +282,12 @@ provision_onvif() {
 }
 
 export_env() {
+    # The board override from camera.conf, for the supervisor and (through
+    # it) every service. Only when set: empty means detect.
+    if [ -n "$BOARD" ]; then
+        export BOARD
+    fi
+
     # Every library comes from the binary's (and each SDK object's) own
     # $ORIGIN-relative RPATH: lib/<variant> for the SDK, lib/sys for the
     # runtime. An inherited LD_LIBRARY_PATH is dropped so nothing can slip a
@@ -318,6 +339,56 @@ preflight() {
         fi
     fi
     return $ok
+}
+
+# --------------------------------------------------------------------------
+# Board
+# --------------------------------------------------------------------------
+
+# Takes the vendor process list from the board profile, through
+# `supervisor board --shell` (which prints single-quoted assignments of
+# KAMODER_BOARD_NAME, VENDOR_PROCESSES and WATCHDOG_WAIT).
+#
+# Anything wrong — no binary, non-zero exit, empty or odd output — keeps the
+# literal AV100 defaults above, which is exactly the behaviour from before
+# board profiles. Only stdout is evaluated; the error, if any, goes to the
+# log. Runs before the vendor IPC is touched, so it cannot affect the
+# watchdog handover.
+resolve_board() {
+    board_out=
+    if [ -x "$SUPERVISOR" ]; then
+        board_out=$("$SUPERVISOR" board --shell) || board_out=
+    fi
+    # Tried in a subshell first: a syntax error in `eval` makes a
+    # non-interactive POSIX shell exit, and this one must keep going.
+    if [ -n "$board_out" ] && (eval "$board_out") >/dev/null 2>&1; then
+        eval "$board_out"
+    fi
+    board_ok=1
+    [ -n "${KAMODER_BOARD_NAME:-}" ] || board_ok=0
+    case "${WATCHDOG_WAIT:-}" in
+        0|1) ;;
+        *) board_ok=0 ;;
+    esac
+    # Names are word-split and compared with /proc/<pid>/comm: refuse glob
+    # or shell characters rather than let them expand (globbing is off
+    # while checking, so the check itself expands nothing).
+    set -f
+    for name in ${VENDOR_PROCESSES:-}; do
+        case "$name" in
+            *[!A-Za-z0-9._+-]*) board_ok=0 ;;
+        esac
+    done
+    set +f
+    if [ "$board_ok" != 1 ]; then
+        KAMODER_BOARD_NAME=
+        VENDOR_PROCESSES=$DEFAULT_VENDOR_PROCESSES
+        WATCHDOG_WAIT=1
+        log "WARNING: board not resolved; using the built-in AV100 defaults (vendor processes: $VENDOR_PROCESSES)"
+        return 1
+    fi
+    log "board $KAMODER_BOARD_NAME: vendor processes '$VENDOR_PROCESSES', watchdog_wait=$WATCHDOG_WAIT"
+    return 0
 }
 
 # --------------------------------------------------------------------------
@@ -558,6 +629,7 @@ main() {
             ;;
         --check)
             export_env
+            resolve_board
             preflight
             return $?
             ;;
@@ -583,6 +655,10 @@ main() {
         start_fallback_feeder
         return 0
     fi
+
+    # Before the vendor IPC is touched: the vendor app still feeds the
+    # watchdog here, and a failure keeps the AV100 defaults.
+    resolve_board || log "continuing with the built-in vendor process list"
 
     # Nothing may sit between this and starting the supervisor: from here the
     # watchdog is only fed once wdt_feeder is up.

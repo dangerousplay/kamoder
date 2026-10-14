@@ -5,6 +5,15 @@
 # editing anything.
 #
 # Validate before deploying:   supervisor --config supervisor.toml --check
+#
+# Board profiles: the supervisor resolves the board once at start (BOARD in
+# camera.conf, which init.sh exports, else detection against boards/ beside
+# this file) and hands it to every service in KAMODER_BOARD. Hardware facts
+# (sensors, GPIOs, Wi-Fi driver, motor) live in boards/<name>.toml, not here.
+# A service with `when = "<capability>"` is skipped when the resolved board
+# lacks it (ptz, lights, wifi, video, video.encoder); if the board cannot be
+# resolved at all, every service starts as before profiles existed.
+# Critical services (the watchdog feeder) can never have `when`.
 
 [supervisor]
 log_dir = "logs"
@@ -23,6 +32,10 @@ name = "wdt_feeder"
 command = "bin/wdt_feeder"
 # -w: wait while the vendor app still holds /dev/watchdog at boot (AV100)
 # instead of exiting; init.sh's vendor guard then kills the vendor app.
+# Always passed, whatever the board's `watchdog_wait`: on a board where
+# nothing else holds the device, -w costs nothing (the first open succeeds),
+# while dropping it on a board that needs it reboot-loops the camera. Only
+# init.sh reads watchdog_wait (WATCHDOG_WAIT from `supervisor board --shell`).
 args = ["-i", "1", "-w"]
 restart = "always"
 # The control socket (and so the web admin) refuses to stop or restart it:
@@ -35,16 +48,18 @@ max_restarts = 30
 restart_window_secs = 60
 stop_timeout_secs = 5
 
-# Owns the light and speaker-amp GPIOs (19 IR-cut, 67 IR LEDs, 68 white,
-# 48 red/blue, 37 amp) and nothing else: GPIO 98 (Wi-Fi power) and the motor
-# pins are refused in code. Second, right after the feeder, because the
-# red/blue lights are lit from boot until something drives them. Applies
-# etc/lights.json (or the defaults: day, lights off, amp muted), serves
-# /tmp/kamoder-lights.sock for web and onvif, and leaves day / lights off /
-# amp muted behind when stopped.
+# Owns the light and speaker-amp GPIOs named in the board's [lights] section
+# (IR-cut, IR LEDs, white, red/blue, amp — see boards/anyka-av100-ptz.toml)
+# and nothing else: the board's Wi-Fi power GPIO is refused in code. Second,
+# right after the feeder, because on the AV100 the red/blue lights are lit
+# from boot until something drives them. Applies etc/lights.json (or the
+# defaults: day, lights off, amp muted), serves /tmp/kamoder-lights.sock for
+# web and onvif, and leaves day / lights off / amp muted behind when stopped.
+# Skipped on boards without [lights], so unknown GPIOs are never touched.
 [[service]]
 name = "lights"
 command = "bin/lights"
+when = "lights"
 args = ["--state", "etc/lights.json", "--socket", "/tmp/kamoder-lights.sock"]
 restart = "always"
 backoff_initial_ms = 1000
@@ -59,6 +74,12 @@ enabled = true
 # does not come up. With wifi_ssid empty it never writes a config, only keeps
 # the existing one associated. Early, so the network is being looked after
 # before anything that listens on it starts.
+#
+# Deliberately NOT `when = "wifi"`: Wi-Fi is the only way into a deployed
+# camera. If detection ever picked the wrong board (say generic-v4l2, which
+# has no [wifi]) a `when` would silently drop Wi-Fi recovery; without a
+# board [wifi] section the service falls back to its built-in AV100
+# interface and driver, with no power-GPIO cycling.
 [[service]]
 name = "wifi"
 command = "bin/wifi"
@@ -125,11 +146,12 @@ enabled = true
 # ONVIF Profile S (SOAP on port 8000) plus WS-Discovery (udp 3702), so NVRs
 # find the camera and learn its RTSP and snapshot URLs. This process owns the
 # PTZ motor and serves /tmp/anyka-ptz.sock; the web UI's PTZ pad is a client
-# of it, so ONVIF and UI moves never fight over the motor. `--ptz auto` probes
-# the SDK motor (/dev/ak-motor0, EV200), then /dev/preset_motor (AV100), and
-# runs without PTZ if neither is present. `--ptz` is left at its default
-# (auto) rather than given here, so ANYKA_ONVIF_PTZ in the environment can
-# override it (itest's VM exports `sim`).
+# of it, so ONVIF and UI moves never fight over the motor. The motor and its
+# limits come from the board's [ptz] section (boards/anyka-av100-ptz.toml);
+# without one it runs without PTZ. No `when`: ONVIF media and discovery are
+# needed on every board, PTZ or not. `--ptz` is left at its default rather
+# than given here, so ANYKA_ONVIF_PTZ in the environment can override it
+# (itest's VM exports `sim`).
 #
 # etc/onvif.secret (`user:password`, mode 0600) is written by init.sh from
 # camera.conf's onvif_user/onvif_password. Without it the service refuses to
@@ -159,19 +181,21 @@ stop_timeout_secs = 10
 enabled = true
 
 # Pure-Rust RTSP server (no vendor libraries) on port 554: one H.264 stream
-# per image sensor, read from the camera service's video socket and
-# hardware-encoded there — rtsp://<camera>/vs0 (the URL onvif hands to NVRs)
-# and /vs1. Digest auth with the ONVIF account in etc/onvif.secret; web
-# restarts this service when that account changes. If the camera service is
-# down the streams stall and resume; they do not end.
+# per image sensor in the board's [video] sensors, read from the camera
+# service's video socket and hardware-encoded there — rtsp://<camera>/vs0
+# (the URL onvif hands to NVRs), /vs1, ... No `--stream` here: the mounts
+# (vsN=camera:N) come from the board; give `--stream` only to override them.
+# Skipped on boards whose capture has no encoder (the test pattern). Digest
+# auth with the ONVIF account in etc/onvif.secret; web restarts this service
+# when that account changes. If the camera service is down the streams
+# stall and resume; they do not end.
 [[service]]
 name = "rtsp"
 command = "bin/rtsp"
+when = "video.encoder"
 args = [
     "--port", "554",
     "--secret", "etc/onvif.secret",
-    "--stream", "vs0=camera:0",
-    "--stream", "vs1=camera:1",
 ]
 restart = "always"
 backoff_initial_ms = 2000
@@ -181,17 +205,20 @@ restart_window_secs = 300
 stop_timeout_secs = 10
 enabled = true
 
-# Pure-Rust capture from every image sensor (two SC2331 on the AV100 PTZ
-# board), no vendor library: loads the ISP tuning from /usr/local, captures
-# 1280x720 per sensor, hardware-encodes H.264 (CBR 2048 kbit/s) for rtsp over
-# /tmp/kamoder-video.sock, and serves JPEG snapshots on loopback
-# (http://127.0.0.1:3000/snapshot.jpg?camera=N) for web, which proxies them
-# as /api/snapshot.jpg and /api/live.mjpeg. Capture failures are retried
-# inside the service and reported at /status, so it keeps running.
+# Pure-Rust capture from every image sensor, no vendor library. Backend,
+# sensors, ISP tuning directory, stream and snapshot settings all come from
+# the board's [video] section (boards/anyka-av100-ptz.toml for the AV100);
+# CLI flags given here would override them. Hardware-encodes H.264 for rtsp
+# over /tmp/kamoder-video.sock (when the backend has an encoder) and serves
+# JPEG snapshots on loopback (http://127.0.0.1:3000/snapshot.jpg?camera=N)
+# for web, which proxies them as /api/snapshot.jpg and /api/live.mjpeg.
+# Capture failures are retried inside the service and reported at /status,
+# so it keeps running.
 [[service]]
 name = "snapshot"
 command = "bin/camera"
-args = ["serve", "--listen", "127.0.0.1:3000", "--conf-dir", "/usr/local"]
+when = "video"
+args = ["serve", "--listen", "127.0.0.1:3000"]
 restart = "always"
 backoff_initial_ms = 2000
 backoff_max_ms = 60000

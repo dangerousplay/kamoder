@@ -682,4 +682,57 @@ mod tests {
         let config = Config::load(&path).unwrap();
         assert!(config.enabled_services().any(|s| s.critical));
     }
+
+    fn shipped() -> Config {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools/supervisor.toml");
+        Config::load(&path).unwrap()
+    }
+
+    const SHIPPED_SERVICES: [&str; 8] = [
+        "wdt_feeder",
+        "lights",
+        "wifi",
+        "sshd",
+        "web",
+        "onvif",
+        "rtsp",
+        "snapshot",
+    ];
+
+    /// The AV100 runs every shipped service, in today's order (PKG-02).
+    #[test]
+    fn the_shipped_config_runs_everything_on_the_av100() {
+        let mut config = shipped();
+        let skipped = config.apply_board(Some(&profile("anyka-av100-ptz")));
+        assert!(skipped.is_empty(), "{skipped:?}");
+        assert_eq!(enabled(&config), SHIPPED_SERVICES);
+    }
+
+    /// Without a board (boards/ missing or broken) nothing is skipped.
+    #[test]
+    fn the_shipped_config_runs_everything_without_a_board() {
+        let mut config = shipped();
+        assert!(config.apply_board(None).is_empty());
+        assert_eq!(enabled(&config), SHIPPED_SERVICES);
+    }
+
+    /// On the generic fallback: no lights (unknown GPIOs) and no rtsp (the
+    /// test pattern has no encoder); the feeder and Wi-Fi always run.
+    #[test]
+    fn the_shipped_config_on_the_generic_board() {
+        let mut config = shipped();
+        let skipped = config.apply_board(Some(&profile("generic-v4l2")));
+        let skipped: Vec<_> = skipped
+            .iter()
+            .map(|(s, c)| (s.as_str(), c.as_str()))
+            .collect();
+        assert_eq!(skipped, [("lights", "lights"), ("rtsp", "video.encoder")]);
+        assert_eq!(
+            enabled(&config),
+            ["wdt_feeder", "wifi", "sshd", "web", "onvif", "snapshot"]
+        );
+        // Wi-Fi is the only way in: it must never depend on the board.
+        let wifi = config.services.iter().find(|s| s.name == "wifi").unwrap();
+        assert!(wifi.when.is_none());
+    }
 }
