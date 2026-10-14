@@ -530,3 +530,22 @@ On the camera a 2 MB upload now completes in 1.2 s with a matching md5.
 
 `/tmp/campush.sh` (base64 chunks in the command line) was used to deploy while
 the old sshd was still running; it is no longer needed.
+
+## 10. Board-agnostic build on the live AV100 (2026-10-13)
+
+Deployed the board-profile build (stripped binaries swapped in with
+`tools/camera-access/swap.sh`; `wdt_feeder` and `sshd` left as they were)
+and checked it from the LAN:
+
+| Check | Result |
+| --- | --- |
+| Board resolution | `anyka-av100-ptz`, "matched cpuinfo_hardware=AK3918AV100 (score 1)"; `/tmp/kamoder-board.json` written, all services started |
+| Supervisor args | camera, rtsp and onvif run with no AV100 flags (no `--conf-dir`, `--stream`, `--rtsp-path`) |
+| Camera service | both sensors capturing, hardware H.264 on (`capturing sensors=2 encoding=true`) |
+| RTSP | `ffprobe` `/vs0` and `/vs1`: H.264 Main 1280x720 15 fps; a decoded frame from each shows a live picture |
+| ONVIF | device info "Kamoder / AK3918AV100 dual SC2331 pan/tilt"; `GetProfiles` returns `Profile_vs0` and `Profile_vs1` (H.264 1280x720) with per-sensor stream and snapshot URIs; 2 video sources; PTZ `GetStatus` answers; imaging advertised |
+| Wi-Fi | profile values in use (`wlan0`, `ssv6x5x`, power GPIO 98), link healthy |
+| Lights | socket up with the profile's five roles |
+
+WS-Discovery multicast did not reach the test host, which sits on another
+subnet; the unicast probe answered.

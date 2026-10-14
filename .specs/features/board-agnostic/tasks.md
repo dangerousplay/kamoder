@@ -1,6 +1,6 @@
 # Board-agnostic — Tasks
 
-**Design:** `design.md` · **Status:** In Progress (scope: AV100; CAM-06/07 deferred)
+**Design:** `design.md` · **Status:** Done (scope: AV100; CAM-06/07 deferred)
 
 Quick gate (per task): `./x test -p <touched crates>` + `cargo check --target x86_64-unknown-linux-gnu -p <touched>` (host, `--all-targets`).
 Full gate (T18+): `./x ci` and `./x test`.
@@ -65,4 +65,6 @@ BRD-01..06 → T1,T2,T3,T11,T16 · CAM-01..05 → T5,T6,T8 · CAM-08 → T7 · P
 
 | Task | Status |
 |---|---|
-| T1–T20 | Pending |
+| T1–T19 | Done (see git log) |
+| T20 | Done — live AV100 checks in HARDWARE-FINDINGS §10 |
+| CAM-06/07 | Deferred |
