@@ -482,6 +482,7 @@ version = "0.1.0"
 dependencies = [
  "anyka-av100",
  "axum",
+ "board",
  "camera",
  "clap",
  "eyre",
@@ -489,6 +490,7 @@ dependencies = [
  "telemetry",
  "tokio",
  "tracing",
+ "video-proto",
 ]
 
 [[package]]

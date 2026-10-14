@@ -28,6 +28,8 @@ members = [
     "crates/rtsp",
     "crates/web",
     "crates/camera",
+    "crates/anyka-av100",
+    "crates/camerad",
     "crates/board",
     "crates/video-proto",
     "itest/support",
@@ -59,6 +61,8 @@ supervisor = { path = "crates/supervisor" }
 wifi = { path = "crates/wifi" }
 board = { path = "crates/board" }
 video-proto = { path = "crates/video-proto" }
+camera = { path = "crates/camera" }
+anyka-av100 = { path = "crates/anyka-av100" }
 
 # Shared by the control sockets, the web API and the ONVIF service.
 serde = { version = "1", features = ["derive"] }

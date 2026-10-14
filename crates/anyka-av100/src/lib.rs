@@ -1,25 +1,81 @@
-//! The AV100 behind the camera core traits: [`Av100Backend`] (ISP + V4L2
-//! capture, `device`) and [`Av100Encoder`] (`/dev/venc` channel, `venc`).
+//! The AK3918AV100 video hardware behind the camera core traits, with no
+//! vendor library: the ISP tuning loader (`conf`), the camera host driver's
+//! V4L2 interface (`v4l2`, `device`) and the hardware H.264 encoder
+//! (`venc`), adapted as [`Av100Backend`] (ISP + V4L2 capture) and
+//! [`Av100Encoder`] (one `/dev/venc` channel per sensor).
 //!
-//! Temporary home: this module, `device`, `v4l2`, `conf` and `venc` move to
-//! the `anyka-av100` crate together (board-agnostic T6). It only uses the
-//! public API of `backend` and of the AV100 modules, so the move is a path
-//! change.
-//!
-//! Hardware rules kept here, not in the service:
+//! Hardware rules kept here, not in the generic service:
 //! - all sensors are opened, then all started ([`Av100Backend::start`]):
 //!   with `SET_DUAL_MODE` neither ISP delivers until both stream;
 //! - the encoder and one channel per sensor are opened once, early, after
-//!   freeing and compacting memory ([`open_encoder`], [`Av100Encoder::open_all`]),
-//!   and never re-created: `ak_venc_adapter` V1.0.74 oopses instead of
-//!   failing when it cannot get contiguous DMA memory.
+//!   freeing and compacting memory ([`Av100Encoder::open_all`]), and never
+//!   re-created: `ak_venc_adapter` V1.0.74 oopses instead of failing when it
+//!   cannot get contiguous DMA memory.
 
-use crate::backend::{self, BoxError, Encoder, FrameRef, Packet, PixelFormat, SensorInfo};
-use crate::device::{self, ChannelSpec, Options, Sensor};
-use crate::venc::{self, Settings};
+pub mod conf;
+pub mod device;
+pub mod v4l2;
+pub mod venc;
+
+use crate::device::{ChannelSpec, Options, Sensor};
+use crate::venc::Settings;
+use camera::backend::{self, BoxError, Encoder, FrameRef, Packet, PixelFormat, SensorInfo};
+use snafu::{ensure, ResultExt, Snafu};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
+
+/// Where the kernel lists the sensors (`v4l-subdevN`) and their names.
+pub const SYSFS: &str = "/sys/class/video4linux";
+
+/// Why a sensor has no usable tuning file.
+#[derive(Debug, Snafu)]
+pub enum TuningError {
+    #[snafu(display("no sensor {index}: {}: {source}", path.display()))]
+    NoSensor {
+        index: u32,
+        path: PathBuf,
+        source: std::io::Error,
+    },
+    #[snafu(display("no ISP tuning file {} for sensor {index} ({sensor})", path.display()))]
+    NoTuning {
+        index: u32,
+        sensor: String,
+        path: PathBuf,
+    },
+}
+
+/// Tuning file of sensor `index`: `<dir>/isp_<sensor>_mipi_2lane_mipi<N>.conf`,
+/// `<sensor>` being the subdev's driver name under `sysfs` (`sc2331`).
+pub fn tuning_file(sysfs: &Path, dir: &Path, index: u32) -> Result<PathBuf, TuningError> {
+    let name_path = sysfs.join(format!("v4l-subdev{index}/name"));
+    let name = std::fs::read_to_string(&name_path).context(NoSensorSnafu {
+        index,
+        path: name_path,
+    })?;
+    let sensor = name.split_whitespace().next().unwrap_or("unknown");
+    let path = dir.join(format!("isp_{sensor}_mipi_2lane_mipi{index}.conf"));
+    ensure!(
+        path.is_file(),
+        NoTuningSnafu {
+            index,
+            sensor,
+            path
+        }
+    );
+    Ok(path)
+}
+
+/// `venc` profile constant for a board profile's `profile` name
+/// (`baseline`, `main`, `high`; case-insensitive).
+pub fn venc_profile(name: &str) -> Option<u32> {
+    match name.to_ascii_lowercase().as_str() {
+        "baseline" => Some(venc::PROFILE_BASELINE),
+        "main" => Some(venc::PROFILE_MAIN),
+        "high" => Some(venc::PROFILE_HIGH),
+        _ => None,
+    }
+}
 
 /// Builds the capture options of one sensor and the position of the
 /// channel the service reads (the preview, i.e. the sub channel).
@@ -175,8 +231,7 @@ pub fn make_room_for_encoder() {
 /// Opens `/dev/venc`. Its kernel init allocates 16 KiB contiguous blocks;
 /// when memory is fragmented that fails, so drop the page cache, compact,
 /// and try once more.
-pub fn open_encoder() -> Result<venc::Encoder, venc::Error> {
-    let dev = Path::new("/dev");
+fn open_encoder(dev: &Path) -> Result<venc::Encoder, venc::Error> {
     // A larger free reserve keeps some higher-order blocks around for the
     // driver (the stock kernel keeps only 256 KiB).
     let _ = std::fs::write("/proc/sys/vm/min_free_kbytes", "1024");
@@ -199,21 +254,21 @@ pub struct Av100Encoder {
 }
 
 impl Av100Encoder {
-    /// Opens one channel per sensor, once, right after the encoder: channels
-    /// are never closed and re-created while the service runs, because each
-    /// creation risks the driver oops on a fragmented system.
-    pub fn open_all(
-        encoder: &Arc<venc::Encoder>,
-        settings: Settings,
-        count: usize,
-    ) -> Result<Vec<Av100Encoder>, venc::Error> {
+    /// Opens the encoder and one channel per entry of `settings` (one per
+    /// sensor, in slot order), once. Call it at start-up, before capture
+    /// buffers and clients fragment memory: the encoder's kernel init and
+    /// every channel set-up need contiguous pages, and channels are never
+    /// closed and re-created while the service runs, because each creation
+    /// risks the driver oops on a fragmented system.
+    pub fn open_all(settings: &[Settings]) -> Result<Vec<Av100Encoder>, venc::Error> {
         let dev = Path::new("/dev");
+        let encoder = Arc::new(open_encoder(dev)?);
         let mut channels = Vec::new();
-        for _ in 0..count {
+        for &settings in settings {
             make_room_for_encoder();
             channels.push(Av100Encoder {
                 chan: encoder.channel(dev, settings)?,
-                encoder: Arc::clone(encoder),
+                encoder: Arc::clone(&encoder),
                 settings,
             });
         }
@@ -322,5 +377,31 @@ mod tests {
             "",
         );
         assert_eq!(high.profile, "High");
+    }
+
+    #[test]
+    fn tuning_file_is_named_after_the_sensor_driver() {
+        let root = std::env::temp_dir().join(format!("av100-tuning-{}", std::process::id()));
+        let sysfs = root.join("sys");
+        std::fs::create_dir_all(sysfs.join("v4l-subdev1")).unwrap();
+        std::fs::write(sysfs.join("v4l-subdev1/name"), "sc2331 1-0030\n").unwrap();
+        let err = tuning_file(&sysfs, &root, 1).unwrap_err();
+        assert!(matches!(err, TuningError::NoTuning { ref sensor, .. } if sensor == "sc2331"));
+        let conf = root.join("isp_sc2331_mipi_2lane_mipi1.conf");
+        std::fs::write(&conf, b"").unwrap();
+        assert_eq!(tuning_file(&sysfs, &root, 1).unwrap(), conf);
+        assert!(matches!(
+            tuning_file(&sysfs, &root, 0),
+            Err(TuningError::NoSensor { index: 0, .. })
+        ));
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn venc_profile_names() {
+        assert_eq!(venc_profile("main"), Some(venc::PROFILE_MAIN));
+        assert_eq!(venc_profile("High"), Some(venc::PROFILE_HIGH));
+        assert_eq!(venc_profile("baseline"), Some(venc::PROFILE_BASELINE));
+        assert_eq!(venc_profile("extended"), None);
     }
 }

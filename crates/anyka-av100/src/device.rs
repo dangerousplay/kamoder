@@ -133,7 +133,7 @@ pub struct FrameRef<'a> {
 }
 
 /// One NV12 picture copied out of a capture buffer (the service's type).
-pub use crate::backend::Frame;
+pub use camera::backend::Frame;
 
 /// A brought-up sensor. Dropping it stops streaming and releases everything.
 pub struct Sensor {

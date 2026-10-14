@@ -226,6 +226,8 @@ const HOST_TESTABLE: &[&str] = &[
     "wifi",
     "anyka-itest-support",
     "camera",
+    "anyka-av100",
+    "camerad",
     "video-proto",
 ];
 

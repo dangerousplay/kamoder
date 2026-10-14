@@ -1,0 +1,26 @@
+[package]
+name = "camerad"
+description = "The camera service binary: picks the video backend from the board profile and runs the camera core service"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+# Pulls in the `pthread_setname_np` shim the crosstool's uClibc lacks.
+os.workspace = true
+telemetry.workspace = true
+camera.workspace = true
+anyka-av100.workspace = true
+board.workspace = true
+video-proto.workspace = true
+clap.workspace = true
+eyre.workspace = true
+tracing.workspace = true
+axum = { version = "0.8", default-features = false, features = ["http1", "tokio"] }
+tokio = { version = "1", features = ["rt", "net", "macros", "signal"] }
+
+# Binary name unchanged (`bin/camera` on the card, supervisor.toml, ./x dist).
+[[bin]]
+name = "camera"
+path = "src/main.rs"

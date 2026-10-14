@@ -729,7 +729,8 @@ mod capture_tests {
                 thread: Some(thread),
             }
         };
-        assert!(frames(&r.cameras[1]) >= 5);
+        // Counted after the units are sent, so it may trail by a picture.
+        wait_for("frames", || frames(&r.cameras[1]) >= 5);
     }
 
     #[test]

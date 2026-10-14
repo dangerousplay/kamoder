@@ -1,26 +1,19 @@
 [package]
 name = "camera"
-description = "Pure-Rust image sensor capture for the AK3918AV100 ISP (V4L2 + Anyka private commands) and the JPEG snapshot service"
+description = "Camera core: capture backend/encoder traits, the snapshot, /status and video-socket service, JPEG and a test-pattern backend (no device access)"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 publish = false
 
-# No SDK library and no vendor code: the kernel's V4L2 nodes and the ISP's
-# private commands, driven directly.
+# Board-agnostic: no device node, no ioctl, no SDK. Hardware backends
+# (anyka-av100) implement `backend` in their own crates; the `camera`
+# binary lives in camerad.
 [dependencies]
-# Pulls in the `pthread_setname_np` shim the crosstool's uClibc lacks.
-os.workspace = true
-telemetry.workspace = true
 video-proto.workspace = true
-clap.workspace = true
-eyre.workspace = true
-snafu.workspace = true
 tracing.workspace = true
 metrics.workspace = true
 serde.workspace = true
-serde_json.workspace = true
-libc.workspace = true
 jpeg-encoder = { version = "0.7", default-features = false, features = ["std"] }
 axum = { version = "0.8", default-features = false, features = ["http1", "tokio", "json", "query"] }
 tokio = { version = "1", features = ["rt", "net", "io-util", "macros", "time", "signal", "sync"] }
@@ -32,7 +25,3 @@ test-support = []
 [dev-dependencies]
 tokio = { version = "1", features = ["test-util"] }
 tower = { version = "0.5", default-features = false, features = ["util"] }
-
-[[bin]]
-name = "camera"
-path = "src/main.rs"

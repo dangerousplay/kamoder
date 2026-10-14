@@ -1,0 +1,17 @@
+[package]
+name = "anyka-av100"
+description = "AK3918AV100 video backend for the camera core: ISP tuning loader, V4L2 capture and the /dev/venc H.264 encoder, no vendor library"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+# No SDK library and no vendor code: the kernel's V4L2 nodes, the ISP's
+# private commands and the encoder's ioctls, driven directly. Must never
+# depend on anyka-sys or any crate that links the SDK.
+[dependencies]
+camera.workspace = true
+video-proto.workspace = true
+snafu.workspace = true
+tracing.workspace = true
+libc.workspace = true
