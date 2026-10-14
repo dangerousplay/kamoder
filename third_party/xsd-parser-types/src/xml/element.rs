@@ -1,0 +1,818 @@
+use std::borrow::Cow;
+use std::fmt::{Debug, Formatter, Result as FmtResult};
+use std::mem::replace;
+use std::slice::Iter;
+use std::str::from_utf8;
+
+#[cfg(feature = "quick-xml")]
+use quick_xml::{
+    events::{attributes::Attribute, BytesEnd, BytesStart},
+    name::QName,
+};
+
+use crate::misc::{format_utf8_slice, Namespace, NamespacePrefix};
+
+#[cfg(feature = "quick-xml")]
+use crate::quick_xml::{
+    DeserializeHelper, Deserializer, DeserializerArtifact, DeserializerEvent, DeserializerOutput,
+    DeserializerResult, Error, Event, SerializeHelper, Serializer, WithDeserializer,
+    WithSerializer,
+};
+
+use super::{
+    attributes::{Key as AttribKey, Value as AttribValue},
+    Attributes, NamespacesShared, Value,
+};
+
+/// Represents a unstructured XML element.
+#[derive(Default, Clone, Eq, PartialEq)]
+pub struct Element<'a> {
+    /// Name of the element.
+    pub name: Cow<'a, [u8]>,
+
+    /// Child values of this element.
+    pub values: Vec<Value<'a>>,
+
+    /// Attributes of this element.
+    pub attributes: Attributes<'a>,
+
+    /// List of valid namespaces for this element.
+    pub namespaces: NamespacesShared<'a>,
+}
+
+/// Represents a list of unstructured XML elements.
+pub type Elements<'a> = Vec<Element<'a>>;
+
+/// Helper type for an element with static lifetime
+pub type AnyElement = Element<'static>;
+
+/// Helper type for elements with static lifetime
+pub type AnyElements = Elements<'static>;
+
+impl<'a> Element<'a> {
+    /// Create a new [`Element`] instance.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Return the name of the element as [`QName`].
+    #[must_use]
+    #[cfg(feature = "quick-xml")]
+    pub fn qname(&self) -> QName<'_> {
+        QName(&self.name)
+    }
+
+    /// Set the name of the element.
+    #[must_use]
+    pub fn name<N>(mut self, name: N) -> Self
+    where
+        N: Into<Cow<'a, [u8]>>,
+    {
+        self.name = name.into();
+
+        self
+    }
+
+    /// Add an attribute to the element.
+    #[must_use]
+    pub fn attribute<K, V>(mut self, name: K, value: V) -> Self
+    where
+        K: Into<Cow<'a, [u8]>>,
+        V: Into<Cow<'a, [u8]>>,
+    {
+        self.attributes.insert(name, value);
+
+        self
+    }
+
+    /// Add a child value to the element.
+    #[must_use]
+    pub fn child(mut self, value: Value<'a>) -> Self {
+        self.values.push(value);
+
+        self
+    }
+
+    /// Add a namespace to the namespace context of this element.
+    ///
+    /// This will not add a namespace attribute to the element itself. It only
+    /// tells the serializer that this namespace must be valid in the context of
+    /// this element. If the namespace is not already declared in a parent element,
+    /// a suitable `xmlns` attribute will be added automatically.
+    ///
+    /// If you want to add a namespace declaration attribute to the element in
+    /// any case, use the [`Element::attribute`] method instead.
+    #[must_use]
+    pub fn namespace<P, N>(mut self, prefix: P, namespace: N) -> Self
+    where
+        P: Into<Cow<'a, [u8]>>,
+        N: Into<Cow<'a, [u8]>>,
+    {
+        let mut namespaces = self.namespaces.into_owned();
+        namespaces.insert(prefix.into().into(), namespace.into().into());
+
+        self.namespaces = namespaces.into_shared();
+
+        self
+    }
+}
+
+impl Debug for Element<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        struct Name<'a>(&'a [u8]);
+
+        impl Debug for Name<'_> {
+            fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+                write!(f, "\"")?;
+                format_utf8_slice(self.0, f)?;
+                write!(f, "\"")?;
+
+                Ok(())
+            }
+        }
+
+        f.debug_struct("Element")
+            .field("name", &Name(&self.name))
+            .field("values", &self.values)
+            .field("attributes", &self.attributes)
+            .field("namespaces", &self.namespaces)
+            .finish()
+    }
+}
+
+#[cfg(feature = "quick-xml")]
+impl<'el> WithSerializer for Element<'el> {
+    type Serializer<'x>
+        = ElementSerializer<'x, 'el>
+    where
+        'el: 'x;
+
+    fn serializer<'ser>(
+        &'ser self,
+        name: Option<&'ser str>,
+        is_root: bool,
+    ) -> Result<Self::Serializer<'ser>, Error> {
+        let _is_root = is_root;
+
+        Ok(ElementSerializer::new(self, name))
+    }
+}
+
+#[cfg(feature = "quick-xml")]
+impl WithDeserializer for Element<'static> {
+    type Deserializer = ElementDeserializer;
+}
+
+#[derive(Debug)]
+#[cfg(feature = "quick-xml")]
+pub enum ElementSerializer<'ser, 'el> {
+    Start {
+        name: Option<&'ser str>,
+        element: &'ser Element<'el>,
+    },
+    End {
+        name: Option<&'ser str>,
+        element: &'ser Element<'el>,
+    },
+    NextValue {
+        name: Option<&'ser str>,
+        element: &'ser Element<'el>,
+        values: Iter<'ser, Value<'el>>,
+    },
+    SubElement {
+        name: Option<&'ser str>,
+        element: &'ser Element<'el>,
+        values: Iter<'ser, Value<'el>>,
+        serializer: Box<ElementSerializer<'ser, 'el>>,
+    },
+    Done,
+}
+
+#[cfg(feature = "quick-xml")]
+impl<'ser, 'el> ElementSerializer<'ser, 'el> {
+    fn new(element: &'ser Element<'el>, name: Option<&'ser str>) -> Self {
+        Self::Start { name, element }
+    }
+
+    #[allow(clippy::too_many_lines)]
+    fn next_item(&mut self, helper: &mut SerializeHelper) -> Result<Option<Event<'ser>>, Error> {
+        loop {
+            match replace(self, Self::Done) {
+                Self::Start { name, element } => {
+                    let element_name = name.map_or_else(|| from_utf8(&element.name), Ok)?;
+                    let mut start = BytesStart::new(element_name);
+
+                    helper.begin_ns_scope();
+                    for (prefix, ns) in &**element.namespaces {
+                        let ns = Namespace::new(ns.0.clone().into_owned());
+                        let prefix = if prefix.0.is_empty() {
+                            None
+                        } else {
+                            Some(NamespacePrefix::new(prefix.0.clone().into_owned()))
+                        };
+                        helper.write_xmlns(&mut start, prefix.as_ref(), &ns);
+                    }
+
+                    // The deserializer stores xmlns declarations in both
+                    // `element.namespaces` and `element.attributes`. Skip xmlns
+                    // attributes that already have a corresponding namespaces entry
+                    // (emitted above via write_xmlns) to avoid duplicates.
+                    let attributes = element
+                        .attributes
+                        .iter()
+                        .filter(|(k, _)| {
+                            if *k.0 == b"xmlns"[..] {
+                                !element.namespaces.contains_key(&b""[..])
+                            } else if let Some(prefix) = k.0.strip_prefix(b"xmlns:") {
+                                !element.namespaces.contains_key(prefix)
+                            } else {
+                                true
+                            }
+                        })
+                        .map(|(k, v)| Attribute {
+                            key: QName(k),
+                            value: Cow::Borrowed(&v.0),
+                        });
+                    start.extend_attributes(attributes);
+
+                    let event = if element.values.is_empty() {
+                        helper.end_ns_scope();
+
+                        Event::Empty(start)
+                    } else {
+                        let values = element.values.iter();
+
+                        *self = Self::NextValue {
+                            name,
+                            element,
+                            values,
+                        };
+
+                        Event::Start(start)
+                    };
+
+                    return Ok(Some(event));
+                }
+                Self::End { name, element } => {
+                    let element_name = name.map_or_else(|| from_utf8(&element.name), Ok)?;
+                    let end = BytesEnd::new(element_name);
+                    let event = Event::End(end);
+
+                    helper.end_ns_scope();
+
+                    return Ok(Some(event));
+                }
+                Self::NextValue {
+                    name,
+                    element,
+                    mut values,
+                } => match values.next() {
+                    None => *self = Self::End { name, element },
+                    Some(Value::Element(sub)) => {
+                        let serializer = Box::new(Self::new(sub, None));
+
+                        *self = Self::SubElement {
+                            name,
+                            element,
+                            values,
+                            serializer,
+                        };
+                    }
+                    Some(Value::Comment(comment)) => {
+                        *self = Self::NextValue {
+                            name,
+                            element,
+                            values,
+                        };
+
+                        return Ok(Some(Event::Comment(comment.borrow())));
+                    }
+                    Some(Value::CData(cdata)) => {
+                        *self = Self::NextValue {
+                            name,
+                            element,
+                            values,
+                        };
+
+                        return Ok(Some(Event::CData(cdata.borrow())));
+                    }
+                    Some(Value::Text(text)) => {
+                        *self = Self::NextValue {
+                            name,
+                            element,
+                            values,
+                        };
+
+                        return Ok(Some(Event::Text(text.borrow())));
+                    }
+                },
+                Self::SubElement {
+                    name,
+                    element,
+                    values,
+                    mut serializer,
+                } => match serializer.next(helper) {
+                    None => {
+                        *self = Self::NextValue {
+                            name,
+                            element,
+                            values,
+                        }
+                    }
+                    Some(event) => {
+                        *self = Self::SubElement {
+                            name,
+                            element,
+                            values,
+                            serializer,
+                        };
+
+                        return event.map(Some);
+                    }
+                },
+                Self::Done => return Ok(None),
+            }
+        }
+    }
+}
+
+#[cfg(feature = "quick-xml")]
+impl<'ser> Serializer<'ser> for ElementSerializer<'ser, '_> {
+    fn next(&mut self, helper: &mut SerializeHelper) -> Option<Result<Event<'ser>, Error>> {
+        self.next_item(helper).transpose()
+    }
+}
+
+#[derive(Debug)]
+#[cfg(feature = "quick-xml")]
+pub struct ElementDeserializer {
+    element: Element<'static>,
+    sub: Box<Option<ElementDeserializer>>,
+}
+
+#[cfg(feature = "quick-xml")]
+impl ElementDeserializer {
+    fn new(element: Element<'static>) -> Self {
+        Self {
+            element,
+            sub: Box::new(None),
+        }
+    }
+
+    fn create_element(
+        start: &BytesStart<'_>,
+        namespaces: NamespacesShared<'static>,
+    ) -> Result<Element<'static>, Error> {
+        let name = Cow::Owned(start.name().0.to_owned());
+        let attributes = start
+            .attributes()
+            .map(|item| match item {
+                Ok(Attribute { key, value }) => {
+                    let key = Cow::Owned(key.0.to_owned());
+                    let value = Cow::Owned(value.into_owned());
+
+                    Ok((AttribKey(key), AttribValue(value)))
+                }
+                Err(error) => Err(error),
+            })
+            .collect::<Result<Attributes<'static>, _>>()?;
+
+        Ok(Element {
+            name,
+            attributes,
+            namespaces,
+            values: Vec::new(),
+        })
+    }
+}
+
+#[cfg(feature = "quick-xml")]
+impl<'de> Deserializer<'de, Element<'static>> for ElementDeserializer {
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, Element<'static>> {
+        match event {
+            Event::Start(start) => {
+                let namespaces = helper.namespaces();
+                let element = Self::create_element(&start, namespaces)?;
+                let deserializer = Self::new(element);
+
+                Ok(DeserializerOutput {
+                    artifact: DeserializerArtifact::Deserializer(deserializer),
+                    event: DeserializerEvent::None,
+                    allow_any: true,
+                })
+            }
+            Event::Empty(start) => {
+                let namespaces = helper.namespaces();
+                let element = Self::create_element(&start, namespaces)?;
+
+                Ok(DeserializerOutput {
+                    artifact: DeserializerArtifact::Data(element),
+                    event: DeserializerEvent::None,
+                    allow_any: true,
+                })
+            }
+            event => Ok(DeserializerOutput {
+                artifact: DeserializerArtifact::None,
+                event: DeserializerEvent::Continue(event),
+                allow_any: true,
+            }),
+        }
+    }
+
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, Element<'static>> {
+        macro_rules! handle_output {
+            ($output:expr) => {{
+                let output = $output;
+
+                match output.artifact {
+                    DeserializerArtifact::None => (),
+                    DeserializerArtifact::Data(element) => {
+                        let value = Value::Element(element);
+
+                        self.element.values.push(value);
+                    }
+                    DeserializerArtifact::Deserializer(sub) => {
+                        *self.sub = Some(sub);
+                    }
+                }
+
+                match output.event {
+                    DeserializerEvent::None => None,
+                    DeserializerEvent::Break(event) => {
+                        return Ok(DeserializerOutput {
+                            artifact: DeserializerArtifact::Deserializer(self),
+                            event: DeserializerEvent::Break(event),
+                            allow_any: true,
+                        })
+                    }
+                    DeserializerEvent::Continue(event) => Some(event),
+                }
+            }};
+        }
+
+        let event = if let Some(sub) = self.sub.take() {
+            let output = sub.next(helper, event)?;
+
+            handle_output!(output)
+        } else {
+            Some(event)
+        };
+
+        let event = match event {
+            None => None,
+            Some(event @ (Event::Start(_) | Event::Empty(_))) => {
+                let output = Self::init(helper, event)?;
+
+                handle_output!(output)
+            }
+            Some(Event::End(_)) => {
+                return Ok(DeserializerOutput {
+                    artifact: DeserializerArtifact::Data(self.element),
+                    event: DeserializerEvent::None,
+                    allow_any: true,
+                })
+            }
+            Some(Event::Text(text)) => {
+                let value = Value::Text(text.into_owned());
+
+                self.element.values.push(value);
+
+                None
+            }
+            Some(Event::CData(cdata)) => {
+                let value = Value::CData(cdata.into_owned());
+
+                self.element.values.push(value);
+
+                None
+            }
+            Some(Event::Comment(comment)) => {
+                let value = Value::Comment(comment.into_owned());
+
+                self.element.values.push(value);
+
+                None
+            }
+            event => event,
+        };
+
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event: event.map_or(DeserializerEvent::None, DeserializerEvent::Break),
+            allow_any: true,
+        })
+    }
+
+    #[allow(clippy::only_used_in_recursion)]
+    fn finish(mut self, helper: &mut DeserializeHelper) -> Result<Element<'static>, Error> {
+        if let Some(sub) = self.sub.take() {
+            let element = sub.finish(helper)?;
+            let value = Value::Element(element);
+
+            self.element.values.push(value);
+        }
+
+        Ok(self.element)
+    }
+}
+
+#[cfg(all(test, feature = "quick-xml"))]
+mod tests {
+    use std::str::from_utf8;
+    use std::sync::Arc;
+
+    use quick_xml::{events::BytesText, Writer};
+
+    use crate::quick_xml::{DeserializeSync, SerializeSync, SliceReader};
+    use crate::xml::Value;
+
+    use super::Element;
+
+    macro_rules! assert_entry {
+        ($map:expr, $key:expr, $val:expr) => {
+            assert_eq!($map.get(&$key[..]).unwrap().as_ref(), $val);
+        };
+    }
+
+    macro_rules! assert_element {
+        ($value:expr) => {
+            if let Value::Element(element) = $value {
+                element
+            } else {
+                panic!("Unexpected value")
+            }
+        };
+    }
+
+    macro_rules! assert_text {
+        ($value:expr, $text:expr) => {
+            assert!(matches!($value, Value::Text(x) if &**x == $text));
+        };
+    }
+
+    #[test]
+    fn serialize() {
+        let mut root = Element::new();
+        root.name = b"root".into();
+
+        root.values.push(Value::Text(BytesText::new("\n    ")));
+
+        let mut element = Element::new();
+        element.name = b"name".into();
+        element.attributes.insert(b"xmlns:ns", b"test");
+        element.attributes.insert(b"ns:first", b"bob");
+        element.attributes.insert(b"last", b"jones");
+        root.values.push(Value::Element(element));
+
+        root.values.push(Value::Text(BytesText::new("\n    ")));
+
+        let mut element = Element::new();
+        element.name = b"name".into();
+        element.attributes.insert(b"first", b"elizabeth");
+        element.attributes.insert(b"last", b"smith");
+        root.values.push(Value::Element(element));
+
+        root.values.push(Value::Text(BytesText::new("\n")));
+
+        let mut buffer = Vec::new();
+        let mut writer = Writer::new(&mut buffer);
+        root.serialize("names", &mut writer).unwrap();
+
+        let xml = from_utf8(&buffer).unwrap();
+        assert_eq!(xml, XML.trim());
+    }
+
+    #[test]
+    fn deserialize() {
+        let mut reader = SliceReader::new(XML.trim());
+        let root = Element::deserialize(&mut reader).unwrap();
+
+        assert_eq!(root.name.as_ref(), b"names");
+        assert_eq!(root.values.len(), 5);
+        assert!(root.attributes.is_empty());
+        assert!(root.namespaces.is_empty());
+
+        let mut iter = root.values.iter();
+
+        let value = iter.next().unwrap();
+        assert_text!(value, b"\n    ");
+
+        let value = iter.next().unwrap();
+        let element = assert_element!(value);
+        assert_eq!(element.name.as_ref(), b"name");
+        assert!(element.values.is_empty());
+        assert_eq!(element.attributes.len(), 3);
+        assert_entry!(element.attributes, b"xmlns:ns", b"test");
+        assert_entry!(element.attributes, b"ns:first", b"bob");
+        assert_entry!(element.attributes, b"last", b"jones");
+        assert_eq!(element.namespaces.len(), 1);
+        assert_entry!(element.namespaces, b"ns", b"test");
+
+        let value = iter.next().unwrap();
+        assert_text!(value, b"\n    ");
+
+        let value = iter.next().unwrap();
+        let element = assert_element!(value);
+        assert_eq!(element.name.as_ref(), b"name");
+        assert!(element.values.is_empty());
+        assert_eq!(element.attributes.len(), 2);
+        assert_entry!(element.attributes, b"first", b"elizabeth");
+        assert_entry!(element.attributes, b"last", b"smith");
+        assert!(element.namespaces.is_empty());
+        assert!(Arc::ptr_eq(&root.namespaces.0, &element.namespaces.0));
+
+        let value = iter.next().unwrap();
+        assert_text!(value, b"\n");
+    }
+
+    const XML: &str = r#"
+<names>
+    <name xmlns:ns="test" ns:first="bob" last="jones"/>
+    <name first="elizabeth" last="smith"/>
+</names>
+"#;
+
+    #[test]
+    fn roundtrip_with_default_namespace() {
+        const INPUT: &str = r#"<root xmlns="http://example.com/ns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><child><value>hello</value></child></root>"#;
+
+        let mut reader = SliceReader::new(INPUT);
+        let doc1 = Element::deserialize(&mut reader).unwrap();
+
+        let mut buffer = Vec::new();
+        let mut writer = Writer::new(&mut buffer);
+        doc1.serialize("root", &mut writer).unwrap();
+        let output = from_utf8(&buffer).unwrap();
+
+        assert!(
+            !output.contains("xmlns:=\""),
+            "must not produce invalid xmlns:= attribute, got: {output}"
+        );
+        assert_eq!(
+            output.matches("xmlns=").count(),
+            1,
+            "default namespace xmlns= should appear exactly once, got: {output}"
+        );
+        assert_eq!(
+            output.matches("xmlns:xsi=").count(),
+            1,
+            "xmlns:xsi= should appear exactly once, got: {output}"
+        );
+
+        let mut reader2 = SliceReader::new(output);
+        let doc2 = Element::deserialize(&mut reader2).unwrap();
+        assert_eq!(doc1, doc2, "round-trip should preserve element equality");
+    }
+
+    #[test]
+    fn roundtrip_without_namespaces() {
+        const INPUT: &str =
+            r#"<root><child first="alice" last="jones"/><child first="bob"/></root>"#;
+
+        let mut reader = SliceReader::new(INPUT);
+        let doc1 = Element::deserialize(&mut reader).unwrap();
+
+        let mut buffer = Vec::new();
+        let mut writer = Writer::new(&mut buffer);
+        doc1.serialize("root", &mut writer).unwrap();
+        let output = from_utf8(&buffer).unwrap();
+
+        let mut reader2 = SliceReader::new(output);
+        let doc2 = Element::deserialize(&mut reader2).unwrap();
+        assert_eq!(doc1, doc2);
+    }
+
+    #[test]
+    fn roundtrip_with_prefixed_namespace_only() {
+        const INPUT: &str =
+            r#"<root xmlns:ns="http://example.com/ns"><ns:child>text</ns:child></root>"#;
+
+        let mut reader = SliceReader::new(INPUT);
+        let doc1 = Element::deserialize(&mut reader).unwrap();
+
+        let mut buffer = Vec::new();
+        let mut writer = Writer::new(&mut buffer);
+        doc1.serialize("root", &mut writer).unwrap();
+        let output = from_utf8(&buffer).unwrap();
+
+        assert!(
+            !output.contains("xmlns:=\""),
+            "must not produce invalid xmlns:= attribute, got: {output}"
+        );
+        assert_eq!(
+            output.matches("xmlns:ns=").count(),
+            1,
+            "xmlns:ns= should appear exactly once, got: {output}"
+        );
+
+        let mut reader2 = SliceReader::new(output);
+        let doc2 = Element::deserialize(&mut reader2).unwrap();
+        assert_eq!(doc1, doc2);
+    }
+
+    /// XML Namespaces 1.0 §6.2: `xmlns=""` undeclares the default namespace.
+    #[test]
+    fn roundtrip_default_namespace_undeclaration() {
+        const INPUT: &str = r#"<root xmlns="http://example.com/ns"><child xmlns=""><value>plain</value></child></root>"#;
+
+        let mut reader = SliceReader::new(INPUT);
+        let doc1 = Element::deserialize(&mut reader).unwrap();
+
+        let mut buffer = Vec::new();
+        let mut writer = Writer::new(&mut buffer);
+        doc1.serialize("root", &mut writer).unwrap();
+        let output = from_utf8(&buffer).unwrap();
+
+        assert!(
+            !output.contains("xmlns:=\""),
+            "must not produce invalid xmlns:= attribute, got: {output}"
+        );
+
+        let mut reader2 = SliceReader::new(output);
+        let doc2 = Element::deserialize(&mut reader2).unwrap();
+        assert_eq!(doc1, doc2);
+    }
+
+    /// XML Namespaces 1.0 §6.1: inner declaration shadows outer with same prefix.
+    #[test]
+    fn roundtrip_prefix_rebinding() {
+        const INPUT: &str = r#"<root xmlns:ns="http://ns1"><ns:child xmlns:ns="http://ns2"><ns:value>text</ns:value></ns:child></root>"#;
+
+        let mut reader = SliceReader::new(INPUT);
+        let doc1 = Element::deserialize(&mut reader).unwrap();
+
+        let mut buffer = Vec::new();
+        let mut writer = Writer::new(&mut buffer);
+        doc1.serialize("root", &mut writer).unwrap();
+        let output = from_utf8(&buffer).unwrap();
+
+        assert!(
+            output.contains(r#"xmlns:ns="http://ns1""#),
+            "parent ns binding must be present, got: {output}"
+        );
+        assert!(
+            output.contains(r#"xmlns:ns="http://ns2""#),
+            "child ns rebinding must be present, got: {output}"
+        );
+
+        let mut reader2 = SliceReader::new(output);
+        let doc2 = Element::deserialize(&mut reader2).unwrap();
+        assert_eq!(doc1, doc2);
+    }
+
+    /// Inherited namespaces must not be re-declared on child elements.
+    #[test]
+    fn roundtrip_inherited_namespace_not_redeclared() {
+        const INPUT: &str = r#"<root xmlns:ns="http://example.com"><ns:child><ns:value>text</ns:value></ns:child></root>"#;
+
+        let mut reader = SliceReader::new(INPUT);
+        let doc1 = Element::deserialize(&mut reader).unwrap();
+
+        let mut buffer = Vec::new();
+        let mut writer = Writer::new(&mut buffer);
+        doc1.serialize("root", &mut writer).unwrap();
+        let output = from_utf8(&buffer).unwrap();
+
+        assert_eq!(
+            output.matches(r"xmlns:ns=").count(),
+            1,
+            "xmlns:ns= should appear only on root, not redeclared on children, got: {output}"
+        );
+
+        let mut reader2 = SliceReader::new(output);
+        let doc2 = Element::deserialize(&mut reader2).unwrap();
+        assert_eq!(doc1, doc2);
+    }
+
+    /// Xmlns declarations added only via `.attribute()` (without a
+    /// corresponding `.namespace()` entry) must be emitted verbatim.
+    #[test]
+    fn attribute_only_xmlns_is_preserved() {
+        let el = Element::new()
+            .name(b"root".as_ref())
+            .attribute(b"xmlns:foo".as_ref(), b"http://foo.example".as_ref())
+            .attribute(b"foo:bar".as_ref(), b"value".as_ref());
+
+        let mut buffer = Vec::new();
+        let mut writer = Writer::new(&mut buffer);
+        el.serialize("root", &mut writer).unwrap();
+        let output = from_utf8(&buffer).unwrap();
+
+        assert!(
+            output.contains(r#"xmlns:foo="http://foo.example""#),
+            "xmlns:foo must be preserved, got: {output}"
+        );
+        assert!(
+            output.contains(r#"foo:bar="value""#),
+            "foo:bar attribute must be preserved, got: {output}"
+        );
+    }
+}

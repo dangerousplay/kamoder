@@ -102,6 +102,10 @@ clap = { version = "4", features = ["derive", "env"] }
 # until upstream releases the fix; see third_party/onvif-device-rs/PATCHES.md.
 [patch.crates-io]
 onvif-device-rs = { path = "third_party/onvif-device-rs" }
+# xsd-parser-types 0.2.1 pins quick-xml 0.38, which has open advisories
+# (RUSTSEC-2026-0194/0195); same release rebuilt on quick-xml 0.41 until
+# upstream moves. See third_party/xsd-parser-types/PATCHES.md.
+xsd-parser-types = { path = "third_party/xsd-parser-types" }
 
 [profile.release]
 opt-level = 3

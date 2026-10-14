@@ -29,6 +29,14 @@ allow = [
     "GPL-3.0-or-later",
 ]
 confidence-threshold = 0.9
+# Allowed for one crate only, so a new IJG dependency is still reviewed.
+exceptions = [
+    # camera's snapshot JPEG encoder: a port of libjpeg's code, so it carries
+    # the Independent JPEG Group licence alongside MIT/Apache-2.0. IJG is a
+    # free licence (FSF) that GPL-3.0 code can use; it asks for credit in
+    # the documentation of a binary distribution.
+    { crate = "jpeg-encoder", allow = ["IJG"] },
+]
 
 [bans]
 multiple-versions = "warn"
