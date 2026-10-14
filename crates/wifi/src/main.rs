@@ -9,6 +9,7 @@ use metrics::{counter, describe_counter, describe_gauge, gauge};
 use os::shutdown;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
+use wifi::hardware::{self, Hardware};
 use wifi::reconcile::{self, Action, Memory, Observed, Policy};
 use wifi::recovery::{self, Outcome, Recovery};
 use wifi::system::{self, Paths, SystemOps};
@@ -53,8 +54,10 @@ struct PathArgs {
     /// wpa_supplicant control socket directory (`-C`).
     #[arg(long, env = "ANYKA_WIFI_CTRL_DIR", default_value = "/etc/Wireless")]
     ctrl_dir: PathBuf,
-    #[arg(long, env = "ANYKA_WIFI_IFACE", default_value = "wlan0")]
-    iface: String,
+    /// Wi-Fi interface. Default: the board profile's `[wifi] iface`, else
+    /// wlan0.
+    #[arg(long, env = "ANYKA_WIFI_IFACE")]
+    iface: Option<String>,
     #[arg(
         long,
         env = "ANYKA_WIFI_DHCP_SCRIPT",
@@ -97,7 +100,8 @@ struct RunArgs {
     #[arg(long, env = "ANYKA_WIFI_DRIVER_RESET_AFTER", default_value_t = 2)]
     driver_reset_after: u32,
     /// Failed driver reloads before the USB Wi-Fi module's power is cycled
-    /// (GPIO 98). 0: never.
+    /// (the board's `[wifi] power_gpio`; a driver reload on a board without
+    /// one). 0: never.
     #[arg(long, env = "ANYKA_WIFI_POWER_CYCLE_AFTER", default_value_t = 1)]
     power_cycle_after: u32,
     /// Log every decision but touch nothing.
@@ -105,29 +109,26 @@ struct RunArgs {
     dry_run: bool,
 }
 
-/// The Wi-Fi driver the hardware steps reload. Defaults are what the AV100
-/// firmware's `/ipc/setup.sh` loads.
+/// The Wi-Fi driver the hardware steps reload. Defaults come from the board
+/// profile's `[wifi]` section; without a readable profile they are what the
+/// AV100 firmware's `/ipc/setup.sh` loads (see `wifi::hardware`).
 #[derive(Args)]
 struct DriverArgs {
-    /// Driver module name, as in `lsmod`.
-    #[arg(long, env = "ANYKA_WIFI_DRIVER_MODULE", default_value = "ssv6x5x")]
-    driver_module: String,
-    /// The module file to `insmod`.
-    #[arg(
-        long,
-        env = "ANYKA_WIFI_DRIVER_PATH",
-        default_value = "/ipc/modules/wifi/ssv6x5x.ko"
-    )]
-    driver_path: PathBuf,
-    /// Module parameters, space-separated.
-    #[arg(
-        long,
-        env = "ANYKA_WIFI_DRIVER_ARGS",
-        default_value = "stacfgpath=/ipc/modules/wifi/ssv6x5x-wifi.cfg"
-    )]
-    driver_args: String,
-    /// The GPIO 98 level that powers the USB Wi-Fi module on, as recorded by
-    /// the firmware. Missing means 1.
+    /// Driver module name, as in `lsmod`. Default: the file name of the
+    /// driver path (ssv6x5x).
+    #[arg(long, env = "ANYKA_WIFI_DRIVER_MODULE")]
+    driver_module: Option<String>,
+    /// The module file to `insmod`. Default: the board profile's
+    /// `[wifi] module`, else /ipc/modules/wifi/ssv6x5x.ko.
+    #[arg(long, env = "ANYKA_WIFI_DRIVER_PATH")]
+    driver_path: Option<PathBuf>,
+    /// Module parameters, space-separated. Default: the board profile's
+    /// `[wifi] module_args`, else
+    /// stacfgpath=/ipc/modules/wifi/ssv6x5x-wifi.cfg.
+    #[arg(long, env = "ANYKA_WIFI_DRIVER_ARGS")]
+    driver_args: Option<String>,
+    /// The power GPIO level that powers the USB Wi-Fi module on, as recorded
+    /// by the firmware. Missing means 1.
     #[arg(
         long,
         env = "ANYKA_WIFI_USB_POWER_ON_FILE",
@@ -136,16 +137,24 @@ struct DriverArgs {
     usb_power_on_file: PathBuf,
 }
 
+impl Cli {
+    fn overrides(&self) -> hardware::Overrides {
+        hardware::Overrides {
+            iface: self.paths.iface.clone(),
+            driver_module: self.driver.driver_module.clone(),
+            driver_path: self.driver.driver_path.clone(),
+            driver_args: self.driver.driver_args.clone(),
+        }
+    }
+}
+
 impl DriverArgs {
-    fn driver(&self) -> recovery::Driver {
+    fn driver(&self, hw: &Hardware) -> recovery::Driver {
         recovery::Driver {
-            module: self.driver_module.clone(),
-            path: self.driver_path.clone(),
-            args: self
-                .driver_args
-                .split_whitespace()
-                .map(str::to_owned)
-                .collect(),
+            module: hw.driver_module.clone(),
+            path: hw.driver_path.clone(),
+            args: hw.driver_args.clone(),
+            power_gpio: hw.power_gpio,
             power_on_file: self.usb_power_on_file.clone(),
             ..recovery::Driver::default()
         }
@@ -169,11 +178,11 @@ impl RunArgs {
 }
 
 impl PathArgs {
-    fn paths(&self) -> Paths {
+    fn paths(&self, hw: &Hardware) -> Paths {
         Paths {
             wpa_conf: self.wpa_conf.clone(),
             ctrl_dir: self.ctrl_dir.clone(),
-            iface: self.iface.clone(),
+            iface: hw.iface.clone(),
             dhcp_script: self.dhcp_script.clone(),
             state_dir: self.state_dir.clone(),
         }
@@ -183,9 +192,39 @@ impl PathArgs {
 fn main() -> Result<()> {
     let cli = Cli::parse();
     let _telemetry = telemetry::install("wifi")?;
-    let paths = cli.paths.paths();
+    let resolved = match board::current() {
+        Ok(resolved) => Some(resolved),
+        Err(error) => {
+            // Never fatal: Wi-Fi may be the only way in to fix the card.
+            tracing::warn!(%error, "no board profile; using the built-in AV100 Wi-Fi defaults");
+            None
+        }
+    };
+    let source = match &resolved {
+        None => hardware::Board::Unresolved,
+        Some(resolved) => match &resolved.profile.wifi {
+            Some(wifi) => hardware::Board::Wifi(wifi),
+            None => {
+                tracing::warn!(
+                    board = resolved.name,
+                    "board profile has no [wifi]; built-in interface and driver, no power GPIO"
+                );
+                hardware::Board::NoWifi
+            }
+        },
+    };
+    let hw = hardware::merge(&cli.overrides(), source);
+    tracing::info!(
+        board = resolved.as_ref().map_or("-", |r| r.name.as_str()),
+        iface = hw.iface,
+        module = hw.driver_module,
+        path = %hw.driver_path.display(),
+        power_gpio = ?hw.power_gpio,
+        "wifi hardware"
+    );
+    let paths = cli.paths.paths(&hw);
     match cli.command {
-        None => run(&cli.paths.config, &paths, &cli.run, cli.driver.driver()),
+        None => run(&cli.paths.config, &paths, &cli.run, cli.driver.driver(&hw)),
         Some(Cmd::Status) => status(&cli.paths.config, &paths, &cli.run.policy()),
     }
 }
@@ -270,7 +309,7 @@ fn describe_metrics() {
     );
     describe_counter!(
         "kamoder_wifi_usb_power_restore_failures_total",
-        "Times GPIO 98 could not be put back to the USB Wi-Fi power-on level"
+        "Times the power GPIO could not be put back to the USB Wi-Fi power-on level"
     );
 }
 
@@ -552,7 +591,11 @@ mod parse_tests {
         );
         assert_eq!(cli.run.max_attempts, 4);
         assert_eq!(cli.run.gateway_failures, 3);
-        let driver = cli.driver.driver();
+        // No board profile: exactly the AV100 values from before profiles.
+        let hw = hardware::merge(&cli.overrides(), hardware::Board::Unresolved);
+        assert_eq!(cli.paths.paths(&hw).iface, "wlan0");
+        let driver = cli.driver.driver(&hw);
+        assert_eq!(driver.power_gpio, Some(98));
         assert_eq!(driver.module, "ssv6x5x");
         assert_eq!(driver.path, PathBuf::from("/ipc/modules/wifi/ssv6x5x.ko"));
         assert_eq!(
@@ -590,6 +633,40 @@ mod parse_tests {
     fn status_subcommand() {
         let cli = Cli::parse_from(["wifi", "--iface", "wlan1", "status"]);
         assert!(matches!(cli.command, Some(Cmd::Status)));
-        assert_eq!(cli.paths.iface, "wlan1");
+        assert_eq!(cli.paths.iface.as_deref(), Some("wlan1"));
+    }
+
+    #[test]
+    fn flags_override_the_board_profile() {
+        let wifi = board::Wifi {
+            iface: "wlan3".into(),
+            module: Some("/lib/8188fu.ko".into()),
+            module_args: vec!["x=1".into()],
+            power_gpio: None,
+        };
+        let cli = Cli::parse_from(["wifi"]);
+        let hw = hardware::merge(&cli.overrides(), hardware::Board::Wifi(&wifi));
+        assert_eq!(cli.paths.paths(&hw).iface, "wlan3");
+        let driver = cli.driver.driver(&hw);
+        assert_eq!(
+            (driver.module.as_str(), driver.power_gpio),
+            ("8188fu", None)
+        );
+
+        let cli = Cli::parse_from([
+            "wifi",
+            "--iface",
+            "wlan1",
+            "--driver-path",
+            "/x/ssv6x5x.ko",
+            "--driver-args",
+            "",
+        ]);
+        let hw = hardware::merge(&cli.overrides(), hardware::Board::Wifi(&wifi));
+        assert_eq!(cli.paths.paths(&hw).iface, "wlan1");
+        let driver = cli.driver.driver(&hw);
+        assert_eq!(driver.module, "ssv6x5x");
+        assert_eq!(driver.path, PathBuf::from("/x/ssv6x5x.ko"));
+        assert!(driver.args.is_empty());
     }
 }

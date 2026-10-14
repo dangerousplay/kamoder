@@ -141,8 +141,8 @@ pub enum Action {
     Reassociate,
     /// Reload the Wi-Fi driver module, then restart the station.
     ResetDriver,
-    /// Power-cycle the USB Wi-Fi module (GPIO 98), reload the driver, then
-    /// restart the station.
+    /// Power-cycle the USB Wi-Fi module (the board's power GPIO), reload
+    /// the driver, then restart the station.
     PowerCycle,
     /// Give up on the current network and restore this one.
     RollBack(Network),

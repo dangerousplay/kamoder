@@ -220,11 +220,21 @@ fn main() -> Result<()> {
             .find(|s| s.name == "wifi" || s.command.file_name().is_some_and(|f| f == "wifi"))
             .map(|s| s.args.clone())
             .unwrap_or_default();
+        // Resolved here for now; the supervisor will resolve the board once
+        // at start and hand it to every service (BRD-05).
+        let board = board::current()
+            .inspect_err(|error| tracing::warn!(%error, "no board profile for the ready report"))
+            .ok();
+        let wifi_iface = ready::wifi_iface(
+            &wifi_args,
+            board.as_ref().and_then(|b| b.profile.wifi.as_ref()),
+        );
         tokio::spawn(ready::watch(
             root.clone(),
             ready_console,
             start,
             ready::wpa_ctrl_dirs(&wifi_args),
+            wifi_iface,
         ));
 
         // The control socket is a convenience; supervision must not depend on

@@ -1,6 +1,6 @@
 //! Side effects: the config file on `/rom`, the last-good record on the SD
 //! card, restarting the station, and the hardware steps of
-//! [`crate::recovery`] (driver modules, the USB Wi-Fi power on GPIO 98).
+//! [`crate::recovery`] (driver modules, the USB Wi-Fi power GPIO).
 
 use crate::wpa::Network;
 use nix::sys::signal::{kill, Signal};
@@ -215,8 +215,8 @@ fn wait_for_association(paths: &Paths, timeout: Duration) -> bool {
 }
 
 /// The camera's side of [`crate::recovery::Ops`]: BusyBox commands, sysfs
-/// and procfs. The only GPIO it can reach is
-/// [`USB_POWER_GPIO`](crate::recovery::USB_POWER_GPIO).
+/// and procfs. The only GPIO it is ever asked to reach is the board's
+/// [`power_gpio`](crate::recovery::Driver::power_gpio).
 pub struct SystemOps<'a> {
     pub paths: &'a Paths,
     /// `/sys/class/gpio`; a temporary directory in tests.
@@ -231,10 +231,8 @@ impl<'a> SystemOps<'a> {
         }
     }
 
-    fn gpio_file(&self, name: &str) -> PathBuf {
-        self.gpio_root
-            .join(format!("gpio{}", crate::recovery::USB_POWER_GPIO))
-            .join(name)
+    fn gpio_file(&self, gpio: u32, name: &str) -> PathBuf {
+        self.gpio_root.join(format!("gpio{gpio}")).join(name)
     }
 }
 
@@ -296,19 +294,19 @@ impl crate::recovery::Ops for SystemOps<'_> {
         }
     }
 
-    fn usb_power_ready(&mut self) -> bool {
-        std::fs::read_to_string(self.gpio_file("direction")).is_ok_and(|d| d.trim() == "out")
+    fn usb_power_ready(&mut self, gpio: u32) -> bool {
+        std::fs::read_to_string(self.gpio_file(gpio, "direction")).is_ok_and(|d| d.trim() == "out")
     }
 
-    fn read_usb_power(&mut self) -> std::io::Result<bool> {
-        let text = std::fs::read_to_string(self.gpio_file("value"))?;
+    fn read_usb_power(&mut self, gpio: u32) -> std::io::Result<bool> {
+        let text = std::fs::read_to_string(self.gpio_file(gpio, "value"))?;
         parse_level(&text).ok_or_else(|| std::io::Error::other(format!("GPIO value {text:?}")))
     }
 
-    fn write_usb_power(&mut self, high: bool) -> std::io::Result<()> {
+    fn write_usb_power(&mut self, gpio: u32, high: bool) -> std::io::Result<()> {
         // `value` only: the pin is already an output (checked), and writing
         // `direction` would glitch it.
-        std::fs::write(self.gpio_file("value"), if high { "1" } else { "0" })
+        std::fs::write(self.gpio_file(gpio, "value"), if high { "1" } else { "0" })
     }
 
     fn wait_for_usb_device(&mut self, timeout: Duration) -> bool {
@@ -575,17 +573,19 @@ tmpfs /mnt tmpfs rw 0 0\n\
             gpio_root: dir.clone(),
         };
         // Not exported by setup.sh: not ready, nothing written.
-        assert!(!ops.usb_power_ready());
+        assert!(!ops.usb_power_ready(98));
 
         std::fs::create_dir_all(&pin).unwrap();
         std::fs::write(pin.join("direction"), "in\n").unwrap();
-        assert!(!ops.usb_power_ready(), "an input is not ours to drive");
+        assert!(!ops.usb_power_ready(98), "an input is not ours to drive");
         std::fs::write(pin.join("direction"), "out\n").unwrap();
         std::fs::write(pin.join("value"), "1\n").unwrap();
-        assert!(ops.usb_power_ready());
-        assert!(ops.read_usb_power().unwrap());
-        ops.write_usb_power(false).unwrap();
-        assert!(!ops.read_usb_power().unwrap());
+        assert!(ops.usb_power_ready(98));
+        // Another pin is not ready just because 98 is.
+        assert!(!ops.usb_power_ready(97));
+        assert!(ops.read_usb_power(98).unwrap());
+        ops.write_usb_power(98, false).unwrap();
+        assert!(!ops.read_usb_power(98).unwrap());
 
         let driver = Driver {
             power_on_file: dir.join("usb_module_power_on"),

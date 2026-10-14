@@ -91,12 +91,26 @@ pub fn wpa_ctrl_dirs(wifi_args: &[String]) -> Vec<PathBuf> {
     dirs
 }
 
+/// The Wi-Fi interface the report asks wpa_supplicant about: the wifi
+/// service's own `--iface`, else the board profile's `[wifi] iface`, else
+/// the wifi crate's fallback — the same order the wifi service uses (PER-04).
+pub fn wifi_iface(wifi_args: &[String], board: Option<&board::Wifi>) -> String {
+    wifi_args
+        .windows(2)
+        .rev()
+        .find(|pair| pair[0] == "--iface")
+        .map(|pair| pair[1].clone())
+        .or_else(|| board.map(|wifi| wifi.iface.clone()))
+        .unwrap_or_else(|| wifi::hardware::FALLBACK_IFACE.to_owned())
+}
+
 /// Waits for the camera to be ready, then prints the report once.
 pub async fn watch(
     root: ActorRef<Supervisor>,
     console: Option<Console>,
     start: StartTime,
     wpa_dirs: Vec<PathBuf>,
+    iface: String,
 ) {
     let deadline = tokio::time::Instant::now() + READY_TIMEOUT;
     let mut ticker = tokio::time::interval(POLL);
@@ -118,7 +132,7 @@ pub async fn watch(
     };
 
     let report = tokio::task::spawn_blocking(move || {
-        let net = Network::probe(&wpa_dirs);
+        let net = Network::probe(&wpa_dirs, &iface);
         let ports = service_ports(&statuses);
         render(
             &start,
@@ -163,19 +177,19 @@ struct Network {
 }
 
 impl Network {
-    fn probe(wpa_dirs: &[PathBuf]) -> Self {
+    fn probe(wpa_dirs: &[PathBuf], iface: &str) -> Self {
         let status = wpa_dirs
             .iter()
-            .find_map(|dir| wifi::wpa::query(dir, "wlan0", "STATUS").ok());
+            .find_map(|dir| wifi::wpa::query(dir, iface, "STATUS").ok());
         let ssid = status.and_then(|reply| wifi::wpa::Status::parse(&reply).ssid);
         let signal_dbm = wpa_dirs
             .iter()
-            .find_map(|dir| wifi::wpa::query(dir, "wlan0", "SIGNAL_POLL").ok())
+            .find_map(|dir| wifi::wpa::query(dir, iface, "SIGNAL_POLL").ok())
             .and_then(|reply| parse_signal_poll(&reply))
             .or_else(|| {
                 std::fs::read_to_string("/proc/net/wireless")
                     .ok()
-                    .and_then(|text| parse_proc_wireless(&text, "wlan0"))
+                    .and_then(|text| parse_proc_wireless(&text, iface))
             });
         let ipv4 = ipv4_interfaces()
             .into_iter()
@@ -602,6 +616,35 @@ mod tests {
             "/x".into(),
         ];
         assert_eq!(wpa_ctrl_dirs(&args)[0], PathBuf::from("/x"));
+    }
+
+    #[test]
+    fn wifi_iface_precedence() {
+        let wifi = board::Wifi {
+            iface: "wlan2".into(),
+            module: None,
+            module_args: Vec::new(),
+            power_gpio: None,
+        };
+        // No profile, no flag: the fallback.
+        assert_eq!(wifi_iface(&[], None), "wlan0");
+        // The profile.
+        assert_eq!(
+            wifi_iface(&["--config".into(), "c".into()], Some(&wifi)),
+            "wlan2"
+        );
+        // The wifi service's own flag wins.
+        let args = vec!["--iface".into(), "wlan5".into()];
+        assert_eq!(wifi_iface(&args, Some(&wifi)), "wlan5");
+        assert_eq!(wifi_iface(&args, None), "wlan5");
+    }
+
+    #[test]
+    fn wifi_iface_from_the_shipped_av100_profile() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../boards/anyka-av100-ptz.toml");
+        let profile = board::load(&path).unwrap();
+        assert_eq!(wifi_iface(&[], profile.wifi.as_ref()), "wlan0");
     }
 
     #[test]

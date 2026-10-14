@@ -5,20 +5,22 @@
 //! the AV100 the SSV6x5x USB driver can wedge under heavy traffic, and the
 //! camera then stays off the network until it is power-cycled. These steps
 //! do the same things the firmware does at boot (`/ipc/setup.sh`): `insmod`
-//! the driver with its config file, raise `wlan0`, and switch the module's
-//! USB power on GPIO 98.
+//! the driver with its config file, raise the interface, and switch the
+//! module's USB power (GPIO 98 on the AV100).
 //!
 //! The sequences are written against [`Ops`], so their order and failure
 //! paths are unit-tested with a fake, including the one rule that must
-//! never break: **once GPIO 98 has been switched off, it is switched back
-//! on**, whatever fails after that.
+//! never break: **once the power GPIO has been switched off, it is switched
+//! back on**, whatever fails after that.
+//!
+//! The power GPIO is [`Driver::power_gpio`], from the board profile's
+//! `[wifi] power_gpio` (see [`crate::hardware`]). It is the only GPIO this
+//! crate ever writes. A board without one skips the power-cycle step: the
+//! rung runs the driver reset instead, as it already does when the pin is
+//! not set up.
 
 use std::path::PathBuf;
 use std::time::Duration;
-
-/// The only GPIO this crate can write: the USB Wi-Fi module's power switch.
-/// It is not configurable on purpose.
-pub const USB_POWER_GPIO: u32 = 98;
 
 /// What to reload, and how long each step may take. Defaults are the AV100
 /// firmware's (`/ipc/setup.sh`, `lsmod`).
@@ -30,7 +32,10 @@ pub struct Driver {
     pub path: PathBuf,
     /// Module parameters, passed through unchanged.
     pub args: Vec<String>,
-    /// File holding the GPIO 98 level that powers the module on (`0`/`1`),
+    /// The GPIO switching the module's USB power. `None`: no power-cycle
+    /// step, and the pin is never touched.
+    pub power_gpio: Option<u32>,
+    /// File holding the power GPIO level that powers the module on (`0`/`1`),
     /// written by `setup.sh`. Missing means `1`, as in `setup.sh`.
     pub power_on_file: PathBuf,
     /// MTU `setup.sh` sets on the fresh interface.
@@ -51,6 +56,7 @@ impl Default for Driver {
             module: "ssv6x5x".into(),
             path: "/ipc/modules/wifi/ssv6x5x.ko".into(),
             args: vec!["stacfgpath=/ipc/modules/wifi/ssv6x5x-wifi.cfg".into()],
+            power_gpio: Some(crate::hardware::FALLBACK_POWER_GPIO),
             power_on_file: "/rom/usb_module_power_on".into(),
             mtu: 1460,
             rmmod_timeout: Duration::from_secs(20),
@@ -79,11 +85,11 @@ pub trait Ops {
     fn restart_station(&mut self) -> std::io::Result<()>;
     /// The level that powers the module on, from `driver.power_on_file`.
     fn power_on_level(&mut self, driver: &Driver) -> std::io::Result<bool>;
-    /// GPIO 98 is exported and an output — i.e. `setup.sh` set it up. It is
+    /// `gpio` is exported and an output — i.e. `setup.sh` set it up. It is
     /// never exported or re-directed here.
-    fn usb_power_ready(&mut self) -> bool;
-    fn read_usb_power(&mut self) -> std::io::Result<bool>;
-    fn write_usb_power(&mut self, high: bool) -> std::io::Result<()>;
+    fn usb_power_ready(&mut self, gpio: u32) -> bool;
+    fn read_usb_power(&mut self, gpio: u32) -> std::io::Result<bool>;
+    fn write_usb_power(&mut self, gpio: u32, high: bool) -> std::io::Result<()>;
     /// Waits for a device on the USB bus (not a root hub); `false` on timeout.
     fn wait_for_usb_device(&mut self, timeout: Duration) -> bool;
     fn sleep(&mut self, duration: Duration);
@@ -93,8 +99,8 @@ pub trait Ops {
 pub enum Outcome {
     /// The step ran in full.
     Done,
-    /// The step does not apply here (no such driver loaded, GPIO 98 not set
-    /// up); a lower step ran instead. The string says why.
+    /// The step does not apply here (no such driver loaded, no power GPIO
+    /// or not set up); a lower step ran instead. The string says why.
     FellBack(String),
 }
 
@@ -118,12 +124,12 @@ pub enum Error {
     Station { source: std::io::Error },
     #[snafu(display("cannot read the USB power-on level: {source}"))]
     PowerLevel { source: std::io::Error },
-    #[snafu(display("cannot switch GPIO {USB_POWER_GPIO} off: {source}"))]
-    PowerOff { source: std::io::Error },
+    #[snafu(display("cannot switch GPIO {gpio} off: {source}"))]
+    PowerOff { gpio: u32, source: std::io::Error },
     #[snafu(display(
-        "GPIO {USB_POWER_GPIO} could NOT be restored to {on}: the Wi-Fi module may be unpowered"
+        "GPIO {gpio} could NOT be restored to {on}: the Wi-Fi module may be unpowered"
     ))]
-    PowerRestore { on: u8 },
+    PowerRestore { gpio: u32, on: u8 },
     #[snafu(display("no USB device enumerated within {}s of power-on", timeout.as_secs()))]
     NoUsbDevice { timeout: Duration },
 }
@@ -151,6 +157,12 @@ impl Recovery {
     /// `mac80211_hwsim`, it is a plain station restart.
     pub fn reset_driver(&mut self, ops: &mut impl Ops) -> Result<Outcome, Error> {
         let module = self.driver.module.clone();
+        if module.is_empty() {
+            restart(ops)?;
+            return Ok(Outcome::FellBack(
+                "no Wi-Fi driver module configured".into(),
+            ));
+        }
         if !self.unloaded && !ops.module_loaded(&module) {
             restart(ops)?;
             return Ok(Outcome::FellBack(format!("{module} is not loaded")));
@@ -169,18 +181,21 @@ impl Recovery {
         Ok(Outcome::Done)
     }
 
-    /// Power-cycle the USB module on GPIO 98, then reload the driver and
-    /// restart the station.
+    /// Power-cycle the USB module on [`Driver::power_gpio`], then reload
+    /// the driver and restart the station.
     ///
-    /// Falls back to [`Recovery::reset_driver`] when the pin is not set up
-    /// as `setup.sh` leaves it, or the power-on level is unknown: guessing
-    /// would risk leaving the module off.
+    /// Falls back to [`Recovery::reset_driver`] when the board has no power
+    /// GPIO, the pin is not set up as `setup.sh` leaves it, or the power-on
+    /// level is unknown: guessing would risk leaving the module off.
     pub fn power_cycle(&mut self, ops: &mut impl Ops) -> Result<Outcome, Error> {
-        if !ops.usb_power_ready() {
+        let Some(gpio) = self.driver.power_gpio else {
             return self.fall_back(
                 ops,
-                format!("GPIO {USB_POWER_GPIO} is not an exported output"),
+                "the board has no Wi-Fi power GPIO; power-cycle step skipped".into(),
             );
+        };
+        if !ops.usb_power_ready(gpio) {
+            return self.fall_back(ops, format!("GPIO {gpio} is not an exported output"));
         }
         let on = match ops.power_on_level(&self.driver) {
             Ok(on) => on,
@@ -204,7 +219,7 @@ impl Recovery {
         }
 
         {
-            let power = PowerGuard::off(ops, on)?;
+            let power = PowerGuard::off(ops, gpio, on)?;
             let off_for = self.driver.power_off.max(Duration::from_secs(2));
             power.ops.sleep(off_for);
             power.restore()?;
@@ -221,25 +236,29 @@ impl Recovery {
         Ok(Outcome::Done)
     }
 
-    /// Restores GPIO 98 to the power-on level if it is not there — after a
-    /// SIGKILL in the middle of a power cycle, say. Touches nothing unless
-    /// `setup.sh` exported the pin and the level is known.
+    /// Restores the power GPIO to the power-on level if it is not there —
+    /// after a SIGKILL in the middle of a power cycle, say. Touches nothing
+    /// unless the board has one, `setup.sh` exported it and the level is
+    /// known.
     pub fn ensure_usb_power_on(&self, ops: &mut impl Ops) -> Result<bool, Error> {
-        if !ops.usb_power_ready() {
+        let Some(gpio) = self.driver.power_gpio else {
+            return Ok(false);
+        };
+        if !ops.usb_power_ready(gpio) {
             return Ok(false);
         }
         let on = ops
             .power_on_level(&self.driver)
             .map_err(|source| Error::PowerLevel { source })?;
-        if ops.read_usb_power().ok() == Some(on) {
+        if ops.read_usb_power(gpio).ok() == Some(on) {
             return Ok(false);
         }
         tracing::warn!(
-            gpio = USB_POWER_GPIO,
+            gpio,
             level = u8::from(on),
             "USB Wi-Fi module found unpowered; restoring"
         );
-        restore_power(ops, on)?;
+        restore_power(ops, gpio, on)?;
         Ok(true)
     }
 
@@ -284,70 +303,67 @@ fn restart(ops: &mut impl Ops) -> Result<(), Error> {
 
 /// Writes the power-on level, retrying: this is the write that must not be
 /// lost. Reads it back to be sure.
-fn restore_power(ops: &mut impl Ops, on: bool) -> Result<(), Error> {
+fn restore_power(ops: &mut impl Ops, gpio: u32, on: bool) -> Result<(), Error> {
     for attempt in 1..=3 {
-        match ops.write_usb_power(on) {
-            Ok(()) if ops.read_usb_power().ok() == Some(on) => {
-                tracing::info!(
-                    gpio = USB_POWER_GPIO,
-                    level = u8::from(on),
-                    "USB Wi-Fi module powered on"
-                );
+        match ops.write_usb_power(gpio, on) {
+            Ok(()) if ops.read_usb_power(gpio).ok() == Some(on) => {
+                tracing::info!(gpio, level = u8::from(on), "USB Wi-Fi module powered on");
                 return Ok(());
             }
-            Ok(()) => tracing::error!(
-                gpio = USB_POWER_GPIO,
-                attempt,
-                "power-on level did not stick"
-            ),
+            Ok(()) => tracing::error!(gpio, attempt, "power-on level did not stick"),
             Err(error) => {
-                tracing::error!(gpio = USB_POWER_GPIO, attempt, %error, "cannot restore power-on level")
+                tracing::error!(gpio, attempt, %error, "cannot restore power-on level")
             }
         }
         ops.sleep(Duration::from_millis(200));
     }
     metrics::counter!("kamoder_wifi_usb_power_restore_failures_total").increment(1);
-    Err(Error::PowerRestore { on: u8::from(on) })
+    Err(Error::PowerRestore {
+        gpio,
+        on: u8::from(on),
+    })
 }
 
-/// GPIO 98 held at the "off" level. Restores "on" when dropped — on an early
+/// The power GPIO held at the "off" level. Restores "on" when dropped — on an early
 /// return or a panic — unless [`PowerGuard::restore`] already did.
 struct PowerGuard<'a, O: Ops> {
     ops: &'a mut O,
+    gpio: u32,
     on: bool,
     restored: bool,
 }
 
 impl<'a, O: Ops> PowerGuard<'a, O> {
-    fn off(ops: &'a mut O, on: bool) -> Result<Self, Error> {
+    fn off(ops: &'a mut O, gpio: u32, on: bool) -> Result<Self, Error> {
         tracing::warn!(
-            gpio = USB_POWER_GPIO,
+            gpio,
             level = u8::from(!on),
             "powering the USB Wi-Fi module off"
         );
         let guard = Self {
             ops,
+            gpio,
             on,
             restored: false,
         };
         // Armed before the write: a write that fails half-way (or reports an
         // error after it took effect) is still undone.
-        if let Err(source) = guard.ops.write_usb_power(!on) {
-            return Err(Error::PowerOff { source });
+        if let Err(source) = guard.ops.write_usb_power(gpio, !on) {
+            return Err(Error::PowerOff { gpio, source });
         }
         Ok(guard)
     }
 
     fn restore(mut self) -> Result<(), Error> {
         self.restored = true;
-        restore_power(self.ops, self.on)
+        restore_power(self.ops, self.gpio, self.on)
     }
 }
 
 impl<O: Ops> Drop for PowerGuard<'_, O> {
     fn drop(&mut self) {
         if !self.restored {
-            let _ = restore_power(self.ops, self.on);
+            let _ = restore_power(self.ops, self.gpio, self.on);
         }
     }
 }
@@ -455,14 +471,14 @@ mod tests {
             self.on_level
                 .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "not 0/1"))
         }
-        fn usb_power_ready(&mut self) -> bool {
+        fn usb_power_ready(&mut self, _: u32) -> bool {
             self.gpio_ready
         }
-        fn read_usb_power(&mut self) -> io::Result<bool> {
+        fn read_usb_power(&mut self, _: u32) -> io::Result<bool> {
             Ok(self.power)
         }
-        fn write_usb_power(&mut self, high: bool) -> io::Result<()> {
-            self.log(format!("gpio98={}", u8::from(high)));
+        fn write_usb_power(&mut self, gpio: u32, high: bool) -> io::Result<()> {
+            self.log(format!("gpio{gpio}={}", u8::from(high)));
             let on = self.on_level == Some(high);
             if on && self.fail_power_on > 0 {
                 self.fail_power_on -= 1;
@@ -662,7 +678,7 @@ mod tests {
         };
         assert!(matches!(
             Recovery::default().power_cycle(&mut fake),
-            Err(Error::PowerRestore { on: 1 })
+            Err(Error::PowerRestore { gpio: 98, on: 1 })
         ));
         assert!(!fake.calls.iter().any(|c| c.starts_with("insmod")));
     }
@@ -753,6 +769,92 @@ mod tests {
         };
         assert!(!recovery.ensure_usb_power_on(&mut fake).unwrap());
         assert!(fake.calls.is_empty());
+    }
+
+    fn without_power_gpio() -> Recovery {
+        Recovery::new(Driver {
+            power_gpio: None,
+            ..Driver::default()
+        })
+    }
+
+    #[test]
+    fn power_cycle_uses_the_profile_gpio() {
+        let mut fake = Fake::camera();
+        let mut recovery = Recovery::new(Driver {
+            power_gpio: Some(7),
+            ..Driver::default()
+        });
+        assert_eq!(recovery.power_cycle(&mut fake).unwrap(), Outcome::Done);
+        let gpio: Vec<_> = fake
+            .calls
+            .iter()
+            .filter(|c| c.starts_with("gpio"))
+            .collect();
+        assert_eq!(gpio, ["gpio7=0", "gpio7=1"]);
+    }
+
+    #[test]
+    fn without_a_power_gpio_the_power_cycle_is_a_driver_reset() {
+        let mut fake = Fake::camera();
+        let outcome = without_power_gpio().power_cycle(&mut fake).unwrap();
+        let Outcome::FellBack(why) = outcome else {
+            panic!("expected a fallback, got {outcome:?}");
+        };
+        assert!(why.contains("no Wi-Fi power GPIO"), "{why}");
+        // Exactly the driver reset rung, and no GPIO touched.
+        assert_eq!(
+            fake.calls,
+            [
+                "stop_station",
+                "rmmod ssv6x5x",
+                INSMOD,
+                "wait_for_iface",
+                "iface_up 1460",
+                "restart_station"
+            ]
+        );
+    }
+
+    #[test]
+    fn without_a_power_gpio_start_up_touches_nothing() {
+        let mut fake = Fake {
+            power: false,
+            ..Fake::camera()
+        };
+        assert!(!without_power_gpio().ensure_usb_power_on(&mut fake).unwrap());
+        assert!(fake.calls.is_empty());
+    }
+
+    #[test]
+    fn without_a_power_gpio_the_driver_reset_is_unchanged() {
+        let mut with = Fake::camera();
+        Recovery::default().reset_driver(&mut with).unwrap();
+        let mut without = Fake::camera();
+        without_power_gpio().reset_driver(&mut without).unwrap();
+        assert_eq!(with.calls, without.calls);
+    }
+
+    #[test]
+    fn no_driver_module_is_a_station_restart() {
+        let mut fake = Fake::camera();
+        let mut recovery = Recovery::new(Driver {
+            module: String::new(),
+            path: PathBuf::new(),
+            args: Vec::new(),
+            power_gpio: None,
+            ..Driver::default()
+        });
+        assert!(matches!(
+            recovery.reset_driver(&mut fake).unwrap(),
+            Outcome::FellBack(_)
+        ));
+        assert_eq!(fake.calls, ["restart_station"]);
+    }
+
+    #[test]
+    fn default_driver_is_the_av100() {
+        assert_eq!(Driver::default().power_gpio, Some(98));
     }
 
     #[test]

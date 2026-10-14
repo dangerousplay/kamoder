@@ -32,6 +32,8 @@ nix = { workspace = true, features = ["signal", "process"] }
 libc.workspace = true
 # wpa_supplicant client and interface helpers for the ready report.
 wifi.workspace = true
+# The Wi-Fi interface named in the board profile, for the ready report.
+board.workspace = true
 
 # The library exposes only the control protocol and client (`control`), so
 # `web` can depend on this crate for the types.

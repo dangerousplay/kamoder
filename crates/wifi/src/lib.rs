@@ -25,9 +25,11 @@
 //!
 //! When restarting the station is not enough — the SSV6x5x USB driver can
 //! wedge under heavy traffic — [`recovery`] escalates to reloading the driver
-//! and power-cycling the module (GPIO 98), behind a trait so those sequences
-//! are unit-tested too.
+//! and power-cycling the module (on the AV100, GPIO 98), behind a trait so
+//! those sequences are unit-tested too. Interface, driver and power GPIO come
+//! from the board profile ([`hardware`]).
 
+pub mod hardware;
 pub mod net;
 pub mod reconcile;
 pub mod recovery;
