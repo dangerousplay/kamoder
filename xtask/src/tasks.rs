@@ -33,6 +33,7 @@ const BINARIES: &[&str] = &[
     "onvif",
     "rtsp",
     "camera",
+    "board",
 ];
 
 pub fn help() {

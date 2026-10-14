@@ -1,0 +1,28 @@
+# Fallback for boards no profile matches (and for the QEMU VM). It has no
+# [match] rules, so it is never chosen by detection, only by name
+# (BOARD=generic-v4l2) or when nothing else matches.
+#
+# Deliberately assumes no hardware: no lights, Wi-Fi or PTZ, so their
+# services stay off rather than poke GPIOs that may mean something else on
+# an unknown board. Video is a moving test pattern (snapshots only, no
+# encoder) until a generic V4L2 backend exists.
+name = "generic-v4l2"
+description = "Unknown board: test-pattern snapshots, no peripherals"
+
+[match]
+
+[video]
+backend = "test-pattern"
+sensors = [0]
+
+# Advertised settings (ONVIF fallback); the test pattern has no encoder.
+[video.stream]
+width = 640
+height = 360
+fps = 15
+kbps = 1024
+gop = 30
+profile = "main"
+
+[video.snapshot]
+quality = 80

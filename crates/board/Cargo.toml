@@ -1,0 +1,17 @@
+[package]
+name = "board"
+description = "Board profiles: what a camera model has and how to drive it, chosen at start-up (no hardware access)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+# Vendor-free and dependency-light: every service links it to learn which
+# board it runs on, so it must not pull the SDK or an async runtime.
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+snafu.workspace = true
+tracing.workspace = true
+# Same version and features as supervisor, so the lockfile keeps one toml.
+toml = { version = "0.9", default-features = false, features = ["parse", "serde"] }

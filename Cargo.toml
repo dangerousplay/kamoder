@@ -28,6 +28,7 @@ members = [
     "crates/rtsp",
     "crates/web",
     "crates/camera",
+    "crates/board",
     "crates/video-proto",
     "itest/support",
 ]
@@ -56,6 +57,7 @@ lights-proto = { path = "crates/lights-proto" }
 onvif-schema = { path = "crates/onvif-schema" }
 supervisor = { path = "crates/supervisor" }
 wifi = { path = "crates/wifi" }
+board = { path = "crates/board" }
 video-proto = { path = "crates/video-proto" }
 
 # Shared by the control sockets, the web API and the ONVIF service.

@@ -1,0 +1,82 @@
+# AK3918AV100 pan/tilt camera with two SC2331 sensors (vendor board
+# EVB_CBDM_KM01N), the unit this project was developed on. Every value here
+# is what the services used as built-in defaults before board profiles
+# existed; change them only with a live test on this board.
+name = "anyka-av100-ptz"
+description = "AK3918AV100 dual SC2331 pan/tilt (EVB_CBDM_KM01N)"
+
+[match]
+# The 3.4 kernel has no device tree; cpuinfo is the only SoC identity.
+cpuinfo_hardware = "AK3918AV100"
+
+[platform]
+# Stopped by init.sh before the Rust services start. `ipc` holds
+# /dev/watchdog, hence watchdog_wait.
+vendor_processes = ["daemon", "gwellupdater.sh", "soft_reboot.sh", "ipc", "anyka_ipc", "main"]
+watchdog_wait = true
+
+[video]
+backend = "anyka-av100"
+# Dual mode: both sensors must be started together (HARDWARE-FINDINGS).
+sensors = [0, 1]
+tuning_dir = "/usr/local"
+
+[video.stream]
+width = 1280
+height = 720
+fps = 15
+kbps = 2048
+gop = 30
+profile = "main"
+
+[video.snapshot]
+# Snapshots come from the 1280x720 capture, halved while wider than this.
+max_width = 640
+quality = 80
+
+[lights]
+gpio_root = "/sys/class/gpio"
+
+# Held level: low = IR-cut filter in (day), high = out (night).
+[[lights.line]]
+role = "ir_cut"
+gpio = 19
+active_low = false
+
+[[lights.line]]
+role = "ir_leds"
+gpio = 67
+active_low = false
+
+[[lights.line]]
+role = "white"
+gpio = 68
+active_low = false
+
+# Red and blue lights.
+[[lights.line]]
+role = "alarm"
+gpio = 48
+active_low = false
+
+# Speaker amplifier enable: high = muted.
+[[lights.line]]
+role = "amp"
+gpio = 37
+active_low = true
+
+[wifi]
+iface = "wlan0"
+module = "/ipc/modules/wifi/ssv6x5x.ko"
+module_args = ["stacfgpath=/ipc/modules/wifi/ssv6x5x-wifi.cfg"]
+# USB power of the SSV6x5x module; the Wi-Fi recovery power-cycles it.
+power_gpio = 98
+
+[ptz]
+backend = "preset_motor"
+device = "/dev/preset_motor"
+# Patched driver shipped with the vendor firmware.
+module = "/ipc/patch/ko/presetmotor.ko"
+pan = [0, 175]
+tilt = [0, 70]
+steps_per_degree = 1.0
