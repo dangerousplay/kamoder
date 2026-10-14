@@ -3,17 +3,44 @@
 What exists, why each piece is shaped the way it is, and what is verified.
 
 ```
-anyka-sys         generated FFI bindings (bindgen over sdk/include)
-anyka-link        build-script helper: per-binary SDK library selection
-anyka             safe wrappers — RAII handles, borrow-checked frame guards
-os          kernel-only helpers (watchdog chardev, signals, libc shims)
-telemetry   tracing + Prometheus, no OpenTelemetry (see below)
-supervisor  event-driven process supervisor (kameo actors)
-sshd        password-authenticated SSH server (russh + ring)
-wifi        Wi-Fi reconciler with rollback to last-known-good
-anyka-v8          safe wrappers for the AK3918AV100 (V8) SDK
-demos/*           ports of the vendor C demos, plus md_demo_v8
-xtask + ./x       build, lint, deny, dist, sd, qemu, deploy, ci
+Services (vendor-free, shipped by ./x dist)
+supervisor    event-driven process supervisor (kameo actors); `supervisor board`
+wifi          Wi-Fi reconciler with rollback to last-known-good
+lights        sole owner of the light / speaker-amp GPIOs the board lists
+sshd          SSH server (russh + ring), password and public-key auth
+web           admin JSON API + SPA (axum)
+onvif         ONVIF Profile S + WS-Discovery; owns the PTZ motor
+rtsp          RTSP 1.0 server, H.264 from the camera service
+camerad       the camera service binary (`bin/camera`): picks the video
+              backend from the board profile
+demos/wdt_feeder  watchdog feeder
+
+Video and board layer
+board         board profiles: schema, validation, detection, KAMODER_BOARD handoff
+video-proto   producer protocol: video socket framing, /status types, vsN naming
+camera        camera core: Backend/Session/Encoder traits, service, JPEG,
+              test-pattern backend (no hardware code)
+anyka-av100   AV100 video backend: ISP tuning, V4L2 capture, /dev/venc H.264,
+              all driven directly, no vendor library
+
+Shared
+os            kernel-only helpers (watchdog chardev, signals, libc shims)
+telemetry     tracing + Prometheus, no OpenTelemetry (see below)
+auth          PBKDF2 passwords, JWT, credential files, file permissions
+lights-proto  lights socket wire types + client
+ptz-proto     PTZ socket wire types + client
+anyka-ptz     PTZ backends: presetmotor.ko ioctls (AV100), EV200 SDK, simulated
+onvif-schema  ONVIF types generated from the vendored WSDL/XSD
+
+Vendor SDK (demos only, ./x dist --with-demos)
+anyka-sys     generated FFI bindings (bindgen over sdk/include)
+anyka-link    build-script helper: per-binary SDK library selection
+anyka         safe wrappers — RAII handles, borrow-checked frame guards
+anyka-v8      safe wrappers for the AK3918AV100 (V8) SDK
+demos/*       ports of the vendor C demos, plus md_demo_v8
+
+xtask + ./x   build, lint, deny, dist, sd, qemu, deploy, check-boards,
+              check-literals, ci
 
 Every binary's command line is a clap derive struct: flags, defaults and
 --help text live on the fields they fill. Flag spellings were kept exactly as
@@ -251,6 +278,8 @@ loader never maps. Strip before pushing over WiFi.
 | `init.sh` | yes | **yes** |
 | `wifi` | **yes** — `./x itest`, real WPA2 over `mac80211_hwsim` | not yet |
 | `md_demo_v8` | builds, links V8 objects only | not yet — camera offline |
+| `camera` service (pure Rust) | test-pattern backend only (no sensor) | **yes** (2026-10-12) — NV12 capture and hardware H.264 from both sensors, no vendor library |
+| `rtsp` / `onvif` media from live video | stream test against a file source | wired; end-to-end check under board profiles pending |
 | metrics (http / textfile) | yes | **yes** |
 | ISP demos | not possible (no sensor) | **blocked** — firmware/SDK mismatch |
 | audio demos | not possible (no ADC) | **blocked** — firmware/SDK mismatch |
@@ -262,6 +291,15 @@ SDK copy vendored here is `V3.1.00` and expects the older
 that would unblock all six video/audio demos — no Rust in this workspace needs
 to change, only `sdk/lib/`. See `HARDWARE-FINDINGS.md` §1, §5 and §5b.
 
+*Update 2026-10-13:* video no longer waits on that drop. The camera service
+(`camerad` + `anyka-av100`) talks to the V4L2 nodes, the ISP and `/dev/venc`
+directly and loads the camera's own v7 tuning files; the demos rows above are
+about the SDK path only. Board facts (sensors, stream settings, GPIOs, Wi-Fi
+module, PTZ driver) come from `boards/*.toml` through the `board` crate; the
+producer protocol is in [`VIDEO-PROTOCOL.md`](VIDEO-PROTOCOL.md), and adding a
+camera model is the docs site's "Adding a board" page
+([`adding-a-board.mdx`](../content/docs/adding-a-board.mdx)).
+
 ### System tests (`./x itest`)
 
 pytest + labgrid against the SD card booted on a **simulated camera**: the
@@ -269,7 +307,7 @@ camera's own rootfs on an ARM926 VM, with its SD card (`/dev/mmcblk0p1`,
 FAT32), JFFS2 `/rom`, app partition, watchdog and Wi-Fi radio simulated — the
 radio via `mac80211_hwsim`, talking WPA2 to two access points run by the
 firmware's own `hostapd`, each in its own network namespace. 34 scenarios;
-details and the full list in [`itest/README.md`](../itest/README.md).
+details and the full list in [`itest/README.md`](../../itest/README.md).
 
 What running on simulated devices found, all fixed:
 
@@ -289,5 +327,7 @@ typo in `camera.conf` takes effect at once instead of after 30 minutes.
 The VM kernel needed two board fixes for its SD card under QEMU
 (`tools/qemu-armv5/patches/`) — the VM only, the camera's kernel is untouched.
 
-`./x ci` — fmt, clippy `-D warnings`, cargo-deny (advisories, bans, licences,
-sources), full cross build — is green.
+`./x ci` — fmt, the ONVIF codegen check, `check-boards`, `check-literals`,
+clippy `-D warnings`, cargo-deny (advisories, bans, licences, sources), host
+tests, full cross build. `check-boards` and `check-literals` also run on every
+push and pull request (`.github/workflows/checks.yml`).

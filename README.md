@@ -29,6 +29,14 @@ Longer engineering notes in `docs/notes/`:
 * [`docs/notes/SDK-SOURCES.md`](docs/notes/SDK-SOURCES.md) — the camera is an
   **AK3918AV100**, not the EV200 this repo was built around. Where the matching
   SDK is, proof that it matches, and what porting to it involves.
+* [`docs/notes/VIDEO-PROTOCOL.md`](docs/notes/VIDEO-PROTOCOL.md) — the contract
+  between the camera service and `rtsp`/`onvif`/`web`: video socket framing,
+  `/status`, snapshots, stream naming.
+
+Supporting another camera model starts with a board profile in `boards/`; the
+docs site's "Adding a board" page
+([`docs/content/docs/adding-a-board.mdx`](docs/content/docs/adding-a-board.mdx))
+has the schema, the detection rules and the backend contract.
 
 ## Does this hardware support Rust?
 
@@ -64,16 +72,29 @@ some crates outright — see [Telemetry](#telemetry) below.
 
 | Path | What it is |
 | --- | --- |
-| `crates/anyka-sys` | Generated FFI bindings. `bindgen` runs over `sdk/include` at build time. |
-| `crates/anyka` | Safe wrappers: handles that close on drop, frame guards that release on drop. |
+| `crates/supervisor` | Event-driven process supervisor. Replaces the polling shell script. Resolves the board profile once (`supervisor board [--shell]`). |
+| `crates/camerad` | The camera service, binary `bin/camera` (`serve`, `probe`): picks the video backend from the board profile and serves snapshots, `/status` and the H.264 video socket. |
+| `crates/camera` | Camera core with no hardware code: the `Backend`/`Session`/`Encoder` traits, the service, JPEG encoding, a test-pattern backend. |
+| `crates/anyka-av100` | AV100 video backend: ISP tuning loader, V4L2 capture and the `/dev/venc` H.264 encoder, driven directly. No vendor library. |
+| `crates/board` | Board profiles: the `boards/*.toml` schema, validation, autodetection and the `KAMODER_BOARD` handoff to services. |
+| `crates/video-proto` | The producer protocol shared by camera, rtsp, onvif and web ([VIDEO-PROTOCOL](docs/notes/VIDEO-PROTOCOL.md)). |
+| `crates/rtsp` | RTSP 1.0 server: H.264 over TCP-interleaved or UDP, Digest auth with the ONVIF account. One `vsN` mount per sensor. No vendor library. See [rtsp](#rtsp). |
+| `crates/onvif` | ONVIF Profile S (device, media, PTZ, imaging) and WS-Discovery; owns the PTZ motor. |
+| `crates/onvif-schema` | ONVIF Device/Media/PTZ types generated from the vendored official WSDL/XSD (`./x gen-onvif`; output committed, `--check` in `./x ci`). |
+| `crates/web` | Admin JSON API and SPA server (axum). |
+| `crates/lights`, `crates/lights-proto` | Owner of the light and speaker-amp GPIOs the board profile lists, and its socket protocol. |
+| `crates/wifi` | Wi-Fi reconciler with rollback and a recovery ladder. |
+| `crates/anyka-ptz`, `crates/ptz-proto` | PTZ backends (`presetmotor.ko`, EV200 SDK, simulated) and the PTZ socket protocol. |
+| `crates/sshd` | SSH server: password and public-key auth. |
+| `crates/auth` | Password hashing, JWT, credential files and their permissions. |
 | `crates/os` | Kernel-only helpers (watchdog character device, signals). Links no SDK library. |
 | `crates/telemetry` | `tracing` setup and a Prometheus recorder. |
-| `crates/onvif-schema` | ONVIF Device/Media/PTZ types generated from the vendored official WSDL/XSD (`./x gen-onvif`; output committed, `--check` in `./x ci`). |
-| `demos/*` | The seven SDK demos, ported. |
-| `crates/rtsp` | RTSP 1.0 server: H.264 over TCP-interleaved or UDP, Digest auth with the ONVIF account. No vendor library. See [rtsp](#rtsp). |
-| `crates/sshd` | Password-authenticated SSH server. |
-| `crates/supervisor` | Event-driven process supervisor. Replaces the polling shell script. |
-| `xtask` | Build, lint and packaging tasks. Runs on the host. |
+| `crates/anyka-sys` | Generated FFI bindings. `bindgen` runs over `sdk/include` at build time. Demos only. |
+| `crates/anyka`, `crates/anyka-v8` | Safe SDK wrappers (EV200, AV100 V8): handles that close on drop, frame guards that release on drop. Demos only. |
+| `crates/anyka-link` | Build-script helper: per-binary SDK library selection and RPATH. |
+| `demos/*` | `wdt_feeder` (shipped) and the seven SDK demos, ported (shipped only with `./x dist --with-demos`). |
+| `boards/` | Board profiles, one TOML file per camera model (`anyka-av100-ptz`, `generic-v4l2` fallback). Shipped next to `bin/`. |
+| `xtask` | Build, lint and packaging tasks, plus `check-boards` and `check-literals`. Runs on the host. |
 | `sdk/` | Vendored Anyka SDK headers and shared objects. |
 | `card/` | Files at the root of the SD card: `autorun.sh`, `Factory/config.sh`. |
 | `tools/autostart/` | Optional AV100 flash patch so the stack starts at boot (with rollback). |
@@ -182,11 +203,12 @@ trust.
 ## rtsp
 
 ```sh
+rtsp --port 554 --secret etc/onvif.secret                       # one vsN per board sensor
 rtsp --port 554 --secret etc/onvif.secret --source file:clip.h264
 ```
 
-Serves `rtsp://<camera>:554/vs0`, the URL `onvif` advertises, without any
-vendor library. The protocol pieces are crates — `msf-rtsp` (framing,
+Serves `rtsp://<camera>:554/vs0` (and `/vs1` on a two-sensor board), the URLs
+`onvif` advertises, without any vendor library. The protocol pieces are crates — `msf-rtsp` (framing,
 interleaved and UDP channels, RTCP), `msf-rtp` (FU-A packetizer), `msf-sdp`
 (SDP, H.264 `fmtp`), `ttpkit-auth` (Digest) — all pinned exactly; the crate
 evaluation is in `.specs/features/pure-rust-onvif-rtsp/design.md`. What is
@@ -200,9 +222,13 @@ ours: the method handlers, the session table and its timeout, and the fan-out.
 - Digest is MD5 with `qop=auth` against `etc/onvif.secret` (the file `onvif`
   reads; the loader lives in `auth::onvif_secret`). `--no-auth` must be
   explicit.
-- Sources sit behind the `VideoSource` trait. Today that is an Annex-B file
-  played in a loop at `--fps`; the AV100 encoder (`/dev/venc`) is the Phase C
-  implementation, which is why the supervisor service is still disabled.
+- Sources sit behind the `VideoSource` trait: `camera:N`, the hardware H.264 of
+  sensor N read from the camera service's video socket (framing in
+  [`docs/notes/VIDEO-PROTOCOL.md`](docs/notes/VIDEO-PROTOCOL.md)), or
+  `file:PATH`, an Annex-B file played in a loop at `--fps`. Without
+  `--stream`/`--source` the mounts come from the board profile's
+  `video.sensors`; the supervisor starts `rtsp` only on boards whose video
+  backend encodes (`when = "video.encoder"`).
 
 `./x test -p rtsp` plays `crates/rtsp/tests/data/clip.h264` to the `retina` client
 over TCP and UDP and checks the received NAL units against the file.
@@ -451,6 +477,11 @@ demos on the same unit:
 Fixing either means sourcing SDK objects that match this firmware, not
 changing Rust.
 
+*Update 2026-10-13:* for video that is no longer the plan. The camera service
+(`crates/camerad` with `crates/anyka-av100`) drives this camera's V4L2 nodes,
+ISP and `/dev/venc` directly and captures and encodes both sensors with no
+vendor library (verified on the camera 2026-10-12). Audio is still blocked.
+
 ### Three bugs the hardware found
 
 Emulation could not have caught these.
@@ -472,8 +503,8 @@ Emulation could not have caught these.
    `ANYKA_METRICS=textfile:` now names a **directory** and each service writes
    `<service>.prom`, which is also what `node_exporter` wants.
 
-`venc_demo` and `jpeg_snapshot` still cannot be exercised anywhere: no ISP on
-this unit, and no encoder under QEMU.
+`venc_demo` and `jpeg_snapshot` still cannot be exercised anywhere: their EV200
+SDK does not match this unit, and there is no encoder under QEMU.
 
 ## Release profile
 

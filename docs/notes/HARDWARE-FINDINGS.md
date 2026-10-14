@@ -4,6 +4,14 @@
 > **AK3918AV100**, not the AK3918EV200 this repository was built around, and
 > the matching SDK has since been located publicly. That single fact explains
 > every video and audio failure below.
+>
+> **Update 2026-10-13.** Sections 1 to 9 are the record of what was found at
+> the time and are kept as written. Since then, video, RTSP and ONVIF media on
+> this AV100 no longer depend on any vendor SDK: the pure-Rust camera service
+> (`crates/camerad`, backend `crates/anyka-av100`) drives the V4L2 nodes, the
+> ISP and `/dev/venc` directly, and autostart is solved by the mtd6 patch kit
+> in [`tools/autostart/`](../../tools/autostart/README.md). Dated notes in §1,
+> §5 and §9 point at what changed.
 
 Recorded from a session on a real camera: firmware `app_version=38.2.72`
 (2025-04-22), kernel `4.4.282`, `armv5tejl`, uClibc-ng 1.0.31, 32 MB RAM,
@@ -50,6 +58,17 @@ SDK shared objects installed on the camera at all** (`/usr/lib` and `/ipc/lib`
 are empty).
 
 ### Consequence for ONVIF / RTSP / PTZ
+
+> **Update 2026-10-13: no longer blocked.** The conclusion below holds for the
+> *vendored SDK*, not for the camera. Video on this unit now comes from the
+> pure-Rust camera service, which needs neither the vendor SDK nor `/ipc/ipc`:
+> it loads the camera's own v7 ISP tuning files, captures NV12 from both
+> SC2331 sensors over V4L2 and encodes H.264 on `/dev/venc` (verified on the
+> live camera 2026-10-12, after a loose sensor ribbon cable was reseated).
+> `rtsp` serves it as `/vs0` and `/vs1` and `onvif` advertises one media
+> profile per sensor; the end-to-end live check of those two under board
+> profiles is still to be recorded here. Audio remains blocked as described.
+> Wire format: [`VIDEO-PROTOCOL.md`](VIDEO-PROTOCOL.md).
 
 Those all live in `/ipc` (`/ipc/onvif`, `/ipc/ipc`), and that stack is ruled
 out here because it resets the WiFi configuration (§5). The vendored SDK cannot
@@ -133,6 +152,13 @@ writes `<service>.prom`, which is also the shape `node_exporter` expects.
 ---
 
 ## 5. The vendor stack is not an option — it resets the WiFi configuration
+
+> **Update 2026-10-13.** The vendor stack is still not an option, and no
+> longer needed: "what would actually unblock video" below was overtaken by
+> option 4, not on the list at the time — drive the kernel interfaces
+> directly from Rust. See the note in §1. Option 3 (containing `/ipc/ipc`)
+> was never pursued; the autostart patch in `tools/autostart/` makes
+> `/ipc/setup.sh` skip `/ipc/ipc` entirely.
 
 `/ipc/ipc` is the only software on the device that can drive this ISP, but it
 **cannot be used here**: it rewrites the WiFi configuration, and this camera is
@@ -429,6 +455,16 @@ verified backup of the APP partition is in `~/backups/anyka-mtd6/` (two reads,
 md5 `f4c739e1d60b3dc0bbaf6d9d5a15beb3`, equal to the camera's own
 `md5sum /dev/mtd6ro` and to the May dump).
 
+> **Update 2026-10-13.** That persistent change now exists:
+> [`tools/autostart/`](../../tools/autostart/README.md) splices a new tail into
+> `/ipc/setup.sh` in the mtd6 squashfs, keeping the hardware bring-up and then
+> mounting the card and running `Factory/config.sh` instead of `/ipc/ipc`
+> (which it never starts, even without a card). Writes are limited to the 4 KiB
+> erase blocks that differ, each read back, with `rollback.sh` restoring the
+> original partition. The live unit was patched on 2026-10-11 and now boots
+> into the Rust stack. The vendor guard below stays, as a safety net for
+> unpatched cameras.
+
 ### The vendor app holds the watchdog, and handing it over works
 
 At boot the vendor app — `main` / `anyka_ipc` on this firmware, the names the
@@ -467,7 +503,8 @@ With `ipc` stopped: `supervisor`, `wdt_feeder`, `wifi`,
 First boot provisioning worked: `etc/web-users`, `etc/web-jwt.key` and
 `etc/onvif.secret` were created and the plaintext blanked from `camera.conf`.
 From the LAN: login in 0.23 s, `/api/services`, `/api/wifi` (healthy, −36 dBm),
-`/api/ptz`, SPA served; `/api/snapshot.jpg` → 503 (no video pipeline, expected);
+`/api/ptz`, SPA served; `/api/snapshot.jpg` → 503 (no video pipeline, expected
+at the time; served by the camera service since 2026-10-12, see §1);
 `/api/system/reboot` rebooted the board.
 
 The camera has no RTC: the clock reads 1970, so JWT `exp` is small

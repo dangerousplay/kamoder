@@ -30,6 +30,7 @@ The primary target. A PTZ indoor camera with Gwell firmware **38.2.72**.
 | Sensor | SmartSens SC2331 (an SC1346 board variant also exists) |
 | Ethernet | JL1101 PHY |
 | Extras | PTZ steppers, IR-cut filter, IR + white LEDs, red/blue LED, speaker. No RTC. |
+| Board profile | `anyka-av100-ptz`, detected from `Hardware : AK3918AV100` in `/proc/cpuinfo` |
 
 | Feature | Status |
 | --- | --- |
@@ -42,14 +43,19 @@ The primary target. A PTZ indoor camera with Gwell firmware **38.2.72**.
 | ONVIF device/media/imaging | ✅ tested with onvif-zeep |
 | IR-cut, IR, white, red/blue lights | ✅ |
 | PTZ | ⚠️ driver opens and reads position; motion not yet verified |
-| RTSP | ⚠️ protocol verified with ffmpeg, but streams a **test clip** |
-| Live video / snapshots | ❌ not yet — needs the V8 encoder path |
+| Live snapshots | ✅ both sensors, from the pure-Rust camera service (V4L2 + ISP, no vendor library) |
+| Hardware H.264 | ✅ both sensors through `/dev/venc`, driven directly from Rust |
+| RTSP `/vs0`, `/vs1` | ⚠️ protocol verified with ffmpeg; live streams from both sensors awaiting a full on-camera check |
+| ONVIF media profiles | ⚠️ one per sensor from the camera service; awaiting the same check |
 | Audio in/out | ❌ the bundled SDK does not match this firmware |
 
-<Callout type="warn" title="Why no live video yet">
+<Callout type="info" title="How video works on the AV100">
   The vendor SDK this project started from (EV200, V3.1) does not match the AV100's
-  firmware (SDK V8, V4L2 ISP subdevices). Live video needs the V8 ISP and encoder
-  path, which is the next milestone.
+  firmware (SDK V8, V4L2 ISP subdevices). Instead of linking the V8 SDK, the camera
+  service drives the kernel's V4L2 nodes, the ISP and the hardware encoder directly
+  (crate `anyka-av100`). Both sensors must start together, and the encoder is opened
+  once at boot: the driver can oops the kernel if it is re-opened after memory has
+  fragmented.
 </Callout>
 
 ## AK3918EV200 (AK3918EN080 v200) · Untested with Kamoder
@@ -63,6 +69,13 @@ a GC1034, GC1054, GC1084, H62 or H63 sensor. Its stock firmware runs
 Kamoder links against that camera's SDK, so it builds for it, but nobody has run the
 current stack on an EV200 yet. Reports are welcome. Until then, Gerge's project is
 the proven option for these cameras.
+
+## Other cameras
+
+A camera that is not listed here boots with the `generic-v4l2` fallback profile:
+SSH, web UI and Wi-Fi work, the camera service serves a test pattern, and lights,
+PTZ and RTSP stay off. Supporting it properly means writing a board profile, and for
+a new SoC a video backend; see [Adding a board](/docs/adding-a-board).
 
 ## Identify your camera
 

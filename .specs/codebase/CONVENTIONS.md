@@ -2,13 +2,13 @@
 
 ## Naming
 
-- Project name **Kamoder**. Generic crates are unprefixed (`os`, `telemetry`, `auth`, `supervisor`, `wifi`, `lights`, `web`, `onvif`, `rtsp`, `camera`); `anyka-*` only for SDK/hardware-binding crates (`anyka-sys`, `anyka-link`, `anyka`, `anyka-v8`, `anyka-ptz`).
+- Project name **Kamoder**. Generic crates are unprefixed (`os`, `telemetry`, `auth`, `supervisor`, `wifi`, `lights`, `web`, `onvif`, `rtsp`, `camera`, `camerad`, `board`, `video-proto`); `anyka-*` only for SDK/hardware-binding crates (`anyka-sys`, `anyka-link`, `anyka`, `anyka-v8`, `anyka-ptz`, `anyka-av100`). The camera service package is `camerad`, its binary keeps the name `camera`.
 - Workspace manifest: every crate uses `version/edition/license.workspace`-style shared fields (`[workspace.package]` edition 2021, GPL-3.0-or-later) and `dep.workspace = true` for shared deps (`Cargo.toml`).
 - Legacy names remain: socket `/tmp/anyka-supervisor.sock`, `/tmp/anyka-ptz.sock`, env vars `ANYKA_*`, files `etc/anyka-sshd.*`, staging dir `anyka_rust/`. Newer pieces use `kamoder-` (`/tmp/kamoder-lights.sock`, `/tmp/kamoder-video.sock`). Mixed by history, not by rule.
 
 ## Error handling
 
-- Libraries: `snafu` enums per module (`#[derive(Debug, Snafu)] pub enum Error { #[snafu(display(...))] Variant { path, source } }`), `.context(...)`/`ResultExt`, local `type Result<T, E = Error>` (e.g. `crates/camera/src/venc.rs`, `crates/rtsp/src/source.rs`, `crates/telemetry/src/lib.rs`).
+- Libraries: `snafu` enums per module (`#[derive(Debug, Snafu)] pub enum Error { #[snafu(display(...))] Variant { path, source } }`), `.context(...)`/`ResultExt`, local `type Result<T, E = Error>` (e.g. `crates/anyka-av100/src/venc.rs`, `crates/board/src/lib.rs`, `crates/rtsp/src/source.rs`, `crates/telemetry/src/lib.rs`).
 - Binaries: `eyre::Result` at `main`; library errors convert with `?`/`.into()` (`demos/wdt_feeder/src/main.rs`). xtask also uses `eyre` (`bail!`, `wrap_err_with`).
 - Panics: `panic = "unwind"` so `Drop` releases hardware; supervisor actors return `ControlFlow::Continue` from `on_panic`/`on_link_died`.
 - Web API errors: `{error, code}` JSON via `crates/web/src/error.rs`. Socket protocols: `{"result":"error","code":"...","message":"..."}`.
@@ -24,26 +24,28 @@
 ## CLI
 
 - Every binary uses `clap` derive (`#[derive(Parser)]`), doc comments on fields become `--help`; defaults on the field (`default_value`, `default_value_t`, `env = "ANYKA_..."`). Legacy flag spellings kept for script compatibility (`wdt_feeder -i/-m/-w`, positional demo args).
-- Subcommands where a binary has modes (`camera serve|probe`, `web ... serve`, `wifi status`, `supervisor --check`).
+- Subcommands where a binary has modes (`camera serve|probe`, `web ... serve`, `wifi status`, `supervisor board [--shell]`, `supervisor --check`).
+- Board-driven values: CLI flags override the board profile, which overrides built-in defaults (`crates/camerad/src/settings.rs`, `crates/wifi/src/hardware.rs`); flags that used to carry AV100 defaults are now `Option` with "[default: the profile's ...]" help text.
 - CLI parse tests assert defaults (e.g. `crates/lights/src/main.rs`, `crates/onvif/src/main.rs` tests check socket paths).
 
 ## Module and code layout
 
 - Binary crates split into `lib.rs` (testable logic, shared protocol) + `main.rs` (CLI, runtime, signals, listener).
 - Pure decision functions separated from I/O for host testing (`crates/wifi/src/reconcile.rs` `decide`, `crates/anyka-ptz/src/preset_motor/machine.rs`).
-- Hardware access behind a trait or an injectable root path (`MotorDevice`, `PtzBackend`, `VideoSource`, GPIO `--gpio-root`, supervisor `hardware.rs` "paths relative to `root`").
-- Protocol types live in a separate dependency-light crate shared by server and client (`ptz-proto`, `lights-proto`, `supervisor` lib `control`).
+- Hardware access behind a trait or an injectable root path (`camera::backend::{Backend, Session, Encoder}`, `MotorDevice`, `PtzBackend`, `VideoSource`, GPIO `--gpio-root`, `board::resolve(dirs, override, root)`, supervisor `hardware.rs` "paths relative to `root`").
+- Protocol types live in a separate dependency-light crate shared by server and client (`video-proto`, `ptz-proto`, `lights-proto`, `supervisor` lib `control`).
+- Hardware facts (sensors, stream settings, GPIOs, Wi-Fi iface/module, PTZ driver/limits, vendor processes) live in `boards/*.toml`, read through `board::current()`; generic crates carry no board literals (`./x check-literals`, list `GENERIC_CRATES` in `xtask/src/checks.rs`). A deliberate fallback is marked `// board-literal-ok: <reason>`.
 - Async: tokio current-thread runtime built explicitly in `main` (`Builder::new_current_thread()`), never `#[tokio::main]` multi-thread.
 - XML: never hand-formatted; ONVIF bodies are generated serde types (`onvif-schema`), regenerated with `./x gen-onvif`, never hand-edited.
-- Prefer own Rust over vendor `.so` (camera, lights, wifi, rtsp are vendor-free); vendor SDK only in `anyka*` crates and demos.
+- Prefer own Rust over vendor `.so` (every shipped service is vendor-free, including the AV100 video backend `anyka-av100`); vendor SDK only in `anyka-sys`/`anyka`/`anyka-v8`/`anyka-link`, the optional `anyka-ptz` `sdk` feature, and the demos (`./x dist --with-demos`).
 
 ## Comment style
 
 - Every module starts with a `//!` doc that explains *why* (constraints, hardware evidence, rejected alternatives), often with `text` blocks showing wire formats or console output. See `crates/ptz-proto/src/lib.rs`, `crates/anyka-link/src/lib.rs`, `crates/os/src/lib.rs`.
-- Every `unsafe` block carries a `// SAFETY:` note (counts per file: e.g. `crates/anyka/src/vi.rs` 18, `crates/camera/src/device.rs` 8).
+- Every `unsafe` block carries a `// SAFETY:` note (counts per file: e.g. `crates/anyka/src/vi.rs` 18, `crates/anyka-av100/src/device.rs` 8).
 - Constants carry doc comments with rationale and units (`/// Frames are copied out while a request came in this recently.`).
 - Config files (`tools/supervisor.toml`, `tools/camera.conf.example`, `.cargo/config.toml`, `deny.toml`) are heavily commented with reasons.
-- Spec traceability tags appear in code: `PTZ-04`, `ONVIF-05`, design decision `D4`, `SPEC_DEVIATION (...)`.
+- Spec traceability tags appear in code: `PTZ-04`, `ONVIF-05`, `BRD-04`, `CAM-03`, `PRO-01`, design decision `D4`, `SPEC_DEVIATION (...)`.
 
 ## Lints and formatting
 

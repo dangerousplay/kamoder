@@ -4,22 +4,24 @@ Severity: H = can strand/brick a camera or ship broken; M = maintenance/correctn
 
 ## Hardware fragility
 
-- **H — Encoder driver oopses on memory fragmentation.** `/dev/venc` (`ak_venc_adapter.ko` V1.0.74) oopses instead of failing when it cannot get contiguous DMA. `camera` drops caches/compacts, sets `min_free_kbytes`, and creates encoder + channels once at start; they must never be re-created at runtime (`crates/camera/src/service.rs:357-367`, `main.rs:285-338`).
-- **H — Dual-sensor bring-up is order-sensitive.** Both SC2331 sensors must be brought up and started together (`SET_DUAL_MODE`, `crates/camera/src/service.rs:208`, `device.rs:63`). Not covered by itest (no ISP in VM).
+- **H — Encoder driver oopses on memory fragmentation.** `/dev/venc` (`ak_venc_adapter.ko` V1.0.74) oopses instead of failing when it cannot get contiguous DMA. `camerad` opens the encoder + one channel per sensor once at start via `Av100Encoder::open_all`, which drops caches/compacts and sets `min_free_kbytes` before each channel (`make_room_for_encoder`); encoders live outside the capture session and are never re-created at runtime (`crates/anyka-av100/src/lib.rs`, `crates/camerad/src/main.rs` `serve_av100`, trait contract in `crates/camera/src/backend.rs`).
+- **H — Dual-sensor bring-up is order-sensitive.** Both SC2331 sensors must be brought up and started together (`SET_DUAL_MODE`; `Backend::start` brings all sensors up at once, `crates/anyka-av100/src/lib.rs`, `device.rs`). Not covered by itest (no ISP in VM; the VM runs the `test-pattern` backend).
 - **H — Watchdog handover.** Vendor app holds `/dev/watchdog` at boot; `wdt_feeder -w` waits, and `init.sh` kills vendor processes only while the feeder runs. Any change to service order, `critical`, or guard logic risks a reboot loop (`tools/supervisor.toml`, `tools/init.sh`).
-- **H — GPIO 98 cuts Wi-Fi.** Only the wifi recovery ladder may touch it; lights enforces an allowlist (`crates/lights/src/gpio.rs` `ALLOWED`). Wi-Fi is the only path in on many units (no Ethernet/UART).
+- **H — GPIO 98 cuts Wi-Fi.** Only the wifi recovery ladder may touch `wifi.power_gpio`; lights may drive only the lines in the board's `[lights]`, and `board` validation rejects a profile whose light line uses `wifi.power_gpio` (`crates/board/src/profile.rs` `Lights::validate`, PER-03). A wrong profile is now the risk: `./x check-boards` validates every shipped profile. Wi-Fi is the only path in on many units (no Ethernet/UART).
 - **H — Autostart flash patch** writes `/dev/mtd6` (`tools/autostart/`). Reversible via `rollback.sh`, tested on one firmware (38.2.72, mtd6 md5 `f4c739e1…`); other firmware revisions untested.
 - **M — Wi-Fi driver wedges under load** (SSV6x5x), hence the reload/power-cycle ladder (`crates/wifi/src/lib.rs`). Large uploads can drop the link.
-- **M — 32 MB RAM budget.** Measured RSS ~1.6-3.3 MB per service (HARDWARE-FINDINGS §9, before `camera`/`rtsp` existed). Current totals with camera + rtsp not recorded in docs — unknown.
+- **M — 32 MB RAM budget.** Measured RSS ~1.6-3.3 MB per service (HARDWARE-FINDINGS §9, before `camera`/`rtsp` existed). Current totals with camera + rtsp not recorded in docs — unknown (to record in T20).
+- **M — Video socket index vs sensor index.** The producer resolves the subscribe line `"N\n"` and `?camera=N` as a *position* in the sensors it serves, while `rtsp` subscribes with the board's sensor index. Equal for every shipped profile (`sensors = [0, 1]`, both present); diverges for `sensors = [1]` or a missing sensor (`crates/camera/src/service.rs` `video_client`, `snapshot`; `docs/notes/VIDEO-PROTOCOL.md` "Open question").
 
-## Hardcoded, board-specific values
+## Board-specific values
 
-- GPIO numbers 19/37/48/67/68/98 (`tools/supervisor.toml` comment, `crates/lights/src/gpio.rs`).
-- Sensor model/tuning naming `isp_<sensor>_mipi_2lane_mipi<N>.conf` in `/usr/local`; 1280x720, 2048 kbit/s CBR fixed in service config (`crates/camera/src/main.rs`, supervisor.toml comment).
-- `/dev/venc` ioctl numbers and parameter block layouts reverse-engineered (`crates/camera/src/venc.rs`); the referenced `tools/re/venc-protocol` does **not exist** in this repo.
-- PTZ limits are raw motor steps (pan 0-175, tilt 0-70) until steps-per-degree is measured (`crates/anyka-ptz/src/lib.rs`, HARDWARE-FINDINGS §9).
-- Firmware paths: `/rom/wpa_supplicant0.conf`, `/etc/Wireless`, `/ipc/modules/wifi/ssv6x5x.ko`, `/ipc/patch/ko/presetmotor.ko`, `/rom/device.config`, `/usr/share/udhcpc/default.script` (CLI defaults in `crates/wifi/src/main.rs`, `crates/anyka-ptz/src/preset_motor/config.rs`).
-- Vendor process names list in `tools/init.sh` (`VENDOR_PROCESSES`).
+Since the board-agnostic feature, board facts live in `boards/*.toml` (crate `board`) and generic crates are kept free of them by `./x check-literals`. What remains:
+
+- AV100 values are in `boards/anyka-av100-ptz.toml`: GPIOs 19/37/48/67/68 (lights) and 98 (Wi-Fi power), 1280x720 / 2048 kbit/s CBR / GOP 30, `tuning_dir = /usr/local`, Wi-Fi module path, `presetmotor.ko`, vendor process list.
+- Deliberate fallbacks marked `// board-literal-ok:` in generic crates (e.g. wifi's built-in AV100 defaults when no board resolves, so Wi-Fi never depends on `boards/`), and `DEFAULT_VENDOR_PROCESSES` in `tools/init.sh` when `supervisor board --shell` fails.
+- Hardware crates legitimately hold SoC specifics: tuning naming `isp_<sensor>_mipi_2lane_mipi<N>.conf` and `/dev/venc` ioctl numbers / parameter block layouts reverse-engineered in `crates/anyka-av100/src/{conf,venc}.rs` (the source traces are not in this repo; the constants are the record).
+- PTZ limits are raw motor steps (pan 0-175, tilt 0-70, `steps_per_degree = 1.0` in the AV100 profile) until steps-per-degree is measured (HARDWARE-FINDINGS §9).
+- Firmware paths still CLI defaults: `/rom/wpa_supplicant0.conf`, `/etc/Wireless`, `/rom/device.config`, `/usr/share/udhcpc/default.script` (`crates/wifi/src/main.rs`, `crates/anyka-ptz/src/preset_motor/config.rs`).
 - `/tmp` socket paths duplicated as defaults across crates and `tools/supervisor.toml` (`/tmp/anyka-*.sock`, `/tmp/kamoder-*.sock`) — naming inconsistent (anyka vs kamoder).
 - Toolchain path `/opt/arm-anykav200-crosstool` hardcoded in `.cargo/config.toml` `[env]` (follows `CC_armv5te_...` env vars, not `ANYKA_TOOLCHAIN`), `tools/ak-linker.sh`, `xtask`, `anyka-sys/build.rs`.
 
@@ -41,18 +43,16 @@ Severity: H = can strand/brick a camera or ship broken; M = maintenance/correctn
 
 ## Process / quality gaps
 
-- **No CI gate**: no workflow runs `./x test`, `./x ci` or `./x itest`; release builds without tests or clippy (`.github/workflows/release.yml`).
-- `./x ci` does not include `./x test`.
+- **Partial CI gate**: `.github/workflows/checks.yml` runs `./x check-boards` and `./x check-literals` on push/PR; no workflow runs `./x test`, clippy, deny or `./x itest` (they need the crosstool + nightly build-std); release builds without tests or clippy (`.github/workflows/release.yml`).
+- `./x ci` now includes `./x test`, `check-boards` and `check-literals` (`xtask/src/tasks.rs` `ci`).
 - itest cannot exercise camera/ISP/venc/audio/real PTZ; video path relies on manual hardware runs.
-- Large uncommitted restructure (crates moved to `crates/`, new `crates/camera`, docs site): state of HEAD differs from working tree.
+- itest runs the `generic-v4l2` profile (test-pattern backend), so the AV100 profile's lights/PTZ/video paths are only checked by host unit tests and manual hardware runs.
 
 ## Documentation drift (verify before trusting)
 
-- `docs/notes/HARDWARE-FINDINGS.md` §1/§5 says ONVIF/RTSP/video blocked on AV100; superseded by pure-Rust `camera` + `rtsp`.
-- §9 says autostart not made on the camera; project memory records the live unit's mtd6 patched 2026-10-11 so config.sh autostarts.
-- `docs/notes/IMPLEMENTATION.md` crate table omits camera, rtsp, web, onvif, lights, auth, anyka-ptz; verification table predates them.
-- `docs/content/docs/architecture.mdx` says rtsp is "off by default" and does not list the camera/snapshot service; `tools/supervisor.toml` enables both.
-- Notes refer to `cross-compile/` (sibling dir outside this self-contained repo) and `tools/re/venc-protocol` (absent).
+- Fixed 2026-10-13 (board-agnostic T19): HARDWARE-FINDINGS §1/§5/§9 carry dated updates (pure-Rust video, mtd6 autostart kit); IMPLEMENTATION.md crate list and verification table; architecture.mdx (rtsp + camera on, board profiles, video data flow); services/cameras/index pages; README crate table; `tools/re/venc-protocol` reference removed from `crates/anyka-av100/src/venc.rs`. New: `docs/notes/VIDEO-PROTOCOL.md`, docs page "Adding a board".
+- Remaining: notes still refer to `cross-compile/` (sibling dir outside this self-contained repo) as historical context; `crates/web/src/video.rs` module doc still says snapshots come from the SDK-based `jpeg_snapshot` service.
+- Live verification of RTSP `/vs0`+`/vs1` and ONVIF per-sensor profiles under board profiles not yet recorded (T20).
 
 ## Security posture (by design, documented)
 
@@ -63,6 +63,6 @@ Severity: H = can strand/brick a camera or ship broken; M = maintenance/correctn
 
 ## Unknowns
 
-- Wire framing on `/tmp/kamoder-video.sock` beyond the `"N\n"` request (not mapped).
+- ~~Wire framing on `/tmp/kamoder-video.sock`~~ — now specified in `crates/video-proto` and `docs/notes/VIDEO-PROTOCOL.md`.
 - Whether `./x test` currently passes on this working tree (not run).
-- Whether `docs/notes/*` is rendered on the docs site.
+- Whether `docs/notes/*` is rendered on the docs site (it is not: the site renders `docs/content/docs/*.mdx` only; site pages refer to notes by path).

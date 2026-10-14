@@ -15,12 +15,13 @@ rcS → rc.local → /ipc/setup.sh          (firmware: modules, clocks, Wi-Fi, G
             anyka_rust/init.sh
                      ▼
                supervisor ──┬─ wdt_feeder   (first, critical)
-                            ├─ lights
+                            ├─ lights       when the board has [lights]
                             ├─ wifi
                             ├─ sshd         :2222
                             ├─ web          :80
                             ├─ onvif        :8000, udp 3702
-                            └─ rtsp         :554 (off by default)
+                            ├─ rtsp         :554 /vs0, /vs1  when the board encodes video
+                            └─ camera       127.0.0.1:3000, /tmp/kamoder-video.sock
 ```
 
 1. **Firmware.** The kernel and the vendor's `setup.sh` load the drivers: ISP and
@@ -32,19 +33,25 @@ rcS → rc.local → /ipc/setup.sh          (firmware: modules, clocks, Wi-Fi, G
    `anyka_rust/init.sh`. With `run_rust=0` it hands over to a legacy tree instead.
 4. **`init.sh`** checks the card, turns first-boot passwords into hashes, guards
    against the vendor app and starts the **supervisor**.
-5. The **supervisor** starts each service from `supervisor.toml` in order, restarts
-   it with backoff, and stops a crash loop.
+5. The **supervisor** resolves the [board profile](#board-profiles), skips services
+   whose hardware the board lacks, starts the rest from `supervisor.toml` in order,
+   restarts each with backoff, and stops a crash loop.
 
 ## Design rules
 
-- **Vendor-free at runtime.** No vendor daemon runs. Hardware the vendor SDK used to
-  drive is reached through kernel interfaces (sysfs GPIO, `/dev/watchdog`, the
-  Wi-Fi control socket) or thin safe wrappers around SDK objects where nothing else
-  exists yet.
-- **One owner per resource.** `lights` owns the indicator and IR GPIOs; `onvif` owns
-  the PTZ motor; everything else is a client over a Unix socket. The `lights`
-  allow-list cannot reach the Wi-Fi power or motor pins; only the `wifi` power-cycle
-  step touches GPIO 98, and it always restores it.
+- **Vendor-free at runtime.** No vendor daemon runs and no shipped service loads a
+  vendor library. Hardware the vendor SDK used to drive is reached through kernel
+  interfaces (V4L2 and the encoder's ioctls, sysfs GPIO, `/dev/watchdog`, the Wi-Fi
+  control socket). The SDK wrappers survive only for the ported demos, which
+  `./x dist --with-demos` adds.
+- **One owner per resource.** `camera` owns the sensors and the hardware encoder;
+  `lights` owns the indicator and IR GPIOs; `onvif` owns the PTZ motor; everything
+  else is a client over a Unix socket or loopback HTTP. `lights` may drive only the
+  lines the board profile lists, and the profile is rejected if one of them is the
+  Wi-Fi power GPIO; only the `wifi` power-cycle step touches that pin (GPIO 98 on the
+  AV100), and it always restores it.
+- **Hardware facts live in board profiles**, not in code. Generic crates contain no
+  SoC names, device paths or GPIO numbers (`./x check-literals` enforces it).
 - **Never brick.** The watchdog feeder starts first and is critical. The vendor app
   is stopped only while the feeder runs. The Wi-Fi service rolls back to the last
   network it saw working. The flash patch is reversible.
@@ -53,6 +60,52 @@ rcS → rc.local → /ipc/setup.sh          (firmware: modules, clocks, Wi-Fi, G
   there is no interpreter, and nothing pulls in a second libc.
 - **Generated, not hand-written, protocols.** ONVIF types come from the official
   WSDL/XSD; SOAP is (de)serialized with serde, never `format!`.
+
+## Board profiles
+
+Every hardware fact a service needs (sensors and stream settings, light GPIOs, the
+Wi-Fi interface and module, the PTZ driver and limits, the vendor processes to stop)
+comes from one TOML file per camera model in `boards/`. The supervisor picks the
+profile once at boot (a `BOARD=` override in `camera.conf`, else autodetection from
+`/proc/cpuinfo` and the device tree, else the `generic-v4l2` fallback), writes it to
+`/tmp/kamoder-board.json` and hands the path to every service in `KAMODER_BOARD`, so
+all of them agree on one board.
+
+```text
+boards/*.toml ──▶ supervisor (resolves once) ──▶ /tmp/kamoder-board.json
+                    │          │                          │ KAMODER_BOARD
+                    │          │ skips services by `when`  ▼
+                    │          └──────────────▶ camera · rtsp · onvif · web · lights · wifi
+                    ▼
+     init.sh: `supervisor board --shell` (vendor processes, watchdog wait)
+```
+
+See [Adding a board](/docs/adding-a-board) for the detection rules, the full schema
+and the camera backend contract.
+
+## Video data flow
+
+```text
+sensors ─▶ ISP ─▶ V4L2 capture (NV12)          ── camera service ──
+                    ├─▶ hardware H.264 encoder (/dev/venc on the AV100)
+                    │     └─▶ /tmp/kamoder-video.sock ─▶ rtsp ─▶ rtsp://<camera>/vsN
+                    └─▶ latest picture ─▶ JPEG
+                          └─▶ 127.0.0.1:3000/snapshot.jpg ─▶ web /api/snapshot.jpg, /api/live.mjpeg
+                              127.0.0.1:3000/status ───────▶ web /api/cameras, onvif media profiles
+```
+
+The **camera** service picks its backend from the profile's `video.backend`:
+`anyka-av100` drives the AV100's ISP, V4L2 nodes and `/dev/venc` directly, with no
+vendor library; `test-pattern` produces a moving picture (snapshots only, no H.264)
+for unknown boards and the VM. All sensors are started together (the AV100's dual
+mode needs it), and the encoder channels are opened once at start and never
+re-created. Pictures are copied out for snapshots only while someone is asking for
+them; H.264 leaves the capture thread only while a client is subscribed.
+
+**rtsp** mounts one `vsN` path per sensor in the profile and reads H.264 from the
+video socket. **onvif** advertises one media profile per sensor with the resolution,
+frame rate and bitrate the camera service reports in `/status`. The wire format is
+specified in `docs/notes/VIDEO-PROTOCOL.md` and defined in the `video-proto` crate.
 
 ## Wi-Fi recovery
 
@@ -63,8 +116,8 @@ through a ladder before giving up:
 | --- | --- |
 | 1. renew | `REASSOCIATE` + DHCP renew (after 3 missed gateway checks) |
 | 2. restart ×2 | restart `wpa_supplicant` and `udhcpc` |
-| 3. reset driver | `rmmod` / `insmod ssv6x5x` with timeouts |
-| 4. power cycle | USB radio off for 3 s on GPIO 98, then re-enumerate |
+| 3. reset driver | `rmmod` / `insmod` of the profile's `wifi.module` (`ssv6x5x` on the AV100) with timeouts |
+| 4. power cycle | USB radio off for 3 s on the profile's `wifi.power_gpio` (98 on the AV100), then re-enumerate; skipped when the board has none |
 
 The ladder then repeats with backoff capped at 5 minutes. Every step is exported as
 a `kamoder_wifi_*` metric.
@@ -73,12 +126,15 @@ a `kamoder_wifi_*` metric.
 
 | Path | What |
 | --- | --- |
-| `crates/` | the Rust crates; the next four rows are all under it |
-| `anyka-sys`, `anyka`, `anyka-link` | FFI bindings and safe wrappers for the vendor SDK |
+| `crates/` | the Rust crates; the next six rows are all under it |
+| `supervisor`, `wifi`, `lights`, `sshd`, `web`, `onvif`, `rtsp`, `camerad` | the services (`camerad` builds `bin/camera`) |
+| `camera`, `anyka-av100` | the vendor-free camera core (backend traits, service, test pattern) and the AV100 video backend |
+| `board`, `video-proto` | board profiles (load, validate, detect, hand off) and the producer protocol |
+| `onvif-schema`, `lights-proto`, `ptz-proto`, `auth`, `anyka-ptz` | protocol and shared crates, PTZ backends |
 | `os`, `telemetry` | kernel helpers (watchdog, signals) and tracing + Prometheus |
-| `supervisor`, `wifi`, `lights`, `sshd`, `web`, `onvif`, `rtsp` | the services |
-| `onvif-schema`, `lights-proto`, `ptz-proto`, `auth` | protocol and shared crates |
-| `demos/` | the vendor SDK demos, ported |
+| `anyka-sys`, `anyka`, `anyka-v8`, `anyka-link` | FFI bindings and safe wrappers for the vendor SDK (demos only) |
+| `boards/` | board profiles, one TOML file per camera model |
+| `demos/` | the vendor SDK demos, ported (shipped only with `./x dist --with-demos`) |
 | `webui/` | the admin SPA (React + Vite) |
 | `card/` | files at the root of the SD card (`autorun.sh`, `Factory/`) |
 | `sdk/` | vendored SDK headers and shared objects |

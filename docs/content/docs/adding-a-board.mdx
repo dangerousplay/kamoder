@@ -1,0 +1,342 @@
+---
+title: Adding a board
+description: Describe a new camera model with a board profile, and add a video backend for new silicon.
+icon: CircuitBoard
+---
+
+Kamoder ships one set of binaries for every camera. What differs between camera
+models (sensor count, stream size, GPIO numbers, the Wi-Fi module, the PTZ driver,
+the vendor processes to stop) lives in a **board profile**: one TOML file per model
+in `boards/`. A new camera with known hardware is a new file, not a fork.
+
+Two profiles ship today:
+
+| Profile | For |
+| --- | --- |
+| `anyka-av100-ptz` | The AK3918AV100 dual-SC2331 pan/tilt camera (EVB_CBDM_KM01N), the tested unit |
+| `generic-v4l2` | The fallback for unknown boards and the QEMU VM: a test-pattern camera and no peripherals |
+
+## How the board is chosen
+
+The **supervisor** resolves the board once at start (crate `board`,
+`board::resolve`), in this order:
+
+1. **Override.** `BOARD=<name>` in `camera.conf` (exported by `init.sh`, or the
+   supervisor's `--board`) loads `boards/<name>.toml` and skips detection. An
+   unknown name is an error, never a silent fallback to another board.
+2. **Detection.** Every profile in `boards/` is loaded and its `[match]` rules are
+   tested against the running kernel:
+
+   | Rule | Holds when |
+   | --- | --- |
+   | `cpuinfo_hardware` | equals the `Hardware` line of `/proc/cpuinfo` |
+   | `dt_compatible` | is a substring of one entry of `/proc/device-tree/compatible` |
+   | `dt_model` | is a substring of `/proc/device-tree/model` |
+   | `path_exists` | every listed absolute path exists (each path counts as one rule) |
+
+   A profile is a candidate only if **all** its rules hold, and its **score** is the
+   number of rules it lists. The highest score wins, so a specific profile (SoC +
+   board model) beats a generic one (SoC only). Two candidates with the same top
+   score are an error naming both profiles; add a rule to tell them apart. A
+   profile with no rules is never chosen by detection.
+3. **Fallback.** No candidate: `generic-v4l2` is used, with a reason such as
+   `no profile matched (SoC: AK3918AV100)`, so an unknown camera still boots into
+   something reachable.
+
+Every profile in the directory is loaded and validated during detection, so one
+broken file makes resolution fail; `./x check-boards` catches that before a release.
+
+### The handoff to services
+
+The supervisor writes the result (name, profile path, reason and the whole
+profile) to `/tmp/kamoder-board.json` (`--board-handoff`) and passes that path to
+every child in `KAMODER_BOARD`. Services call `board::current()`, which reads the
+handoff, so all of them agree on one board and none re-runs detection. Started by
+hand without `KAMODER_BOARD`, a service resolves on its own from
+`KAMODER_BOARDS_DIR` (default `<binary dir>/../boards`) and `BOARD`.
+
+If the supervisor cannot resolve the board it logs the error and carries on: the
+watchdog feeder, Wi-Fi, SSH and web never depend on `boards/` being right. Services
+with a `when` condition then all start, and board-driven services (camera, rtsp,
+onvif, lights) fail on their own `board::current()` call with the same error.
+
+### Checking what a camera resolves to
+
+```sh
+/mnt/disc1/anyka_rust/bin/supervisor board
+# board:   anyka-av100-ptz
+# reason:  matched cpuinfo_hardware=AK3918AV100 (score 1)
+# profile: /mnt/disc1/anyka_rust/bin/../boards/anyka-av100-ptz.toml
+
+/mnt/disc1/anyka_rust/bin/supervisor board --shell
+# KAMODER_BOARD_NAME='anyka-av100-ptz'
+# VENDOR_PROCESSES='daemon gwellupdater.sh soft_reboot.sh ipc anyka_ipc main'
+# WATCHDOG_WAIT=1
+```
+
+`supervisor board` needs no supervisor config, honours `--boards-dir` / `--board`
+(and `KAMODER_BOARDS_DIR` / `BOARD`), and exits non-zero when the board cannot be
+resolved. `init.sh` evaluates the `--shell` form before any service runs to learn
+which vendor processes to stop; if it fails, `init.sh` keeps its built-in AV100
+defaults. The web UI shows the resolved board and the reason in `/api/hardware`.
+
+## Profile schema
+
+Every table rejects unknown keys, so a typo such as `kpbs = 4096` is a load error
+naming the file and the key instead of a silently ignored setting. Only `name`,
+`[match]` and `[video]` are required. Leave out `[lights]` or `[ptz]` on a board
+without that hardware: the lights service is not started and ONVIF offers no PTZ.
+Without `[wifi]` the wifi service still runs on its built-in interface and driver
+defaults, minus the power-cycle step, because Wi-Fi may be the only way in.
+
+### Top level
+
+| Key | Type | Default | Rule |
+| --- | --- | --- | --- |
+| `name` | string | required | Not empty; must equal the file name without `.toml` |
+| `description` | string | none | Shown as the ONVIF model and in the web UI |
+
+### `[match]`
+
+Required table; may be empty (chosen only by name or as the fallback).
+
+| Key | Type | Default | Rule |
+| --- | --- | --- | --- |
+| `cpuinfo_hardware` | string | none | Exact `Hardware` value of `/proc/cpuinfo` |
+| `dt_compatible` | string | none | Substring of one `/proc/device-tree/compatible` entry |
+| `dt_model` | string | none | Substring of `/proc/device-tree/model` |
+| `path_exists` | array of paths | `[]` | Absolute paths that must exist |
+
+### `[platform]`
+
+Optional. What the stock firmware leaves running.
+
+| Key | Type | Default | Rule |
+| --- | --- | --- | --- |
+| `vendor_processes` | array of strings | `[]` | Process names `init.sh` stops (only while the watchdog feeder runs) |
+| `watchdog_wait` | bool | `false` | The vendor app holds `/dev/watchdog` at boot, so the feeder must wait for it |
+
+### `[video]`
+
+Required.
+
+| Key | Type | Default | Rule |
+| --- | --- | --- | --- |
+| `backend` | string | required | Not empty. `anyka-av100` or `test-pattern` in this build; an unknown name still loads, and the camera service exits with a clear error |
+| `sensors` | array of u32 | required | At least one; no duplicates. RTSP mounts one `vsN` per entry |
+| `tuning_dir` | path | none | ISP tuning files, for backends that need them (camera falls back to `/usr/local`) |
+
+### `[video.stream]`
+
+Required. H.264 settings for every sensor.
+
+| Key | Type | Default | Rule |
+| --- | --- | --- | --- |
+| `width`, `height` | u32 | required | Even and non-zero (4:2:0 pictures) |
+| `fps` | u32 | required | `1..=60` |
+| `kbps` | u32 | required | Constant bitrate, `64..=8000` |
+| `gop` | u32 | required | Frames between IDRs, `1..=600` |
+| `profile` | string | required | `baseline`, `main` or `high` |
+
+### `[[video.override]]`
+
+Optional, repeatable. Per-sensor exceptions to `[video.stream]`.
+
+| Key | Type | Default | Rule |
+| --- | --- | --- | --- |
+| `index` | u32 | required | Must be in `video.sensors`; at most one override per sensor |
+| `width`, `height`, `fps`, `kbps`, `gop`, `profile` | as in `[video.stream]` | inherited | The merged result must pass the `[video.stream]` rules |
+
+### `[video.snapshot]`
+
+Optional.
+
+| Key | Type | Default | Rule |
+| --- | --- | --- | --- |
+| `max_width` | u32 | none (full size) | Even and non-zero; pictures are halved while wider |
+| `quality` | u8 | `80` | JPEG quality, `1..=100` |
+
+### `[lights]` and `[[lights.line]]`
+
+Optional. The lines the `lights` service may drive, and nothing else.
+
+| Key | Type | Default | Rule |
+| --- | --- | --- | --- |
+| `gpio_root` | path | `/sys/class/gpio` | sysfs GPIO directory for lines given by number |
+| `line.role` | `ir_cut`, `ir_leds`, `white`, `alarm`, `amp` | required | Each role at most once |
+| `line.gpio` | u32 | none | sysfs GPIO number; exactly one of `gpio` and `path` |
+| `line.path` | path | none | Directory holding a `value` file (`/sys/user-gpio/<name>` style kernels) |
+| `line.active_low` | bool | `false` | Logical "on" drives the pin low |
+
+No GPIO number may appear on two lines, and no line may use `wifi.power_gpio`: the
+lights service must never be able to cut the Wi-Fi module's power. Roles the board
+lacks are reported as unsupported by the lights socket and hidden in the web UI.
+
+### `[wifi]`
+
+Optional.
+
+| Key | Type | Default | Rule |
+| --- | --- | --- | --- |
+| `iface` | string | required | Not empty (e.g. `wlan0`) |
+| `module` | path | none | Kernel module (`.ko`) the driver-reset step reloads |
+| `module_args` | array of strings | `[]` | Arguments for `insmod` |
+| `power_gpio` | u32 | none | GPIO that switches the module's power; without it the power-cycle recovery step is skipped |
+
+### `[ptz]`
+
+Optional.
+
+| Key | Type | Default | Rule |
+| --- | --- | --- | --- |
+| `backend` | `preset_motor`, `sdk`, `sim` | required | `preset_motor` drives `presetmotor.ko` directly; `sim` is a simulated motor |
+| `device` | path | none | Driver device node |
+| `module` | path | none | Kernel module that creates `device` |
+| `pan`, `tilt` | `[min, max]` floats | required | Degrees; finite with `min < max` |
+| `steps_per_degree` | float | `1.0` | Finite and positive |
+
+### A minimal profile
+
+```toml title="boards/acme-cam.toml"
+name = "acme-cam"
+description = "Acme single-sensor bullet camera"
+
+[match]
+cpuinfo_hardware = "ACME1234"
+dt_model = "Acme Bullet"
+
+[video]
+backend = "test-pattern"   # until a backend for this SoC exists
+sensors = [0]
+
+[video.stream]
+width = 1280
+height = 720
+fps = 15
+kbps = 2048
+gop = 30
+profile = "main"
+
+[wifi]
+iface = "wlan0"
+```
+
+`boards/anyka-av100-ptz.toml` is the complete, commented example with every section.
+
+## Services and capabilities
+
+A service in `supervisor.toml` can carry `when = "<capability>"`; on a board that
+lacks it, the service is not started (logged as skipped), so a camera without a motor
+never restart-loops the PTZ code.
+
+| `when` | Met when the profile has |
+| --- | --- |
+| `ptz` | a `[ptz]` section |
+| `lights` | a `[lights]` section |
+| `wifi` | a `[wifi]` section |
+| `video` | a non-empty `video.backend` |
+| `video.encoder` | a backend that produces encoded video (anything but `test-pattern`) |
+
+An unknown capability is a config load error. A `critical` service (the watchdog
+feeder) may not have `when`. With no resolved board, `when` is ignored and the
+service starts. The shipped config uses `lights` for the lights service, `video` for
+the camera service and `video.encoder` for rtsp.
+
+## Camera backends
+
+The camera service (`bin/camera`, package `camerad`) reads `video.backend` and builds
+the matching backend; the core in the `camera` crate only knows three traits from
+`crates/camera/src/backend.rs`:
+
+| Trait | Contract |
+| --- | --- |
+| `Backend` | `sensors()` lists the sensors it will bring up (index, picture size, tuning), before starting. `start()` brings **every** sensor up at once and returns a `Session`; dropping the session tears all of them down. There is no per-sensor start: on the AV100 neither ISP delivers until both stream. |
+| `Session` | `sensors()` repeats the list with what bring-up learnt (active area, chip id). `with_frame(slot, timeout, f)` waits for the next picture of one sensor and lends it to `f` in place, as a `FrameRef` (NV12, plus the physical address when it is DMA memory a hardware encoder can read). |
+| `Encoder` | One H.264 channel per sensor. `info()` returns the `StreamInfo` reported in `/status`; `encode(frame, out)` lends each Annex-B access unit to `out` with its keyframe flag; `request_idr()` makes the next picture an IDR. |
+
+The service drives them like this: open the encoders, start the backend, read each
+sensor in turn, publish snapshots on demand, encode every picture and fan the access
+units out to the video socket. Any error drops the session and retries with a pause
+growing from 2 s to 60 s, reported as `failed` in `/status`.
+
+<Callout type="warn" title="Open encoders once">
+  Encoders live **outside** the session and survive its retries. Create them once,
+  as early as possible, and never re-create them at runtime. The AV100's
+  `ak_venc_adapter` oopses the kernel instead of failing when it cannot get
+  contiguous DMA memory, which is plentiful at boot and scarce after the camera has
+  been running a while. `Av100Encoder::open_all` opens every channel before capture
+  buffers exist, freeing and compacting memory before each one. Treat any new hardware
+  encoder the same way until proven otherwise.
+</Callout>
+
+The protocol the service speaks to `rtsp`, `onvif` and `web` (video socket framing,
+`/status`, `/snapshot.jpg`, `vsN` naming) is specified in
+`docs/notes/VIDEO-PROTOCOL.md` and defined in the `video-proto` crate.
+
+## New silicon: adding a backend
+
+A board whose video hardware an existing backend already drives needs only a
+profile. New silicon needs a backend crate too:
+
+1. **Create `crates/<vendor>-<soc>`** (for example `anyka-ev300`), modelled on
+   `crates/anyka-av100`: implement `camera::backend::{Backend, Session, Encoder}`
+   over the kernel's interfaces (V4L2 nodes, the ISP's private ioctls, the encoder
+   device). Keep it vendor-free: no `anyka-sys` and no SDK `.so`; the vendor
+   libraries are a reverse-engineering reference only. Board facts belong in the
+   profile, hardware rules (start order, open-once) in the backend.
+2. **Register it in `camerad`.** Add the dependency to `crates/camerad/Cargo.toml`, a
+   constant for the `video.backend` name next to `AV100` and `TEST_PATTERN` in
+   `crates/camerad/src/main.rs`, and a `match` arm in `serve()` that builds the
+   backend and its encoders from `board::Video` (see `serve_av100`). Extend the
+   "known backends" error message.
+3. **Wire up the workspace.** Add the crate to the root `Cargo.toml` `members` and
+   `[workspace.dependencies]`, and to `HOST_TESTABLE` in `xtask/src/tasks.rs` if its
+   tests run on the host. It is a hardware crate, so it is **not** added to
+   `GENERIC_CRATES` in `xtask/src/checks.rs`: SoC names and device paths are
+   expected there.
+4. **Write the profile** with `video.backend` naming the new backend, plus match
+   rules that only this board satisfies.
+5. If the board has no hardware encoder yet, `backend = "test-pattern"` (or a
+   capture-only backend with no encoders) still gives snapshots, `/status` and
+   ONVIF; rtsp stays off through `when = "video.encoder"`.
+
+Peripherals need no code when they fit the schema: sysfs or path-addressed light
+GPIOs, a Wi-Fi interface with an optional module and power GPIO, and the existing
+PTZ backends. Anything else is a schema change in `crates/board/src/profile.rs`
+(with validation and tests) and in this page.
+
+## Test checklist
+
+On the host:
+
+- [ ] `./x check-boards` — every `boards/*.toml` loads and validates, the
+      `generic-v4l2` fallback exists, no two profiles have identical match rules, and
+      on a synthetic board satisfying exactly one profile's rules, detection picks
+      that profile (no tie, no shadowing). Runs in CI (`.github/workflows/checks.yml`).
+- [ ] `./x check-literals` — no board literals (SoC names, `wlan0`, `/dev/venc`,
+      GPIO numbers, driver names) in the generic crates outside tests; a deliberate
+      fallback is marked `// board-literal-ok: <reason>`. Also in CI.
+- [ ] `./x test` — host unit tests, including the `board` tests that load every
+      shipped profile and the new backend crate's own tests (fixture roots and fakes;
+      `camera`'s `test-support` feature provides a fake backend).
+- [ ] `./x ci` — the full gate (fmt, ONVIF codegen check, both checks above, clippy,
+      deny, tests, cross build).
+
+On the camera:
+
+- [ ] `bin/supervisor board` names the new profile with the expected reason.
+- [ ] `logs/supervisor.log` shows the board and which services were skipped for a
+      missing capability.
+- [ ] The web UI (`/api/hardware`) shows the board and its reason, and
+      `/api/cameras` reports every sensor `running`, with the stream filled in when
+      the backend encodes (the camera has no `curl`; this is the producer's
+      `/status` relayed by `web`).
+- [ ] `/api/snapshot.jpg?camera=N` returns a picture for each sensor.
+- [ ] `ffprobe rtsp://user:pass@<camera>/vsN` for each sensor (the `rtsp_url`s
+      from `/api/cameras`).
+- [ ] ONVIF `GetProfiles` returns one profile per sensor with the configured
+      resolution, fps and bitrate.
+- [ ] Each light role and the PTZ limits behave as the profile says; nothing touches
+      the Wi-Fi power GPIO.
+- [ ] Leave it running: the watchdog is fed, memory stays inside the budget, and a
+      `kill` of the camera service recovers without a reboot.

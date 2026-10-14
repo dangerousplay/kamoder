@@ -5,18 +5,20 @@ icon: Server
 ---
 
 All services are declared in `anyka_rust/supervisor.toml` and started by the
-supervisor in file order. Paths in it are relative to `anyka_rust/`.
+supervisor in file order. Paths in it are relative to `anyka_rust/`. A service with
+a `when` condition starts only if the [board profile](/docs/adding-a-board) has that
+hardware; on the tested AV100 every service runs.
 
 | Service | Default | Listens on | Purpose |
 | --- | --- | --- | --- |
 | `wdt_feeder` | on, **critical** | — | Feeds `/dev/watchdog` every second. Started first; the web UI cannot stop it. |
-| `lights` | on | `/tmp/kamoder-lights.sock` | Owns the IR-cut filter, IR and white LEDs, red/blue indicator and speaker amp. Day/night mode, persisted in `etc/lights.json`. |
+| `lights` | on, `when = "lights"` | `/tmp/kamoder-lights.sock` | Owns the light lines the board profile lists: IR-cut filter, IR and white LEDs, red/blue indicator, speaker amp. Day/night mode, persisted in `etc/lights.json`. |
 | `wifi` | on | — | Keeps the station associated, applies `wifi_ssid` changes with rollback, and runs the [recovery ladder](/docs/architecture#wi-fi-recovery). |
 | `sshd` | on | TCP **2222** | Password-authenticated SSH (PBKDF2 hashes in `etc/`). |
 | `web` | on | TCP **80** | Admin SPA and JSON API: login, services, Wi-Fi, PTZ, lights, users, reboot. |
 | `onvif` | on | TCP **8000**, UDP **3702** | ONVIF Profile S: device, media, PTZ and imaging (IR-cut), plus WS-Discovery. Owns the PTZ motor. |
-| `rtsp` | off | TCP **554** `/vs0` | RTSP 1.0, H.264 over TCP-interleaved or UDP, Digest auth with the ONVIF account. |
-| `snapshot` | off | TCP **3000** | `jpeg_snapshot` (EV200 SDK). |
+| `rtsp` | on, `when = "video.encoder"` | TCP **554**, `/vs0`, `/vs1`, … | RTSP 1.0, H.264 over TCP-interleaved or UDP, Digest auth with the ONVIF account. One `vsN` path per sensor in the board profile. |
+| `snapshot` | on, `when = "video"` | `127.0.0.1:3000`, `/tmp/kamoder-video.sock` | The camera service (`bin/camera serve`): captures every sensor with the board's video backend, hardware H.264 for `rtsp`, JPEG snapshots and `/status` for `web` and `onvif`. No vendor library. |
 
 ## Supervisor
 
@@ -46,8 +48,11 @@ Set `metrics='textfile:/mnt/disc1/anyka_rust/metrics'` and each service writes
 
 ## Demos
 
-The vendor SDK's demo programs are ported and shipped in `bin/` for experiments:
-`ai_demo`, `aenc_demo`, `venc_demo`, `md_demo`, `md_demo_v8`, `rtsp_demo` and
-`jpeg_snapshot`. Run one with `sh anyka_rust/run-on-camera.sh <demo> [args]`. All
-but `md_demo_v8` use the EV200 SDK, which does not match the AV100's video
-pipeline; `md_demo_v8` uses the AV100's V8 SDK and is not yet tested on hardware.
+The vendor SDK's demo programs are ported for experiments: `ai_demo`, `aenc_demo`,
+`venc_demo`, `md_demo`, `md_demo_v8`, `rtsp_demo` and `jpeg_snapshot`. They are not
+part of a normal build; `./x dist --with-demos` (or `./x sd --with-demos`) adds them
+to `bin/` together with the SDK objects they load. Run one with
+`sh anyka_rust/run-on-camera.sh <demo> [args]`. All but `md_demo_v8` use the EV200
+SDK, which does not match the AV100's video pipeline; `md_demo_v8` uses the AV100's
+V8 SDK and is not yet tested on hardware. None of them is needed for video: the
+camera service drives the AV100 without the SDK.

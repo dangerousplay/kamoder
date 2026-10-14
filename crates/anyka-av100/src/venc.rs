@@ -8,7 +8,9 @@
 //! H.264 access unit read from the mapped pool and released after use.
 //!
 //! Recovered from `libmpi_venc` V2.0.46 and the kernel module, and checked
-//! against traces of the vendor application (see `tools/re/venc-protocol`).
+//! against ioctl traces of the vendor application. The traces are not part of
+//! this repository; the constants and parameter block layouts below are the
+//! record.
 //! `/dev/venc` admits one opener system-wide, so one [`Encoder`] per process
 //! hosts every channel.
 
