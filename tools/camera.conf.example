@@ -46,6 +46,32 @@ log_level=info
 metrics=
 
 # ---------------------------------------------------------------------------
+# Time — clock from NTP (the ntp service), local time zone for everything
+# ---------------------------------------------------------------------------
+
+# Time zone for every service and shell. Either an IANA name from the
+# built-in table (`bin/ntp tz --list`: UTC, the Brazilian zones such as
+# America/Sao_Paulo, America/Manaus, America/Noronha, and the main US and EU
+# zones) or a raw POSIX TZ string such as '<-03>3' or
+# 'CET-1CEST,M3.5.0,M10.5.0/3' (quote it). init.sh writes the result to
+# /etc/TZ and exports TZ at boot. Empty = UTC; an unknown name logs a warning
+# in logs/init.log and keeps UTC.
+TIMEZONE=
+
+# SNTP servers, space separated, tried in order (quote the list). Empty = the
+# default: 'a.st1.ntp.br b.st1.ntp.br pool.ntp.org'. Emptying it does not
+# turn time sync off; NTP_ENABLED=0 does.
+NTP_SERVERS=
+
+# Seconds between syncs once the clock is set. Empty = 3600. Failed syncs are
+# retried sooner: after 5 s, doubling up to 5 minutes.
+NTP_INTERVAL=
+
+# 0 = do not set the clock from NTP (the ntp service exits at start). Empty
+# or 1 = on.
+NTP_ENABLED=
+
+# ---------------------------------------------------------------------------
 # Wi-Fi — handled by wifi (a supervised service), re-read every 10 s
 # ---------------------------------------------------------------------------
 

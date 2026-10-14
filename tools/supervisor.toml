@@ -91,6 +91,29 @@ backoff_max_ms = 60000
 max_restarts = 20
 restart_window_secs = 600
 
+# Sets the clock from SNTP servers: the camera boots at 1970-01-01, which
+# breaks logs, JWT expiry, ONVIF WS-Security and recording times. Steps the
+# clock on the first reply (or any offset over 0.5 s) and slews after that;
+# resyncs every NTP_INTERVAL seconds (default 3600); never exits on network
+# errors, it backs off 5 s -> 5 min instead. Servers and interval come from
+# camera.conf (NTP_SERVERS, NTP_INTERVAL) through the environment init.sh
+# exports, so no args here. Right after wifi so the clock is set before the
+# network services hand out timestamps.
+#
+# `on-failure`: NTP_ENABLED=0 in camera.conf makes it log and exit 0, which
+# must stay final; a crash still restarts it. No `when`: every board needs a
+# clock. Not critical: a camera with a wrong clock still works.
+[[service]]
+name = "ntp"
+command = "bin/ntp"
+restart = "on-failure"
+backoff_initial_ms = 5000
+backoff_max_ms = 300000
+max_restarts = 10
+restart_window_secs = 3600
+stop_timeout_secs = 5
+enabled = true
+
 [[service]]
 name = "sshd"
 command = "bin/sshd"

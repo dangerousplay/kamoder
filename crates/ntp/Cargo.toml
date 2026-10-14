@@ -1,0 +1,27 @@
+[package]
+name = "ntp"
+description = "SNTP client that sets the camera clock, plus the IANA name to POSIX TZ table init.sh uses"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+# No SNTP crate: the client is one UDP request, one 48-byte reply and the
+# four-timestamp formula, which is smaller than any dependency's surface and
+# needs nothing the camera's uClibc lacks. std's UdpSocket does the I/O and
+# libc the three clock calls (clock_gettime, clock_settime, adjtime).
+[dependencies]
+# Pulls in the `pthread_setname_np` shim the crosstool's uClibc lacks, and
+# the SIGTERM flag the sync loop polls.
+os.workspace = true
+telemetry.workspace = true
+clap.workspace = true
+eyre.workspace = true
+snafu.workspace = true
+tracing.workspace = true
+metrics.workspace = true
+libc.workspace = true
+
+[[bin]]
+name = "ntp"
+path = "src/main.rs"

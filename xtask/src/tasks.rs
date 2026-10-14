@@ -21,6 +21,7 @@ const VM_DIR_ENV: &str = "ANYKA_VM_DIR";
 const BINARIES: &[&str] = &[
     "supervisor",
     "wifi",
+    "ntp",
     "wdt_feeder",
     "lights",
     "sshd",
@@ -239,6 +240,7 @@ const HOST_TESTABLE: &[&str] = &[
     "rtsp",
     "anyka-v8",
     "wifi",
+    "ntp",
     "anyka-itest-support",
     "camera",
     "anyka-av100",

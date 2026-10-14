@@ -688,10 +688,11 @@ mod tests {
         Config::load(&path).unwrap()
     }
 
-    const SHIPPED_SERVICES: [&str; 8] = [
+    const SHIPPED_SERVICES: [&str; 9] = [
         "wdt_feeder",
         "lights",
         "wifi",
+        "ntp",
         "sshd",
         "web",
         "onvif",
@@ -729,10 +730,23 @@ mod tests {
         assert_eq!(skipped, [("lights", "lights"), ("rtsp", "video.encoder")]);
         assert_eq!(
             enabled(&config),
-            ["wdt_feeder", "wifi", "sshd", "web", "onvif", "snapshot"]
+            [
+                "wdt_feeder",
+                "wifi",
+                "ntp",
+                "sshd",
+                "web",
+                "onvif",
+                "snapshot"
+            ]
         );
         // Wi-Fi is the only way in: it must never depend on the board.
         let wifi = config.services.iter().find(|s| s.name == "wifi").unwrap();
         assert!(wifi.when.is_none());
+        // Every board needs a clock; NTP_ENABLED=0 exits 0, which must be
+        // final rather than restarted (NTP-05).
+        let ntp = config.services.iter().find(|s| s.name == "ntp").unwrap();
+        assert!(ntp.when.is_none());
+        assert_eq!(ntp.restart, Restart::OnFailure);
     }
 }

@@ -13,7 +13,7 @@
 ## `./x test` details (`xtask/src/tasks.rs` `test`)
 
 - Runs `cargo +$ANYKA_RUST_TOOLCHAIN test --target <host> -p <each HOST_TESTABLE>`; passing `-p`/`--package` overrides the list.
-- `HOST_TESTABLE`: os, telemetry, supervisor, auth, anyka-ptz, ptz-proto, lights-proto, lights, onvif-schema, sshd, web, onvif, rtsp, anyka-v8, wifi, anyka-itest-support, camera, anyka-av100, camerad, video-proto, board.
+- `HOST_TESTABLE`: os, telemetry, supervisor, auth, anyka-ptz, ptz-proto, lights-proto, lights, onvif-schema, sshd, web, onvif, rtsp, anyka-v8, wifi, ntp, anyka-itest-support, camera, anyka-av100, camerad, video-proto, board.
 - Excluded (link ARM SDK objects or are SDK helpers): anyka-sys, anyka, anyka-link and every `demos/*` crate (including the SDK-free `wdt_feeder`) — none of these is host-tested.
 - Note: `build-std` stays configured from `.cargo/config.toml` for this invocation (unlike `./x` itself); not verified whether that matters for host tests.
 - Not run during this mapping (skipped to avoid a long compile).

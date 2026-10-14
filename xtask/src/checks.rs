@@ -151,6 +151,7 @@ const GENERIC_CRATES: &[&str] = &[
     "lights",
     "lights-proto",
     "wifi",
+    "ntp",
     "camera",
     "video-proto",
     "board",

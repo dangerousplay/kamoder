@@ -2,7 +2,7 @@
 
 ## Naming
 
-- Project name **Kamoder**. Generic crates are unprefixed (`os`, `telemetry`, `auth`, `supervisor`, `wifi`, `lights`, `web`, `onvif`, `rtsp`, `camera`, `camerad`, `board`, `video-proto`); `anyka-*` only for SDK/hardware-binding crates (`anyka-sys`, `anyka-link`, `anyka`, `anyka-v8`, `anyka-ptz`, `anyka-av100`). The camera service package is `camerad`, its binary keeps the name `camera`.
+- Project name **Kamoder**. Generic crates are unprefixed (`os`, `telemetry`, `auth`, `supervisor`, `wifi`, `ntp`, `lights`, `web`, `onvif`, `rtsp`, `camera`, `camerad`, `board`, `video-proto`); `anyka-*` only for SDK/hardware-binding crates (`anyka-sys`, `anyka-link`, `anyka`, `anyka-v8`, `anyka-ptz`, `anyka-av100`). The camera service package is `camerad`, its binary keeps the name `camera`.
 - Workspace manifest: every crate uses `version/edition/license.workspace`-style shared fields (`[workspace.package]` edition 2021, GPL-3.0-or-later) and `dep.workspace = true` for shared deps (`Cargo.toml`).
 - Legacy names remain: socket `/tmp/anyka-supervisor.sock`, `/tmp/anyka-ptz.sock`, env vars `ANYKA_*`, files `etc/anyka-sshd.*`, staging dir `anyka_rust/`. Newer pieces use `kamoder-` (`/tmp/kamoder-lights.sock`, `/tmp/kamoder-video.sock`). Mixed by history, not by rule.
 

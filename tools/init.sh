@@ -43,6 +43,8 @@ WEB=$BASE/bin/web
 WEB_USERS=$BASE/etc/web-users
 ONVIF_SECRET=$BASE/etc/onvif.secret
 FALLBACK_FEEDER=$BASE/bin/wdt_feeder
+# Resolves camera.conf's TIMEZONE to a POSIX TZ string (`ntp tz`).
+NTP=$BASE/bin/ntp
 # Vendor processes stopped when stop_vendor_ipc=1, matched against
 # /proc/<pid>/comm. The watchers that respawn `ipc` or reboot the board when it
 # disappears go first, then the IPC binary itself.
@@ -163,6 +165,13 @@ load_settings() {
     # Board profile name (boards/<name>.toml); empty = detect. An inherited
     # BOARD is kept unless camera.conf sets one.
     BOARD=${BOARD:-}
+    # Time zone (IANA name or POSIX string; empty = UTC) and the ntp
+    # service's settings (empty = its built-in defaults). Inherited values
+    # are kept unless camera.conf sets them, like BOARD.
+    TIMEZONE=${TIMEZONE:-}
+    NTP_SERVERS=${NTP_SERVERS:-}
+    NTP_INTERVAL=${NTP_INTERVAL:-}
+    NTP_ENABLED=${NTP_ENABLED:-}
     # shellcheck source=/dev/null
     [ -f "$CAMERA_CONF" ] && . "$CAMERA_CONF"
     return 0
@@ -312,6 +321,50 @@ export_env() {
         esac
         export ANYKA_METRICS
     fi
+
+    # For the ntp service. Only when set, so an empty line in camera.conf
+    # means the service's own default rather than an empty value.
+    if [ -n "$NTP_SERVERS" ]; then
+        export NTP_SERVERS
+    fi
+    if [ -n "$NTP_INTERVAL" ]; then
+        export NTP_INTERVAL
+    fi
+    if [ -n "$NTP_ENABLED" ]; then
+        export NTP_ENABLED
+    fi
+}
+
+# Sets the local time zone from camera.conf's TIMEZONE (TZ-02).
+#
+# uClibc understands POSIX TZ strings only, from TZ or else /etc/TZ, so the
+# name is turned into one by `ntp tz` (a built-in table plus raw POSIX
+# passthrough). The result goes to /etc/TZ (a tmpfs, rebuilt every boot) for
+# shells and anything started outside the stack, and into TZ, which the
+# supervisor and every service inherit. Anything wrong keeps UTC: a wrong
+# time zone must never stop the stack from starting.
+apply_timezone() {
+    if [ -z "$TIMEZONE" ]; then
+        log "TIMEZONE not set; local time is UTC"
+        return 0
+    fi
+    if [ ! -x "$NTP" ]; then
+        log "WARNING: $NTP missing, cannot resolve TIMEZONE='$TIMEZONE'; keeping UTC"
+        return 1
+    fi
+    # ntp prints the reason on stderr, which is the init log by now.
+    if ! tz=$("$NTP" tz "$TIMEZONE") || [ -z "$tz" ]; then
+        log "WARNING: unknown TIMEZONE='$TIMEZONE' (see 'bin/ntp tz --list'); keeping UTC"
+        return 1
+    fi
+    TZ=$tz
+    export TZ
+    if { printf '%s\n' "$tz" > /etc/TZ; } 2>/dev/null; then
+        log "time zone $TIMEZONE: TZ=$tz, written to /etc/TZ"
+    else
+        log "WARNING: time zone $TIMEZONE: TZ=$tz exported but /etc/TZ is not writable"
+    fi
+    return 0
 }
 
 # --------------------------------------------------------------------------
@@ -646,6 +699,7 @@ main() {
     log "----- anyka_rust starting from $BASE -----"
 
     export_env
+    apply_timezone || log "continuing in UTC"
     provision_ssh || log "continuing; the rest of the stack does not depend on sshd"
     provision_web || log "continuing; the rest of the stack does not depend on the web UI"
     provision_onvif || log "continuing; the rest of the stack does not depend on ONVIF"

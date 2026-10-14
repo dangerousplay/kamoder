@@ -28,6 +28,7 @@ Evidence: `card/autorun.sh`, `card/Factory/config.sh`, `tools/init.sh`, `docs/co
 | wdt_feeder | `demos/wdt_feeder` | feeds `/dev/watchdog`; `-w` waits while vendor app holds it; `critical = true` (cannot be stopped via control socket) | `/dev/watchdog` |
 | lights (`when = "lights"`) | `crates/lights` | sole owner of the light/amp lines in the board's `[lights]` (AV100: 19 IR-cut, 67 IR LEDs, 68 white, 48 red/blue, 37 amp); state in `etc/lights.json` | `/tmp/kamoder-lights.sock` |
 | wifi | `crates/wifi` | Wi-Fi reconciler (desired = `camera.conf` `wifi_ssid`), rollback to last-good in `backup/`, escalation up to a `wifi.power_gpio` power cycle (AV100: GPIO 98); iface/module from the board, built-in fallback when none resolves | wpa_supplicant ctrl socket, `/rom/wpa_supplicant0.conf` |
+| ntp | `crates/ntp` | SNTP client: steps the clock on first sync / offsets > 0.5 s, slews smaller ones, resyncs every `NTP_INTERVAL`; `ntp tz` maps camera.conf `TIMEZONE` to the POSIX TZ init.sh writes to `/etc/TZ` and exports; `restart = "on-failure"` so `NTP_ENABLED=0` (exit 0) stays stopped | udp client to port 123 |
 | sshd | `crates/sshd` | russh password/pubkey SSH, PTY or pipes | tcp 2222 |
 | web | `crates/web` | axum JSON API + SPA (`www/`) | tcp 80 |
 | onvif | `crates/onvif` | ONVIF Profile S (Device/Media/PTZ/Imaging) + WS-Discovery; one media profile per sensor from the producer's `/status`; **owns PTZ motor** (backend/limits from `[ptz]`) | tcp 8000, udp 3702, `/tmp/anyka-ptz.sock` |

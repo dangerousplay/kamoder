@@ -18,6 +18,7 @@ members = [
     "crates/sshd",
     "crates/supervisor",
     "crates/wifi",
+    "crates/ntp",
     "crates/auth",
     "crates/anyka-ptz",
     "crates/ptz-proto",
