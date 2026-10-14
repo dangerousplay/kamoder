@@ -10,6 +10,8 @@ publish = false
 # a camera with nothing else installed.
 [dependencies]
 lights-proto.workspace = true
+# The board profile: which light lines exist and where (PER-01..03).
+board.workspace = true
 # Pulls in the `pthread_setname_np` shim the crosstool's uClibc lacks.
 os.workspace = true
 telemetry.workspace = true

@@ -40,6 +40,7 @@ impl Saved {
             white: self.white,
             alarm: self.alarm,
             muted: true,
+            ..State::default()
         }
     }
 }

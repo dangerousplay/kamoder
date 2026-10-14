@@ -5,11 +5,15 @@
 //! puts it behind a lock and adds persistence and blinking.
 
 use crate::gpio::{Error, Gpio, Line};
-use lights_proto::{Alarm, Mode, State};
+use lights_proto::{Alarm, Mode, Roles, State};
 use metrics::{counter, gauge};
 use std::time::Duration;
 
 /// The camera's lights and speaker amp, driven through `gpio`.
+///
+/// Only the lines the backend has ([`Gpio::supported`]) are ever written;
+/// the others keep their default in the state (off, muted, day) and the
+/// owner refuses requests for them.
 ///
 /// Dropping it applies the safe state (day, every light off, amp muted),
 /// unless [`Lights::safe_state`] already did.
@@ -28,13 +32,18 @@ impl Lights {
     /// last the day/night pair in its safe order. If a write fails, the lines
     /// already taken are put in the safe state before the error is returned.
     pub fn start(gpio: Box<dyn Gpio + Send>, state: State) -> Result<Self, Error> {
+        let supported = gpio.supported();
+        let state = restrict(state, supported);
         let mut lights = Self {
             gpio,
-            state: State::default(),
+            state: State {
+                supported,
+                ..State::default()
+            },
             alarm_lit: false,
             safe: false,
         };
-        lights.drive(Line::Amp, state.muted)?;
+        lights.drive(Line::Amp, !state.muted)?;
         lights.state.muted = state.muted;
         lights.set_alarm(state.alarm)?;
         lights.set_white(state.white)?;
@@ -87,10 +96,10 @@ impl Lights {
         Ok(())
     }
 
-    /// Speaker amp: `true` mutes. The line is active-low, so muted = high.
+    /// Speaker amp: `true` mutes (turns the amp line off).
     pub fn set_muted(&mut self, muted: bool) -> Result<(), Error> {
         self.safe = false;
-        self.drive(Line::Amp, muted)?;
+        self.drive(Line::Amp, !muted)?;
         self.state.muted = muted;
         self.publish();
         Ok(())
@@ -126,11 +135,14 @@ impl Lights {
                 first.get_or_insert(error);
             }
         };
-        attempt(self.drive(Line::Amp, true));
+        attempt(self.drive(Line::Amp, false));
         attempt(self.drive(Line::Alarm, false));
         attempt(self.drive(Line::White, false));
         attempt(self.switch(Mode::Day));
-        self.state = State::default();
+        self.state = State {
+            supported: self.state.supported,
+            ..State::default()
+        };
         self.alarm_lit = false;
         self.publish();
         match first {
@@ -160,11 +172,17 @@ impl Lights {
         }
     }
 
-    fn drive(&mut self, line: Line, high: bool) -> Result<(), Error> {
-        let result = self.gpio.set(line, high);
+    /// Turns `line` on or off. A line this board lacks is skipped: the
+    /// owner refuses requests that need only such lines, and day/night on a
+    /// board with just one of the IR pair moves the one it has.
+    fn drive(&mut self, line: Line, on: bool) -> Result<(), Error> {
+        if !self.state.supported.contains(line) {
+            return Ok(());
+        }
+        let result = self.gpio.set(line, on);
         if let Err(error) = &result {
-            counter!("kamoder_lights_gpio_errors_total", "line" => line.name()).increment(1);
-            tracing::warn!(line = line.name(), gpio = line.gpio(), high, %error, "GPIO write failed");
+            counter!("kamoder_lights_gpio_errors_total", "line" => line.as_str()).increment(1);
+            tracing::warn!(line = line.as_str(), on, %error, "GPIO write failed");
         }
         result
     }
@@ -183,6 +201,26 @@ impl Lights {
     }
 }
 
+/// `state` with everything the board lacks at its default: a light that is
+/// not there is off, an amp that is not there is muted, and without either
+/// IR line the camera is in day mode.
+fn restrict(mut state: State, supported: Roles) -> State {
+    if !supported.contains(Line::White) {
+        state.white = false;
+    }
+    if !supported.contains(Line::Alarm) {
+        state.alarm = Alarm::Off;
+    }
+    if !supported.contains(Line::Amp) {
+        state.muted = true;
+    }
+    if !supported.contains(Line::IrCut) && !supported.contains(Line::IrLeds) {
+        state.mode = Mode::Day;
+    }
+    state.supported = supported;
+    state
+}
+
 impl Drop for Lights {
     fn drop(&mut self) {
         if !self.safe {
@@ -196,8 +234,8 @@ impl Drop for Lights {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
-    use crate::gpio::tests::fake_tree;
-    use crate::gpio::{Sysfs, ALLOWED};
+    use crate::gpio::tests::{av100, av100_numbers, av100_sysfs, fake_tree};
+    use crate::gpio::Sysfs;
     use std::collections::HashMap;
     use std::sync::{Arc, Mutex};
 
@@ -213,15 +251,19 @@ pub(crate) mod tests {
     }
 
     impl Gpio for Recorder {
-        fn set(&mut self, line: Line, high: bool) -> Result<(), Error> {
+        fn set(&mut self, line: Line, on: bool) -> Result<(), Error> {
             if self.fail.lock().unwrap().contains(&line) {
                 return Err(Error::NotExported {
-                    gpio: line.gpio(),
+                    gpio: 0,
                     root: self.inner.root().to_path_buf(),
                 });
             }
-            self.log.lock().unwrap().push((line, high));
-            self.inner.set(line, high)
+            self.log.lock().unwrap().push((line, on));
+            self.inner.set(line, on)
+        }
+
+        fn supported(&self) -> Roles {
+            self.inner.supported()
         }
     }
 
@@ -232,12 +274,19 @@ pub(crate) mod tests {
     }
 
     impl Rig {
+        /// The AV100 profile over a fake tree.
         pub(crate) fn new(tag: &str) -> (Self, Box<dyn Gpio + Send>) {
-            let root = fake_tree(&format!("control-{tag}"), &ALLOWED);
+            let root = fake_tree(&format!("control-{tag}"), &av100_numbers());
+            let inner = av100_sysfs(&root);
+            Self::with(root, inner)
+        }
+
+        /// `inner`, recorded; `root` is removed on drop.
+        pub(crate) fn with(root: std::path::PathBuf, inner: Sysfs) -> (Self, Box<dyn Gpio + Send>) {
             let log = Log::default();
             let fail = Arc::new(Mutex::new(Vec::new()));
             let gpio = Recorder {
-                inner: Sysfs::new(&root),
+                inner,
                 log: Arc::clone(&log),
                 fail: Arc::clone(&fail),
             };
@@ -270,19 +319,25 @@ pub(crate) mod tests {
         assert_eq!(
             rig.take(),
             [
-                (Amp, true),
+                (Amp, false),
                 (Alarm, false),
                 (White, false),
                 (IrLeds, false),
                 (IrCut, false)
             ]
         );
-        // The physical levels the live UAT settled on: 19=0 37=1 48=0 67=0 68=0.
-        let directions: Vec<String> = [19, 37, 48, 67, 68]
-            .iter()
-            .map(|n| crate::gpio::tests::read(&rig.root, *n, "direction"))
-            .collect();
-        assert_eq!(directions, ["low", "high", "low", "low", "low"]);
+        // The physical levels the live UAT settled on: every light low, the
+        // active-low amp high (muted).
+        for line in av100().lights.unwrap().lines {
+            let n = line.gpio.unwrap();
+            let expected = if line.role == board::Role::Amp {
+                "high"
+            } else {
+                "low"
+            };
+            let direction = crate::gpio::tests::read(&rig.root, n, "direction");
+            assert_eq!(direction, expected, "{:?}", line.role);
+        }
         drop(lights);
     }
 
@@ -332,7 +387,7 @@ pub(crate) mod tests {
         lights.set_white(true).unwrap();
         lights.set_alarm(lights_proto::Alarm::On).unwrap();
         lights.set_muted(false).unwrap();
-        assert_eq!(rig.take(), [(White, true), (Alarm, true), (Amp, false)]);
+        assert_eq!(rig.take(), [(White, true), (Alarm, true), (Amp, true)]);
         let state = lights.state();
         assert!(state.white && !state.muted);
         assert_eq!(state.alarm, lights_proto::Alarm::On);
@@ -377,7 +432,7 @@ pub(crate) mod tests {
         assert_eq!(
             rig.take(),
             [
-                (Amp, true),
+                (Amp, false),
                 (Alarm, false),
                 (White, false),
                 (IrLeds, false),
@@ -407,7 +462,12 @@ pub(crate) mod tests {
         assert!(lights.safe_state().is_err());
         assert_eq!(
             rig.take(),
-            [(Amp, true), (White, false), (IrLeds, false), (IrCut, false)]
+            [
+                (Amp, false),
+                (White, false),
+                (IrLeds, false),
+                (IrCut, false)
+            ]
         );
         rig.fail.lock().unwrap().clear();
     }
@@ -418,7 +478,62 @@ pub(crate) mod tests {
         rig.fail.lock().unwrap().push(White);
         assert!(Lights::start(gpio, State::default()).is_err());
         let levels = rig.levels();
-        assert!(levels[&Amp]);
+        assert!(!levels[&Amp]);
         assert!(!levels[&Alarm] && !levels[&IrCut] && !levels[&IrLeds]);
+    }
+
+    /// An EV-style board: only the IR pair, as `/sys/user-gpio` lines.
+    pub(crate) fn ir_only(tag: &str) -> (Rig, Box<dyn Gpio + Send>, std::path::PathBuf) {
+        use crate::gpio::tests::{add_named, scratch};
+        use crate::gpio::{Address, Pin};
+        let dir = scratch(&format!("control-{tag}"));
+        let cut = add_named(&dir, "IR_CUT");
+        let leds = add_named(&dir, "IR_LED");
+        let pins = vec![
+            Pin {
+                line: IrCut,
+                address: Address::Path(cut),
+                active_low: false,
+            },
+            Pin {
+                line: IrLeds,
+                address: Address::Path(leds.clone()),
+                active_low: true,
+            },
+        ];
+        let inner = Sysfs::new(dir.join("no-gpio-root"), pins, None).unwrap();
+        let (rig, gpio) = Rig::with(dir, inner);
+        (rig, gpio, leds)
+    }
+
+    #[test]
+    fn a_board_without_some_lines_never_writes_them() {
+        let (rig, gpio, leds) = ir_only("ir-only");
+        // A saved state from another board: white on, alarm on, unmuted.
+        let saved = State {
+            mode: Mode::Night,
+            white: true,
+            alarm: lights_proto::Alarm::On,
+            muted: false,
+            ..State::default()
+        };
+        let mut lights = Lights::start(gpio, saved).unwrap();
+        let state = lights.state();
+        assert_eq!(state.supported, [IrCut, IrLeds].into_iter().collect());
+        assert_eq!(state.mode, Mode::Night);
+        assert!(!state.white && state.muted);
+        assert_eq!(state.alarm, lights_proto::Alarm::Off);
+        assert_eq!(rig.take(), [(IrCut, true), (IrLeds, true)]);
+        // Active-low LEDs: on = 0.
+        assert_eq!(std::fs::read_to_string(leds.join("value")).unwrap(), "0");
+
+        lights.set_mode(Mode::Day).unwrap();
+        assert_eq!(rig.take(), [(IrLeds, false), (IrCut, false)]);
+        lights.safe_state().unwrap();
+        assert_eq!(rig.take(), [(IrLeds, false), (IrCut, false)]);
+        assert_eq!(
+            lights.state().supported,
+            [IrCut, IrLeds].into_iter().collect()
+        );
     }
 }

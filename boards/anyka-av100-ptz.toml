@@ -34,6 +34,8 @@ profile = "main"
 max_width = 640
 quality = 80
 
+# Sysfs numbers, live-confirmed on this board. `lights` may write these five
+# and nothing else; it refuses to start if one equals wifi.power_gpio.
 [lights]
 gpio_root = "/sys/class/gpio"
 
@@ -53,7 +55,8 @@ role = "white"
 gpio = 68
 active_low = false
 
-# Red and blue lights.
+# Red and blue lights: lit from boot while the pin floats, which is why
+# lights starts early and never unexports its lines.
 [[lights.line]]
 role = "alarm"
 gpio = 48

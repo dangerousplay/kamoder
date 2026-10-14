@@ -1,12 +1,15 @@
 //! Owner of the camera's lights and speaker amp.
 //!
-//! One process drives GPIO 19 (IR-cut), 67 (IR LEDs), 68 (white), 48
-//! (red/blue) and 37 (speaker amp) through sysfs, like `onvif` owns the PTZ
-//! motor: `web` and `onvif` ask it over `/tmp/kamoder-lights.sock`
+//! One process drives the board's IR-cut, IR LEDs, white light, red/blue
+//! lights and speaker amp through sysfs, like `onvif` owns the PTZ motor:
+//! `web` and `onvif` ask it over `/tmp/kamoder-lights.sock`
 //! ([`lights_proto`]) instead of writing the pins themselves, so two writers
-//! never fight over a light.
+//! never fight over a light. Which pins those are, and which of the five the
+//! board has at all, comes from the board profile (`[[lights.line]]`); the
+//! roles it lacks are reported as unsupported and refused.
 //!
-//! - [`gpio`]: the sysfs layer and its allowlist. No other GPIO is reachable.
+//! - [`gpio`]: the sysfs layer and its allowlist (exactly the profile's
+//!   lines, never the Wi-Fi power GPIO). No other GPIO is reachable.
 //! - [`control`]: state → levels, in the order that keeps IR light off the
 //!   filter, and the safe state (day, lights off, amp muted) on drop.
 //! - [`store`]: the user-set state across restarts (`etc/lights.json`).

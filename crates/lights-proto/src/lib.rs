@@ -14,14 +14,18 @@
 //!
 //! ```text
 //! -> {"op":"get"}
-//! <- {"result":"state","state":{"mode":"day","white":false,"alarm":{"state":"off"},"muted":true}}
+//! <- {"result":"state","state":{"mode":"day","white":false,"alarm":{"state":"off"},"muted":true,
+//!     "supported":["ir_cut","ir_leds","white","alarm","amp"]}}
 //! -> {"op":"set_mode","mode":"night"}
-//! <- {"result":"state","state":{"mode":"night","white":false,"alarm":{"state":"off"},"muted":true}}
+//! <- {"result":"state","state":{"mode":"night","white":false,"alarm":{"state":"off"},"muted":true,
+//!     "supported":["ir_cut","ir_leds","white","alarm","amp"]}}
 //! -> {"op":"set_alarm","alarm":{"state":"blink","period_ms":500}}
 //! <- {"result":"state","state":{"mode":"night","white":false,
-//!     "alarm":{"state":"blink","period_ms":500},"muted":true}}
+//!     "alarm":{"state":"blink","period_ms":500},"muted":true,"supported":[...]}}
 //! -> {"op":"set_alarm","alarm":{"state":"blink","period_ms":5}}
 //! <- {"result":"error","code":"invalid_argument","message":"period_ms must be within 200..=10000"}
+//! -> {"op":"set_white","on":true}            (board without a white light)
+//! <- {"result":"error","code":"invalid_argument","message":"set_white: this board has no white line"}
 //! ```
 //!
 //! # Terms
@@ -33,6 +37,11 @@
 //! - **alarm**: the red and blue lights, steady or blinking.
 //! - **muted**: the speaker amplifier is off. It is muted by default and
 //!   whenever the owner starts, whatever was set before.
+//! - **supported**: the [`Role`]s this board has, from its board profile. A
+//!   setter for a light the board lacks is refused with `invalid_argument`
+//!   naming the role, and clients hide its control. Owners older than this
+//!   field never sent it; it then reads as every role, which is what those
+//!   owners (AV100 only) had.
 
 use serde::{Deserialize, Serialize};
 use snafu::{ensure, ResultExt, Snafu};
@@ -107,6 +116,124 @@ impl Alarm {
     }
 }
 
+/// One light line (or the speaker amp) a board may have. Wire names are the
+/// `role` values of a board profile's `[[lights.line]]`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Role {
+    /// IR-cut filter, a held level: on = filter out (night).
+    IrCut,
+    /// IR illuminator LEDs.
+    IrLeds,
+    /// White light.
+    White,
+    /// Red and blue lights.
+    Alarm,
+    /// Speaker amplifier enable: on = audible.
+    Amp,
+}
+
+impl Role {
+    /// Every role, in the order they are reported.
+    pub const ALL: [Role; 5] = [
+        Role::IrCut,
+        Role::IrLeds,
+        Role::White,
+        Role::Alarm,
+        Role::Amp,
+    ];
+
+    /// Wire name, for logs, errors and metrics labels.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Role::IrCut => "ir_cut",
+            Role::IrLeds => "ir_leds",
+            Role::White => "white",
+            Role::Alarm => "alarm",
+            Role::Amp => "amp",
+        }
+    }
+
+    fn bit(self) -> u8 {
+        1 << self as u8
+    }
+}
+
+impl std::fmt::Display for Role {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+/// A set of [`Role`]s. A bit set so [`State`] stays `Copy`; on the wire a
+/// list of role names in [`Role::ALL`] order.
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+pub struct Roles(u8);
+
+impl Roles {
+    /// No role.
+    pub const NONE: Roles = Roles(0);
+    /// Every role.
+    pub const ALL: Roles = Roles(0b1_1111);
+
+    pub fn contains(self, role: Role) -> bool {
+        self.0 & role.bit() != 0
+    }
+
+    pub fn insert(&mut self, role: Role) {
+        self.0 |= role.bit();
+    }
+
+    pub fn is_empty(self) -> bool {
+        self.0 == 0
+    }
+
+    /// The roles in the set, in [`Role::ALL`] order.
+    pub fn iter(self) -> impl Iterator<Item = Role> {
+        Role::ALL
+            .into_iter()
+            .filter(move |role| self.contains(*role))
+    }
+}
+
+impl Default for Roles {
+    /// [`Roles::ALL`]: what a state without the field means (see the crate
+    /// docs).
+    fn default() -> Self {
+        Roles::ALL
+    }
+}
+
+impl FromIterator<Role> for Roles {
+    fn from_iter<I: IntoIterator<Item = Role>>(roles: I) -> Self {
+        let mut set = Roles::NONE;
+        for role in roles {
+            set.insert(role);
+        }
+        set
+    }
+}
+
+impl std::fmt::Debug for Roles {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_set().entries(self.iter()).finish()
+    }
+}
+
+impl Serialize for Roles {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.collect_seq(self.iter())
+    }
+}
+
+impl<'de> Deserialize<'de> for Roles {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        Ok(Vec::<Role>::deserialize(deserializer)?
+            .into_iter()
+            .collect())
+    }
+}
+
 /// Everything the owner controls, as last applied.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct State {
@@ -116,16 +243,21 @@ pub struct State {
     pub alarm: Alarm,
     /// Speaker amplifier off.
     pub muted: bool,
+    /// The lines this board has. Absent on the wire = every role.
+    #[serde(default)]
+    pub supported: Roles,
 }
 
 impl Default for State {
     /// The defaults decided for the camera: day, every light off, amp muted.
+    /// `supported` is every role until the owner fills in the board's.
     fn default() -> Self {
         Self {
             mode: Mode::Day,
             white: false,
             alarm: Alarm::Off,
             muted: true,
+            supported: Roles::ALL,
         }
     }
 }
@@ -157,6 +289,34 @@ impl Request {
             Request::SetMute { .. } => "set_mute",
         }
     }
+
+    /// The lines this request drives. It can be carried out when the board
+    /// has at least one of them (day/night still moves the filter on a board
+    /// without IR LEDs); empty for [`Request::Get`].
+    pub fn roles(&self) -> &'static [Role] {
+        match self {
+            Request::Get => &[],
+            Request::SetMode { .. } => &[Role::IrCut, Role::IrLeds],
+            Request::SetWhite { .. } => &[Role::White],
+            Request::SetAlarm { .. } => &[Role::Alarm],
+            Request::SetMute { .. } => &[Role::Amp],
+        }
+    }
+
+    /// `Err` naming the missing role(s) when `supported` has none of
+    /// [`Request::roles`].
+    pub fn check_supported(&self, supported: Roles) -> Result<(), String> {
+        let roles = self.roles();
+        if roles.is_empty() || roles.iter().any(|role| supported.contains(*role)) {
+            return Ok(());
+        }
+        let names: Vec<&str> = roles.iter().map(|role| role.as_str()).collect();
+        Err(format!(
+            "{}: this board has no {} line",
+            self.op(),
+            names.join(" or ")
+        ))
+    }
 }
 
 /// One response, as sent by the server.
@@ -179,7 +339,8 @@ pub enum ErrorCode {
     BadRequest,
     /// The line exceeded [`MAX_LINE`].
     TooLong,
-    /// A value the owner rejects (blink period out of range).
+    /// A value the owner rejects (blink period out of range), or a light
+    /// this board does not have (see [`State::supported`]).
     InvalidArgument,
     /// A GPIO write failed; the state may be partly applied.
     Gpio,
@@ -384,13 +545,15 @@ mod tests {
             white: true,
             alarm: Alarm::Blink { period_ms: 1000 },
             muted: true,
+            supported: [Role::IrCut, Role::IrLeds].into_iter().collect(),
         };
         let cases = [
             (
                 Response::State { state },
                 json!({"result": "state", "state": {
                     "mode": "night", "white": true,
-                    "alarm": {"state": "blink", "period_ms": 1000}, "muted": true
+                    "alarm": {"state": "blink", "period_ms": 1000}, "muted": true,
+                    "supported": ["ir_cut", "ir_leds"]
                 }}),
             ),
             (
@@ -416,6 +579,54 @@ mod tests {
         ] {
             assert_eq!(serde_json::to_value(code).unwrap(), json!(code.as_str()));
         }
+    }
+
+    #[test]
+    fn supported_roles_on_the_wire() {
+        // An owner that predates the field: every role.
+        let old: State = serde_json::from_value(json!({
+            "mode": "day", "white": false, "alarm": {"state": "off"}, "muted": true
+        }))
+        .unwrap();
+        assert_eq!(old.supported, Roles::ALL);
+        assert_eq!(
+            serde_json::to_value(Roles::ALL).unwrap(),
+            json!(["ir_cut", "ir_leds", "white", "alarm", "amp"])
+        );
+        assert_eq!(serde_json::to_value(Roles::NONE).unwrap(), json!([]));
+        // Order and duplicates on input do not matter.
+        let roles: Roles = serde_json::from_value(json!(["amp", "ir_cut", "amp"])).unwrap();
+        assert_eq!(roles.iter().collect::<Vec<_>>(), [Role::IrCut, Role::Amp]);
+        assert!(serde_json::from_value::<Roles>(json!(["gpio98"])).is_err());
+        for role in Role::ALL {
+            assert_eq!(serde_json::to_value(role).unwrap(), json!(role.as_str()));
+        }
+    }
+
+    #[test]
+    fn requests_for_missing_lines_are_refused_by_name() {
+        let ir_only: Roles = [Role::IrCut, Role::IrLeds].into_iter().collect();
+        assert!(Request::Get.check_supported(Roles::NONE).is_ok());
+        assert!(Request::SetMode { mode: Mode::Night }
+            .check_supported(ir_only)
+            .is_ok());
+        let filter_only: Roles = [Role::IrCut].into_iter().collect();
+        assert!(Request::SetMode { mode: Mode::Day }
+            .check_supported(filter_only)
+            .is_ok());
+        for (request, name) in [
+            (Request::SetWhite { on: true }, "white"),
+            (Request::SetAlarm { alarm: Alarm::On }, "alarm"),
+            (Request::SetMute { muted: false }, "amp"),
+        ] {
+            let message = request.check_supported(ir_only).unwrap_err();
+            assert!(message.contains(name), "{message}");
+            assert!(request.check_supported(Roles::ALL).is_ok());
+        }
+        let message = Request::SetMode { mode: Mode::Day }
+            .check_supported(Roles::NONE)
+            .unwrap_err();
+        assert!(message.contains("ir_cut or ir_leds"), "{message}");
     }
 
     #[test]

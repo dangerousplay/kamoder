@@ -78,6 +78,9 @@ impl Owner {
     fn dispatch(&self, request: Request) -> Response {
         let mut lights = self.lock();
         let before = lights.state();
+        if let Err(message) = request.check_supported(before.supported) {
+            return error(ErrorCode::InvalidArgument, message);
+        }
         let outcome = match request {
             Request::Get => Ok(()),
             Request::SetMode { mode } => lights.set_mode(mode),
@@ -459,7 +462,7 @@ mod tests {
         assert_eq!(
             rig.take(),
             [
-                (Line::Amp, true),
+                (Line::Amp, false),
                 (Line::Alarm, false),
                 (Line::White, false),
                 (Line::IrLeds, false),
@@ -498,6 +501,49 @@ mod tests {
         tokio::time::sleep(Duration::from_secs(5)).await;
         assert_eq!(rig.take(), []);
         task.abort();
+    }
+
+    #[test]
+    fn requests_for_lines_the_board_lacks_are_refused_by_name() {
+        let (rig, gpio, _leds) = crate::control::tests::ir_only("owner-ir-only");
+        let owner = Owner::new(Lights::start(gpio, State::default()).unwrap(), None);
+        rig.take();
+        let supported = owner.state().supported;
+        assert_eq!(supported, [Line::IrCut, Line::IrLeds].into_iter().collect());
+        for (request, name) in [
+            (Request::SetWhite { on: true }, "white"),
+            (Request::SetAlarm { alarm: Alarm::On }, "alarm"),
+            (
+                Request::SetAlarm {
+                    alarm: Alarm::Blink { period_ms: 500 },
+                },
+                "alarm",
+            ),
+            (Request::SetMute { muted: false }, "amp"),
+        ] {
+            match owner.handle(request) {
+                Response::Error {
+                    code: ErrorCode::InvalidArgument,
+                    message,
+                } => assert!(message.contains(name), "{message}"),
+                other => panic!("{request:?}: expected a refusal, got {other:?}"),
+            }
+        }
+        assert_eq!(rig.take(), []);
+        assert_eq!(
+            owner.state(),
+            State {
+                supported,
+                ..State::default()
+            }
+        );
+
+        // The lines it has still work, and `get` reports what is there.
+        let night = state(owner.handle(Request::SetMode { mode: Mode::Night }));
+        assert_eq!(night.mode, Mode::Night);
+        assert_eq!(night.supported, supported);
+        assert_eq!(rig.take(), [(Line::IrCut, true), (Line::IrLeds, true)]);
+        assert_eq!(state(owner.handle(Request::Get)).supported, supported);
     }
 
     #[test]

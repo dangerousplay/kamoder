@@ -151,6 +151,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "anyka-av100"
+version = "0.1.0"
+dependencies = [
+ "camera",
+ "libc",
+ "snafu",
+ "tracing",
+ "video-proto",
+]
+
+[[package]]
 name = "anyka-itest-support"
 version = "0.1.0"
 dependencies = [
@@ -456,20 +467,28 @@ name = "camera"
 version = "0.1.0"
 dependencies = [
  "axum",
- "clap",
- "eyre",
  "jpeg-encoder",
- "libc",
  "metrics",
- "os",
  "serde",
- "serde_json",
- "snafu",
- "telemetry",
  "tokio",
  "tower",
  "tracing",
  "video-proto",
+]
+
+[[package]]
+name = "camerad"
+version = "0.1.0"
+dependencies = [
+ "anyka-av100",
+ "axum",
+ "camera",
+ "clap",
+ "eyre",
+ "os",
+ "telemetry",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -1794,6 +1813,7 @@ dependencies = [
 name = "lights"
 version = "0.1.0"
 dependencies = [
+ "board",
  "clap",
  "eyre",
  "libc",
@@ -2194,6 +2214,7 @@ dependencies = [
  "async-trait",
  "auth",
  "base64",
+ "board",
  "clap",
  "eyre",
  "lights-proto",
@@ -2210,6 +2231,7 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-log",
+ "video-proto",
 ]
 
 [[package]]
@@ -3374,6 +3396,7 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 name = "supervisor"
 version = "0.1.0"
 dependencies = [
+ "board",
  "clap",
  "eyre",
  "file-rotate",
@@ -3970,6 +3993,7 @@ dependencies = [
 name = "wifi"
 version = "0.1.0"
 dependencies = [
+ "board",
  "clap",
  "eyre",
  "libc",
