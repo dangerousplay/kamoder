@@ -178,7 +178,15 @@ pub fn resolve(server: &str) -> Result<Vec<SocketAddr>> {
     if addrs.is_empty() {
         return NoAddressSnafu { server }.fail();
     }
-    Ok(addrs)
+    Ok(ipv4_first(addrs))
+}
+
+/// IPv4 before IPv6, otherwise in resolver order: camera kernels are often
+/// built without IPv6, and an AAAA answer tried first just burns one of the
+/// [`ADDRS_PER_SERVER`] attempts on `EAFNOSUPPORT`.
+fn ipv4_first(mut addrs: Vec<SocketAddr>) -> Vec<SocketAddr> {
+    addrs.sort_by_key(SocketAddr::is_ipv6);
+    addrs
 }
 
 /// Makes the resolver re-read `/etc/resolv.conf`; see the module docs.
@@ -236,6 +244,14 @@ mod tests {
     const FLOOR: i64 = crate::BUILD_FLOOR_UNIX;
     /// What the fake servers claim the time is.
     const SERVER_NOW: i64 = (FLOOR + 3_600) * NANOS;
+
+    #[test]
+    fn ipv4_addresses_are_tried_first() {
+        let v6: SocketAddr = "[2001:db8::1]:123".parse().unwrap();
+        let a: SocketAddr = "192.0.2.1:123".parse().unwrap();
+        let b: SocketAddr = "192.0.2.2:123".parse().unwrap();
+        assert_eq!(ipv4_first(vec![v6, a, b]), vec![a, b, v6]);
+    }
 
     #[test]
     fn four_timestamp_formula() {
