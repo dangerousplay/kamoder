@@ -26,6 +26,7 @@ CARD_SRC=$HERE/card
 
 [ -d "$DIST/bin" ] || { echo "no $DIST; run ./x dist first" >&2; exit 1; }
 [ -x "$STRIP" ] || { echo "strip not found at $STRIP" >&2; exit 1; }
+[ -d "$DIST/boards" ] || { echo "board profiles missing from dist; rerun ./x dist" >&2; exit 1; }
 [ -d "$DIST/www" ] || { echo "web UI missing from dist; run ./x webui before ./x dist" >&2; exit 1; }
 
 NAME=kamoder-$VERSION
@@ -39,11 +40,11 @@ mkdir -p "$CARD/anyka_rust/bin" "$CARD/anyka_rust/logs" "$CARD/Factory"
 for f in "$DIST"/bin/*; do
 	"$STRIP" -o "$CARD/anyka_rust/bin/$(basename "$f")" "$f"
 done
-cp -R "$DIST/lib" "$DIST/www" "$CARD/anyka_rust/"
+cp -R "$DIST/lib" "$DIST/www" "$DIST/boards" "$CARD/anyka_rust/"
 for f in init.sh run-on-camera.sh camera.conf.example; do
 	cp "$DIST/$f" "$CARD/anyka_rust/"
 done
-# The tracked config, not dist's copy (dist keeps local edits).
+# The shipped config (build-owned, like bin/ and boards/).
 cp "$HERE/tools/supervisor.toml" "$CARD/anyka_rust/supervisor.toml"
 cp "$HERE/tools/SD-README.md" "$CARD/anyka_rust/README.md"
 cp "$CARD_SRC/Factory/config.sh" "$CARD/Factory/config.sh"

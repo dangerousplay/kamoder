@@ -14,7 +14,7 @@ vendored Anyka SDK through safe wrappers.
 ./x dist                 # build everything, stage dist/anyka_rust (full debug info)
 ./x sd                   # dist, strip, assemble the SD card tree in dist/sdcard
 ./x itest                # that card on a simulated camera: pytest + labgrid, 34 scenarios
-./x ci                   # fmt --check, gen-onvif --check, clippy, cargo-deny, build
+./x ci                   # fmt, gen-onvif --check, check-boards, check-literals, clippy, deny, test, build
 ./x qemu wdt_feeder -h   # run a staged binary under qemu-arm-static
 ./x help                 # every task
 ```

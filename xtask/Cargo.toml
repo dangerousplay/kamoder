@@ -12,6 +12,9 @@ publish = false
 
 [dependencies]
 eyre = "0.6"
+# `./x check-boards` validates boards/*.toml with the same code the services
+# use. Host-safe: serde/toml only, no SDK.
+board = { path = "../crates/board" }
 
 # `./x gen-onvif` (src/gen_onvif.rs): the ONVIF type generator. Host-only on
 # purpose: xsd-parser and its ~80 crates stay out of every camera build, which

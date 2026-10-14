@@ -24,12 +24,12 @@ use std::path::{Path, PathBuf};
 
 /// Interface name when neither the CLI nor a profile names one. Also the
 /// supervisor's fallback for its ready report.
-pub const FALLBACK_IFACE: &str = "wlan0";
+pub const FALLBACK_IFACE: &str = "wlan0"; // board-literal-ok: AV100 recovery default (no profile readable)
 /// The AV100's driver, as `/ipc/setup.sh` loads it.
-pub const FALLBACK_DRIVER_PATH: &str = "/ipc/modules/wifi/ssv6x5x.ko";
-pub const FALLBACK_DRIVER_ARGS: &str = "stacfgpath=/ipc/modules/wifi/ssv6x5x-wifi.cfg";
+pub const FALLBACK_DRIVER_PATH: &str = "/ipc/modules/wifi/ssv6x5x.ko"; // board-literal-ok: AV100 recovery default
+pub const FALLBACK_DRIVER_ARGS: &str = "stacfgpath=/ipc/modules/wifi/ssv6x5x-wifi.cfg"; // board-literal-ok: AV100 recovery default
 /// The AV100's USB Wi-Fi power switch.
-pub const FALLBACK_POWER_GPIO: u32 = 98;
+pub const FALLBACK_POWER_GPIO: u32 = 98; // board-literal-ok: AV100 recovery default
 
 /// What the board profile said about Wi-Fi.
 #[derive(Debug, Clone, Copy)]

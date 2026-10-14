@@ -51,7 +51,13 @@ const LOGO: [&str; 5] = [
 
 /// Renders the banner. Lines end in `\r\n` so it lines up on a raw serial
 /// console as well as a cooked tty.
-pub fn render(config: &Config, config_path: &Path, start: &crate::ready::StartTime) -> String {
+/// `wifi_iface` is the interface whose MAC the hardware section shows.
+pub fn render(
+    config: &Config,
+    config_path: &Path,
+    start: &crate::ready::StartTime,
+    wifi_iface: &str,
+) -> String {
     let mut out = String::new();
     let mut line = |s: String| {
         out.push_str(&s);
@@ -106,7 +112,7 @@ pub fn render(config: &Config, config_path: &Path, start: &crate::ready::StartTi
     line(field("Services", &services(config)));
     line(String::new());
     line(format!("  {RUST}{BOLD}Hardware"));
-    for (label, value) in crate::hardware::detect(Path::new("/")) {
+    for (label, value) in crate::hardware::detect(Path::new("/"), wifi_iface) {
         line(field(label, &value));
     }
     line(field("Kernel", &system_line()));

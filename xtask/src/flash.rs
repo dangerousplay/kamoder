@@ -14,6 +14,7 @@
 //!   ./x flash --no-build             write the last `./x sd` output
 //!   ./x flash --device /dev/sdc1     pick the partition explicitly
 //!   ./x flash --keep-mounted         leave the card mounted afterwards
+//!   ./x flash --with-demos           include the SDK demos (see ./x dist)
 
 use crate::tasks;
 use eyre::{bail, eyre, Result, WrapErr};
@@ -26,12 +27,14 @@ const DEFAULT_LABEL: &str = "ANYKA";
 pub fn flash(extra: &[String]) -> Result<()> {
     let mut skip_build = false;
     let mut keep_mounted = false;
+    let mut sd_args = Vec::new();
     let mut device = std::env::var(DEVICE_ENV).ok().map(PathBuf::from);
     let mut args = extra.iter();
     while let Some(arg) = args.next() {
         match arg.as_str() {
             "--no-build" => skip_build = true,
             "--keep-mounted" => keep_mounted = true,
+            tasks::WITH_DEMOS => sd_args.push(arg.clone()),
             "--device" => {
                 let value = args.next().ok_or_else(|| eyre!("--device needs a path"))?;
                 device = Some(PathBuf::from(value));
@@ -61,7 +64,7 @@ pub fn flash(extra: &[String]) -> Result<()> {
     ensure_removable_vfat(&device)?;
 
     if !skip_build {
-        tasks::sd(&[])?;
+        tasks::sd(&sd_args)?;
     }
 
     let source = tasks::sd_contents_dir()?;

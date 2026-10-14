@@ -586,7 +586,7 @@ mod half_tests {
 mod capture_tests {
     use super::*;
     use crate::fake::{FakeBackend, FakeEncoder, FakeEncoderStats, FAKE_PARAMETER_SETS};
-    use std::sync::atomic::AtomicU64;
+    use std::sync::atomic::AtomicUsize;
 
     /// Short pauses so failure tests take milliseconds, not seconds.
     fn quick() -> CaptureOptions {
@@ -760,7 +760,7 @@ mod capture_tests {
         let cam = &r.cameras[0];
         let mut rx = cam.subscribe();
         wait_for("lag", || {
-            stats.encoded.load(Ordering::Relaxed) > VIDEO_BUFFER as u64 * 2
+            stats.encoded.load(Ordering::Relaxed) > VIDEO_BUFFER * 2
         });
         let rt = tokio::runtime::Builder::new_current_thread()
             .build()
@@ -841,7 +841,7 @@ mod capture_tests {
 
     impl TempDir {
         fn new() -> TempDir {
-            static N: AtomicU64 = AtomicU64::new(0);
+            static N: AtomicUsize = AtomicUsize::new(0);
             let p = std::env::temp_dir().join(format!(
                 "camera-test-{}-{}",
                 std::process::id(),

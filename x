@@ -2,7 +2,7 @@
 # Entry point for the xtask runner.
 #
 #   ./x dist            build everything and stage it for the SD card
-#   ./x ci              fmt + gen-onvif --check + clippy + deny + build, as CI runs them
+#   ./x ci              fmt, gen-onvif --check, check-boards, check-literals, clippy, deny, test, build
 #   ./x help            list every task
 #
 # This wrapper exists because the workspace pins `build.target` to the camera's

@@ -5,7 +5,7 @@
 | Tier | Command | Runs on | Covers |
 |---|---|---|---|
 | Unit + crate integration | `./x test` | host triple (x86_64), not cross | logic-only tests of `HOST_TESTABLE` crates |
-| Static gate | `./x ci` | host, cross build | fmt --check, gen-onvif --check, clippy -D warnings, cargo-deny, full ARM build |
+| Static gate | `./x ci` | host, cross build | fmt --check, gen-onvif --check, check-boards, check-literals, clippy -D warnings, cargo-deny, `./x test`, full ARM build |
 | System (simulated camera) | `./x itest [--no-build] [-- pytest args]` | QEMU ARM926 VM (labgrid) | whole SD card boot, services end to end (~10 min) |
 | Single binary under emulation | `./x qemu <binary> [args]` | qemu-arm-static, firmware `/lib` sysroot | smoke run of staged ARM binary |
 | Real hardware | manual (`tools/camera-access/e2e.py`, `onvif_live.py`, `wfr-test.sh`, gitignored) | camera | not automated; results recorded in `docs/notes/HARDWARE-FINDINGS.md` |
@@ -13,7 +13,7 @@
 ## `./x test` details (`xtask/src/tasks.rs` `test`)
 
 - Runs `cargo +$ANYKA_RUST_TOOLCHAIN test --target <host> -p <each HOST_TESTABLE>`; passing `-p`/`--package` overrides the list.
-- `HOST_TESTABLE`: os, telemetry, supervisor, auth, anyka-ptz, ptz-proto, lights-proto, lights, onvif-schema, sshd, web, onvif, rtsp, anyka-v8, wifi, anyka-itest-support, camera.
+- `HOST_TESTABLE`: os, telemetry, supervisor, auth, anyka-ptz, ptz-proto, lights-proto, lights, onvif-schema, sshd, web, onvif, rtsp, anyka-v8, wifi, anyka-itest-support, camera, anyka-av100, camerad, video-proto, board.
 - Excluded (link ARM SDK objects or are SDK helpers): anyka-sys, anyka, anyka-link and every `demos/*` crate (including the SDK-free `wdt_feeder`) — none of these is host-tested.
 - Note: `build-std` stays configured from `.cargo/config.toml` for this invocation (unlike `./x` itself); not verified whether that matters for host tests.
 - Not run during this mapping (skipped to avoid a long compile).
@@ -27,11 +27,11 @@
 ./x deny               # cargo deny --all-features check
 ./x build              # cargo +nightly build --release --workspace
 ./x test               # host unit/integration tests
-./x ci                 # = fmt --check, gen-onvif --check, clippy, deny, build (does NOT run ./x test)
+./x ci                 # = fmt --check, gen-onvif --check, check-boards, check-literals, clippy, deny, test, build
 ./x itest              # system tests (needs qemu-system-arm, fakeroot, cpio, sfdisk, mkfs.vfat, mcopy, sshpass, uv, VM images)
 ```
 
-No GitHub workflow runs `./x ci`, `./x test` or `./x itest`; `release.yml` only builds (`./x webui`, `./x dist`). Gates are local only.
+No GitHub workflow runs `./x ci`, `./x test` or `./x itest`; `release.yml` only builds (`./x webui`, `./x dist`). `checks.yml` runs the toolchain-free `./x check-boards` and `./x check-literals` on push/PR. The other gates are local only.
 
 ## Test layout and patterns
 

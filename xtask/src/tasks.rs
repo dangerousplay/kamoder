@@ -15,12 +15,24 @@ const DEFAULT_CROSS_TOOLCHAIN: &str = "/opt/arm-anykav200-crosstool";
 const SD_TREE_ENV: &str = "ANYKA_SD_TREE";
 const VM_DIR_ENV: &str = "ANYKA_VM_DIR";
 
-/// Binaries staged by `dist`, in the order they are listed to the user.
+/// Vendor-free binaries staged by `dist`, in the order they are listed to
+/// the user. None of them loads an SDK object (PKG-01); `camera` is the
+/// `camerad` package's binary.
 const BINARIES: &[&str] = &[
     "supervisor",
     "wifi",
     "wdt_feeder",
     "lights",
+    "sshd",
+    "web",
+    "onvif",
+    "rtsp",
+    "camera",
+];
+
+/// SDK demos, staged (with the SDK objects they load) only by
+/// `./x dist --with-demos`.
+const DEMOS: &[&str] = &[
     "ai_demo",
     "aenc_demo",
     "venc_demo",
@@ -28,13 +40,10 @@ const BINARIES: &[&str] = &[
     "md_demo_v8",
     "rtsp_demo",
     "jpeg_snapshot",
-    "sshd",
-    "web",
-    "onvif",
-    "rtsp",
-    "camera",
-    "board",
 ];
+
+/// `dist`/`sd`/`flash` flag that adds [`DEMOS`] and the SDK objects.
+pub(crate) const WITH_DEMOS: &str = "--with-demos";
 
 pub fn help() {
     println!("Tasks:");
@@ -48,15 +57,21 @@ pub fn help() {
     println!("  deny                    cargo-deny: advisories, licences, bans, sources");
     println!("  webui                   build the web admin UI (webui/, npm) into webui/dist");
     println!(
-        "  dist                    build and stage dist/anyka_rust (+ www/ if webui is built)"
+        "  dist [--with-demos]     build and stage dist/anyka_rust: vendor-free binaries, boards/,"
     );
-    println!("  sd                      dist, strip, and assemble the SD card tree in dist/sdcard");
-    println!("  flash [--no-build] [--device /dev/sdXN] [--keep-mounted]");
+    println!("                          www/ if webui is built; --with-demos adds the SDK demos + SDK libs");
+    println!("  sd [--with-demos]       dist, strip, and assemble the SD card tree in dist/sdcard");
+    println!("  flash [--no-build] [--device /dev/sdXN] [--keep-mounted] [--with-demos]");
     println!("                          sd, then mount the card (label ANYKA) and write it");
     println!("  itest [--no-build] [-- pytest args]  system tests: the SD card on a simulated camera (labgrid)");
     println!("  qemu <binary> [args...] run a staged binary under qemu-arm-static");
     println!("  deploy <user@host:dir>  copy dist/anyka_rust over scp");
-    println!("  ci                      fmt --check, gen-onvif --check, clippy, deny, build");
+    println!("  check-boards            load + validate boards/*.toml, fail on detection ties");
+    println!("  check-literals          fail on board literals (AV100, wlan0, /dev/venc...) in generic crates");
+    println!(
+        "  ci                      fmt --check, gen-onvif --check, check-boards, check-literals,"
+    );
+    println!("                          clippy, deny, test, build");
     println!();
     println!("Environment:");
     println!("  {TOOLCHAIN_ENV}   rust toolchain to use (default {DEFAULT_TOOLCHAIN})");
@@ -229,6 +244,7 @@ const HOST_TESTABLE: &[&str] = &[
     "anyka-av100",
     "camerad",
     "video-proto",
+    "board",
 ];
 
 pub fn test(extra: &[String]) -> Result<()> {
@@ -345,14 +361,49 @@ fn tree_size(dir: &Path) -> Result<(u64, u64)> {
     Ok((files, bytes))
 }
 
+/// Copies every `boards/*.toml` into `target` (replacing it), returning the
+/// profile names.
+fn stage_boards(root: &Path, target: &Path) -> Result<Vec<String>> {
+    if target.exists() {
+        std::fs::remove_dir_all(target)?;
+    }
+    std::fs::create_dir_all(target)?;
+    let mut names = Vec::new();
+    for entry in std::fs::read_dir(root.join("boards")).wrap_err("cannot read boards/")? {
+        let path = entry?.path();
+        if path.extension().is_some_and(|e| e == "toml") {
+            let file = path.file_name().ok_or_else(|| eyre!("unnamed profile"))?;
+            std::fs::copy(&path, target.join(file))
+                .wrap_err_with(|| format!("cannot stage {}", path.display()))?;
+            names.push(file.to_string_lossy().trim_end_matches(".toml").to_owned());
+        }
+    }
+    if names.is_empty() {
+        bail!("no board profiles in boards/");
+    }
+    names.sort();
+    Ok(names)
+}
+
+/// Splits `--with-demos` off the arguments `dist`/`sd`/`flash` pass to cargo.
+fn take_with_demos(extra: &[String]) -> (bool, Vec<String>) {
+    let with_demos = extra.iter().any(|a| a == WITH_DEMOS);
+    let rest = extra.iter().filter(|a| *a != WITH_DEMOS).cloned().collect();
+    (with_demos, rest)
+}
+
 pub fn dist(extra: &[String]) -> Result<()> {
-    build(extra)?;
+    let (with_demos, extra) = take_with_demos(extra);
+    build(&extra)?;
 
     let root = workspace_root();
     let dist = root.join("dist/anyka_rust");
     let bin_dir = dist.join("bin");
     let lib_dir = dist.join("lib");
 
+    // Always staged from scratch: nothing in dist/anyka_rust is meant to be
+    // edited in place (the card's own files live in the SD tree, see
+    // SD_PRESERVED), so a stale binary, profile or config never survives.
     if dist.exists() {
         std::fs::remove_dir_all(&dist)
             .wrap_err_with(|| format!("cannot clear {}", dist.display()))?;
@@ -362,7 +413,8 @@ pub fn dist(extra: &[String]) -> Result<()> {
 
     let built = root.join("target").join(TARGET).join("release");
     let mut staged = Vec::new();
-    for binary in BINARIES {
+    let demos: &[&str] = if with_demos { DEMOS } else { &[] };
+    for binary in BINARIES.iter().chain(demos) {
         let source = built.join(binary);
         if !source.is_file() {
             continue;
@@ -376,26 +428,28 @@ pub fn dist(extra: &[String]) -> Result<()> {
         bail!("nothing was built; run ./x build first");
     }
 
-    // One directory per SDK variant, matching the `$ORIGIN/../lib/<variant>`
-    // RPATH that anyka-link bakes into each binary. The variants are not
-    // interchangeable — see that crate's docs.
-    for entry in std::fs::read_dir(root.join("sdk/lib"))? {
-        let variant = entry?.path();
-        if !variant.is_dir() {
-            continue;
+    if with_demos {
+        // One directory per SDK variant, matching the `$ORIGIN/../lib/<variant>`
+        // RPATH that anyka-link bakes into each demo. The variants are not
+        // interchangeable — see that crate's docs.
+        for entry in std::fs::read_dir(root.join("sdk/lib"))? {
+            let variant = entry?.path();
+            if !variant.is_dir() {
+                continue;
+            }
+            let name = variant
+                .file_name()
+                .ok_or_else(|| eyre!("unnamed variant"))?;
+            stage_objects(&variant, &lib_dir.join(name))?;
         }
-        let name = variant
-            .file_name()
-            .ok_or_else(|| eyre!("unnamed variant"))?;
-        stage_objects(&variant, &lib_dir.join(name))?;
-    }
 
-    // The V8 SDK is a whole separate tree, not a variant of the EV200 one, so
-    // it lives outside `sdk/lib` — but its binaries carry the same
-    // `$ORIGIN/../lib/<variant>` RPATH, with `v8` as the variant.
-    let v8 = root.join("sdk/v8/lib");
-    if v8.is_dir() {
-        stage_objects(&v8, &lib_dir.join("v8"))?;
+        // The V8 SDK is a whole separate tree, not a variant of the EV200 one, so
+        // it lives outside `sdk/lib` — but its binaries carry the same
+        // `$ORIGIN/../lib/<variant>` RPATH, with `v8` as the variant.
+        let v8 = root.join("sdk/v8/lib");
+        if v8.is_dir() {
+            stage_objects(&v8, &lib_dir.join("v8"))?;
+        }
     }
     stage_runtime(&root, &lib_dir)?;
     check_closure(&dist)?;
@@ -410,13 +464,16 @@ pub fn dist(extra: &[String]) -> Result<()> {
         dist.join("camera.conf.example"),
     )
     .wrap_err("cannot stage camera.conf.example")?;
-    // Only seed the config if the staging directory does not already carry an
-    // edited one, so `./x dist` never silently reverts local service changes.
-    let config = dist.join("supervisor.toml");
-    if !config.exists() {
-        std::fs::copy(root.join("tools/supervisor.toml"), &config)
-            .wrap_err("cannot stage supervisor.toml")?;
-    }
+    // The shipped default, always: dist was cleared above, so there is no
+    // local copy to preserve (the old "seed only if missing" check could
+    // never fire). Per-camera settings belong in camera.conf on the card.
+    std::fs::copy(
+        root.join("tools/supervisor.toml"),
+        dist.join("supervisor.toml"),
+    )
+    .wrap_err("cannot stage supervisor.toml")?;
+    // Board profiles, next to bin/: the supervisor resolves `<base>/boards`.
+    let boards = stage_boards(&root, &dist.join("boards"))?;
     std::fs::create_dir_all(dist.join("logs"))?;
 
     // The SPA is optional for dist: the Rust stack runs without it (the API
@@ -433,9 +490,13 @@ pub fn dist(extra: &[String]) -> Result<()> {
     for (name, size) in staged {
         println!("  {name:<16} {size:>8} bytes");
     }
+    println!("  {:<16} {}", "boards/", boards.join(", "));
     match www {
         Some((files, bytes)) => println!("  {:<16} {bytes:>8} bytes ({files} files)", "www/"),
         None => println!("\nwarning: web UI not built, www/ not staged; run ./x webui"),
+    }
+    if !with_demos {
+        println!("\nSDK demos not staged; ./x dist {WITH_DEMOS} adds them and the SDK objects");
     }
     println!("\ncopy it to the SD card, then on the camera run:");
     println!("  sh /mnt/disc1/anyka_rust/run-on-camera.sh <binary> [args...]");
@@ -548,12 +609,15 @@ pub fn sd(extra: &[String]) -> Result<()> {
     for script in ["init.sh", "run-on-camera.sh"] {
         copy_executable(&dist.join(script), &target.join(script))?;
     }
-    // The card gets the tracked config, not dist's copy: dist preserves local
-    // edits to supervisor.toml, and those should not leak into the repo.
+    // supervisor.toml is build-owned like bin/ (not in SD_PRESERVED): the
+    // card always gets the shipped default; per-camera settings go in
+    // camera.conf, which is preserved.
     std::fs::copy(
         root.join("tools/supervisor.toml"),
         target.join("supervisor.toml"),
     )?;
+    // boards/ is build-owned too, replaced wholesale above.
+    copy_tree(&dist.join("boards"), &target.join("boards"))?;
     std::fs::copy(
         root.join("tools/camera.conf.example"),
         target.join("camera.conf.example"),
@@ -658,11 +722,16 @@ pub fn deploy(args: &[String]) -> Result<()> {
     run("scp", &["-r", &dist.to_string_lossy(), destination])
 }
 
+/// Every gate, cheapest first. Steps run one at a time on purpose: each
+/// cargo invocation is memory-hungry.
 pub fn ci(_extra: &[String]) -> Result<()> {
     fmt(&["--check".to_owned()])?;
     crate::gen_onvif::gen_onvif(&["--check".to_owned()])?;
+    crate::checks::check_boards(&[])?;
+    crate::checks::check_literals(&[])?;
     clippy(&[])?;
     deny(&[])?;
+    test(&[])?;
     build(&[])?;
     Ok(())
 }

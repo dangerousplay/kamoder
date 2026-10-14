@@ -20,7 +20,9 @@ const USB_WIFI: &[(&str, &str)] = &[
 /// One `label: value` line of the banner's hardware section.
 pub type Row = (&'static str, String);
 
-pub fn detect(root: &Path) -> Vec<Row> {
+/// `wifi_iface` is the board's Wi-Fi interface (see `ready::wifi_iface`);
+/// its MAC is shown next to the module.
+pub fn detect(root: &Path, wifi_iface: &str) -> Vec<Row> {
     let read = |rel: &str| fs::read_to_string(root.join(rel)).ok();
     let mut rows = Vec::new();
 
@@ -80,8 +82,8 @@ pub fn detect(root: &Path) -> Vec<Row> {
     }
 
     if let Some(wifi) = usb_wifi(root) {
-        let mac = read("sys/class/net/wlan0/address")
-            .map(|mac| format!(", wlan0 {}", mac.trim()))
+        let mac = read(&format!("sys/class/net/{wifi_iface}/address"))
+            .map(|mac| format!(", {wifi_iface} {}", mac.trim()))
             .unwrap_or_default();
         rows.push(("Wi-Fi", format!("{wifi}{mac}")));
     }
@@ -207,7 +209,7 @@ mod tests {
     #[test]
     fn describes_the_av100() {
         let root = av100_root();
-        let rows = detect(&root);
+        let rows = detect(&root, "wlan0");
         let get = |label: &str| {
             rows.iter()
                 .find(|(l, _)| *l == label)
@@ -234,7 +236,7 @@ mod tests {
     fn empty_root_still_reports_libc_only() {
         let root = std::env::temp_dir().join(format!("hw-empty-{}", std::process::id()));
         fs::create_dir_all(&root).unwrap();
-        let rows = detect(&root);
+        let rows = detect(&root, "wlan0");
         assert_eq!(rows.len(), 1);
         assert_eq!(rows[0].0, "libc");
         fs::remove_dir_all(root).unwrap();

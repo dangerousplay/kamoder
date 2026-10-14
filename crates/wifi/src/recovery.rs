@@ -19,7 +19,7 @@
 //! rung runs the driver reset instead, as it already does when the pin is
 //! not set up.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 /// What to reload, and how long each step may take. Defaults are the AV100
@@ -53,9 +53,14 @@ pub struct Driver {
 impl Default for Driver {
     fn default() -> Self {
         Self {
-            module: "ssv6x5x".into(),
-            path: "/ipc/modules/wifi/ssv6x5x.ko".into(),
-            args: vec!["stacfgpath=/ipc/modules/wifi/ssv6x5x-wifi.cfg".into()],
+            // The built-in fallback (see crate::hardware); main.rs fills
+            // these from the merged board/CLI values.
+            module: crate::hardware::module_name(Path::new(crate::hardware::FALLBACK_DRIVER_PATH)),
+            path: crate::hardware::FALLBACK_DRIVER_PATH.into(),
+            args: crate::hardware::FALLBACK_DRIVER_ARGS
+                .split_whitespace()
+                .map(str::to_owned)
+                .collect(),
             power_gpio: Some(crate::hardware::FALLBACK_POWER_GPIO),
             power_on_file: "/rom/usb_module_power_on".into(),
             mtu: 1460,

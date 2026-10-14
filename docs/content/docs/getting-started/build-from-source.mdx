@@ -55,7 +55,9 @@ overwritten.
 | `./x test` | host-side unit tests |
 | `./x gen-onvif [--check]` | regenerate the ONVIF types from the vendored WSDL/XSD |
 | `./x deny` | cargo-deny: advisories, licences, bans, sources |
-| `./x ci` | fmt, gen-onvif, clippy, deny and build, as CI runs them |
+| `./x ci` | fmt, gen-onvif, check-boards, check-literals, clippy, deny, test and build, as CI runs them |
+| `./x check-boards` / `check-literals` | validate `boards/*.toml` (and detection ties) / fail on board literals in generic crates |
+| `./x dist --with-demos` | also stage the SDK demos and the vendor SDK objects they load (default dist is vendor-free) |
 | `./x qemu <bin> [args]` | run a staged binary under `qemu-arm-static` |
 | `./x itest` | the SD card on a simulated camera (qemu + labgrid + pytest) |
 | `./x deploy user@host:dir` | copy `dist/anyka_rust` over scp |

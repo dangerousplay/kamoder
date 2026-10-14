@@ -136,7 +136,7 @@ struct Options {
 }
 
 /// Interface used when neither `--wifi-iface` nor the board profile names one.
-const FALLBACK_WIFI_IFACE: &str = "wlan0"; // board-literal-ok
+const FALLBACK_WIFI_IFACE: &str = "wlan0"; // board-literal-ok: same fallback as the wifi service (no profile readable)
 
 impl Options {
     fn into_config(self, board: Option<board::Resolved>) -> Config {

@@ -32,8 +32,9 @@ sh /mnt/disc1/Factory/config.sh
 | Path | What |
 |---|---|
 | `bin/` | stripped binaries (full-debug copies are in `rust-cross-compile/dist/`) |
-| `lib/{audio,video,md,rtsp}/` | EV200 SDK variants — each binary's RPATH picks one |
-| `lib/v8/` | AK3918AV100 V8 SDK, used by `md_demo_v8` |
+| `boards/` | board profiles; the supervisor picks one at start (`supervisor board` shows which) |
+| `lib/{audio,video,md,rtsp}/` | EV200 SDK variants for the SDK demos — only in a `./x dist --with-demos` build |
+| `lib/v8/` | AK3918AV100 V8 SDK, used by `md_demo_v8` — only with `--with-demos` |
 | `lib/sys/` | runtime every binary loads from the card: empty `libpthread`/`libm`/`librt`/`libdl` stubs (the camera's libc already has them) and the firmware's `libgcc_s.so.1`, `libstdc++.so.6`. Only `libc.so.0` and `ld-uClibc` come from the firmware, so binaries in `bin/` run directly, no `LD_LIBRARY_PATH` |
 | `init.sh` | starts and restarts the supervisor; `--check`, `--fg`, `--stop` |
 | `run-on-camera.sh` | run any binary by hand: `sh run-on-camera.sh md_demo_v8 50` |
@@ -131,3 +132,8 @@ it with `--dry-run` (add it to `args` in `supervisor.toml`) and reading
 
 All on the card under `logs/`, rotated at 1 MiB, 5 generations:
 `init.log`, `wifi.log`, `boot.log`, `supervisor.log`, and one per service.
+
+## Credits
+
+This software is based in part on the work of the Independent JPEG Group
+(snapshot JPEG encoding, via the `jpeg-encoder` crate).

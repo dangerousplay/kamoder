@@ -1,0 +1,43 @@
+# Cheap source checks that need no cross toolchain (the full gate is
+# `./x ci`, which needs the crosstool and nightly build-std):
+#
+#   ./x check-boards     every boards/*.toml loads, validates, and detection
+#                        can tell the profiles apart (BRD-04)
+#   ./x check-literals   no board literals in generic crates (PKG-04)
+name: checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  board-checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Rust toolchain
+        run: rustup default stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: xtask -> target
+
+      - name: Board profiles
+        run: ./x check-boards
+
+      - name: Board literals
+        run: ./x check-literals

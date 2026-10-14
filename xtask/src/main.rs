@@ -5,6 +5,7 @@
 //! `.cargo/config.toml` already points the build at
 //! `armv5te-unknown-linux-uclibceabi`.
 
+mod checks;
 mod flash;
 mod gen_onvif;
 mod itest;
@@ -34,6 +35,8 @@ fn main() -> Result<()> {
         "itest" => itest::itest(rest),
         "qemu" => tasks::qemu(rest),
         "deploy" => tasks::deploy(rest),
+        "check-boards" => checks::check_boards(rest),
+        "check-literals" => checks::check_literals(rest),
         "ci" => tasks::ci(rest),
         "help" | "--help" | "-h" => {
             tasks::help();

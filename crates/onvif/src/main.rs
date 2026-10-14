@@ -186,7 +186,8 @@ fn serve(cli: Cli) -> Result<()> {
     }
     tracing::info!(board = %board.name, sensors = video.len(), "board profile");
 
-    let mac = net::mac_address(&mac_candidates(cli.interface.as_deref()));
+    let wifi_iface = board.profile.wifi.as_ref().map(|w| w.iface.as_str());
+    let mac = net::mac_address(&mac_candidates(cli.interface.as_deref(), wifi_iface));
     let cpuinfo = std::fs::read_to_string("/proc/cpuinfo").ok();
     let identity = device_identity(
         &cli.name,
@@ -300,10 +301,12 @@ fn serve(cli: Cli) -> Result<()> {
     })
 }
 
-/// Interfaces whose MAC can serve as the serial number, in order.
-fn mac_candidates(interface: Option<&str>) -> Vec<&str> {
-    let mut names: Vec<&str> = interface.into_iter().collect();
-    names.extend(["wlan0", "eth0"]);
+/// Interfaces whose MAC can serve as the serial number, in order: the
+/// `--interface` flag, the board's Wi-Fi interface, then `eth0`.
+fn mac_candidates<'a>(interface: Option<&'a str>, wifi: Option<&'a str>) -> Vec<&'a str> {
+    let mut names: Vec<&str> = interface.into_iter().chain(wifi).collect();
+    names.push("eth0");
+    names.dedup();
     names
 }
 
@@ -356,6 +359,20 @@ mod cli_tests {
     fn cli_definition_is_valid() {
         use clap::CommandFactory;
         Cli::command().debug_assert();
+    }
+
+    #[test]
+    fn mac_candidates_follow_flag_then_board_wifi() {
+        assert_eq!(mac_candidates(None, None), vec!["eth0"]);
+        assert_eq!(mac_candidates(None, Some("wlan0")), vec!["wlan0", "eth0"]);
+        assert_eq!(
+            mac_candidates(Some("ra0"), Some("wlan0")),
+            vec!["ra0", "wlan0", "eth0"]
+        );
+        assert_eq!(
+            mac_candidates(Some("wlan0"), Some("wlan0")),
+            vec!["wlan0", "eth0"]
+        );
     }
 
     #[test]

@@ -196,7 +196,7 @@ fn main() -> Result<()> {
         Ok(resolved) => Some(resolved),
         Err(error) => {
             // Never fatal: Wi-Fi may be the only way in to fix the card.
-            tracing::warn!(%error, "no board profile; using the built-in AV100 Wi-Fi defaults");
+            tracing::warn!(%error, "no board profile; using the built-in AV100 Wi-Fi defaults"); // board-literal-ok: names the fallback hardware in the log
             None
         }
     };

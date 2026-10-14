@@ -256,8 +256,23 @@ fn main() -> Result<()> {
         );
     }
     let enabled = config.enabled_services().count();
+    // The Wi-Fi interface the wifi service will manage (its `--iface`, else
+    // the board's), for the banner and the ready report.
+    let wifi_args = config
+        .services
+        .iter()
+        .find(|s| s.name == "wifi" || s.command.file_name().is_some_and(|f| f == "wifi"))
+        .map(|s| s.args.clone())
+        .unwrap_or_default();
+    let wifi_iface = ready::wifi_iface(
+        &wifi_args,
+        board.as_ref().and_then(|b| b.profile.wifi.as_ref()),
+    );
     if args.banner {
-        print!("{}", banner::render(&config, &args.config, &start));
+        print!(
+            "{}",
+            banner::render(&config, &args.config, &start, &wifi_iface)
+        );
         return Ok(());
     }
     if args.check_only {
@@ -309,7 +324,7 @@ fn main() -> Result<()> {
     }
 
     match &console {
-        Some(console) => console.print(banner::render(&config, &args.config, &start)),
+        Some(console) => console.print(banner::render(&config, &args.config, &start, &wifi_iface)),
         None if !args.console.as_os_str().is_empty() => {
             tracing::warn!(console = %args.console.display(), "console unavailable")
         }
@@ -348,16 +363,6 @@ fn main() -> Result<()> {
 
         // Prints the ready report (time to ready, Wi-Fi, addresses, ports)
         // once everything is up, or what is missing after a timeout.
-        let wifi_args = config
-            .services
-            .iter()
-            .find(|s| s.name == "wifi" || s.command.file_name().is_some_and(|f| f == "wifi"))
-            .map(|s| s.args.clone())
-            .unwrap_or_default();
-        let wifi_iface = ready::wifi_iface(
-            &wifi_args,
-            board.as_ref().and_then(|b| b.profile.wifi.as_ref()),
-        );
         tokio::spawn(ready::watch(
             root.clone(),
             ready_console,

@@ -7,7 +7,9 @@
 use crate::backend::{
     Backend, BoxError, Encoder, FrameRef, Packet, PixelFormat, SensorInfo, Session,
 };
-use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
+// AtomicUsize, not AtomicU64: ARMv5TE has no 64-bit atomics, and this module
+// is also built for the camera with the `test-support` feature.
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -17,7 +19,7 @@ pub struct FakeBackendStats {
     /// Calls to `start`, failed ones included.
     pub starts: AtomicUsize,
     /// Pictures lent, all sensors.
-    pub frames: AtomicU64,
+    pub frames: AtomicUsize,
 }
 
 /// `sensors` sensors of `width`×`height` NV12, one picture per `interval`.
@@ -30,7 +32,7 @@ pub struct FakeBackend {
     /// The first this many `start` calls fail.
     pub fail_starts: usize,
     /// `with_frame` fails once, when this many pictures were lent in total.
-    pub fail_frame: Option<u64>,
+    pub fail_frame: Option<usize>,
     pub stats: Arc<FakeBackendStats>,
 }
 
@@ -118,7 +120,7 @@ impl Session for FakeSession {
             format: PixelFormat::Nv12,
             data: &self.data,
             phys: None,
-            timestamp_ms: n * self.backend.interval.as_millis() as u64,
+            timestamp_ms: n as u64 * self.backend.interval.as_millis() as u64,
         })
     }
 }
@@ -126,8 +128,8 @@ impl Session for FakeSession {
 /// What a [`FakeEncoder`] has done so far, shared with the test.
 #[derive(Debug, Default)]
 pub struct FakeEncoderStats {
-    pub encoded: AtomicU64,
-    pub keyframes: AtomicU64,
+    pub encoded: AtomicUsize,
+    pub keyframes: AtomicUsize,
     pub idr_requests: AtomicUsize,
 }
 
