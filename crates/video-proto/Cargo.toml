@@ -1,0 +1,15 @@
+[package]
+name = "video-proto"
+description = "Wire protocol of the camera service: video socket framing, /status types, stream naming (no capture, no SDK)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+# Like ptz-proto and lights-proto: only the protocol, so rtsp, onvif and web
+# can talk to the video producer without linking it (or any hardware backend).
+[dependencies]
+serde.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true

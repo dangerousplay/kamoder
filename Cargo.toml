@@ -28,6 +28,7 @@ members = [
     "crates/rtsp",
     "crates/web",
     "crates/camera",
+    "crates/video-proto",
     "itest/support",
 ]
 # xtask builds for the host, not the camera, so it is kept out of the
@@ -55,6 +56,7 @@ lights-proto = { path = "crates/lights-proto" }
 onvif-schema = { path = "crates/onvif-schema" }
 supervisor = { path = "crates/supervisor" }
 wifi = { path = "crates/wifi" }
+video-proto = { path = "crates/video-proto" }
 
 # Shared by the control sockets, the web API and the ONVIF service.
 serde = { version = "1", features = ["derive"] }

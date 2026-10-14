@@ -225,6 +225,7 @@ const HOST_TESTABLE: &[&str] = &[
     "wifi",
     "anyka-itest-support",
     "camera",
+    "video-proto",
 ];
 
 pub fn test(extra: &[String]) -> Result<()> {
