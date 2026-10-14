@@ -279,10 +279,10 @@ supervisor's own notes about it go into the same file, so one file tells the
 whole story of that process:
 
 ```
-[  27431980] sup started, pid 2183157
-[  27432010] out flapper starting
-[  27432010] sup exit code 3, restarting in 100 ms
-[  27433520] sup restarted too often, giving up
+[2026-10-14 14:03:07.123 -0300] [  27431980] sup started, pid 2183157
+[2026-10-14 14:03:07.153 -0300] [  27432010] out flapper starting
+[2026-10-14 14:03:07.153 -0300] [  27432010] sup exit code 3, restarting in 100 ms
+[2026-10-14 14:03:08.663 -0300] [  27433520] sup restarted too often, giving up
 ```
 
 Writes happen on one dedicated thread fed by a **bounded** channel: SD writes
@@ -291,11 +291,16 @@ the runtime would stall the supervision logic. Bounded means a service that
 floods its output backpressures its own reader instead of growing a queue in
 32 MB of RAM.
 
-Timestamps are milliseconds since boot, not wall clock — the camera has no RTC
-and reads 1970 until NTP lands.
+Each line carries the local wall time (the `TZ` init.sh sets from
+`TIMEZONE`) once the `ntp` service has set the clock, and always the
+milliseconds since boot. Before the first sync — the camera has no RTC and
+reads 1970 — the wall time is left out and lines start at the uptime. The
+console shows `[HH:MM:SS] [uptime s]` the same way, and `init.log` uses
+`[YYYY-MM-DD HH:MM:SS ±HHMM] [uptime s]`.
 
 Every Rust binary here also routes its own `tracing` output to a rotating file
-when `ANYKA_LOG_FILE` is set, which `init.sh` does by default.
+when `ANYKA_LOG_FILE` is set, which `init.sh` does by default (for the
+supervisor's own `supervisor.log`), with the same timestamp prefix.
 
 ## Booting: init.sh
 

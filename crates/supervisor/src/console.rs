@@ -9,6 +9,12 @@
 //! and must not slow down supervision. A crash-looping service gets its log
 //! tail printed at most once per [`TAIL_INTERVAL`]; repeats in between are
 //! one line each.
+//!
+//! Every console line starts with a [`Stamp`]: `[14:03:07] [   281.48]` once
+//! NTP has set the clock, `[   281.48]` (seconds since boot) before. Only
+//! `HH:MM:SS` on the console: it is a 115200-baud UART read on an 80-column
+//! terminal, the date and UTC offset are in the banner and ready report, and
+//! the per-service log files carry the full date, milliseconds and offset.
 
 use std::collections::HashMap;
 use std::fs::OpenOptions;
@@ -95,7 +101,7 @@ impl Console {
                                 } else {
                                     alert.tail.clear();
                                 }
-                                render(&alert, uptime())
+                                render(&alert, &Stamp::now())
                             }
                         });
                         if text.len() < BATCH_BYTES {
@@ -206,10 +212,38 @@ impl Level {
     }
 }
 
-/// Formats one log line for the console: uptime, source, coloured level,
+/// When a console line is written: kernel uptime, plus the local wall clock
+/// once it has been set.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Stamp {
+    /// Seconds since boot.
+    pub uptime: f64,
+    /// `HH:MM:SS` local time, `None` while the clock is unset.
+    pub clock: Option<String>,
+}
+
+impl Stamp {
+    pub fn now() -> Self {
+        Self {
+            uptime: uptime(),
+            clock: os::time::now().map(|time| time.clock()),
+        }
+    }
+
+    /// `[14:03:07] [   281.48]` or `[   281.48]`, without colour.
+    pub fn text(&self) -> String {
+        let uptime = self.uptime;
+        match &self.clock {
+            Some(clock) => format!("[{clock}] [{uptime:>9.2}]"),
+            None => format!("[{uptime:>9.2}]"),
+        }
+    }
+}
+
+/// Formats one log line for the console: stamp, source, coloured level,
 /// message. `line` is either a service's raw output line (no colour, level
 /// token first) or a supervisor event already coloured by `tracing`.
-pub fn render_log(uptime: f64, source: &str, line: &str, coloured: bool) -> String {
+pub fn render_log(at: &Stamp, source: &str, line: &str, coloured: bool) -> String {
     let body = if coloured {
         line.trim_start().to_owned()
     } else {
@@ -222,11 +256,17 @@ pub fn render_log(uptime: f64, source: &str, line: &str, coloured: bool) -> Stri
             .unwrap_or(trimmed);
         format!("{}{}{RESET} {message}", level.colour(), level.name())
     };
-    format!("{DIM}[{uptime:>9.2}]{RESET} {CYAN}{source:<10}{RESET} {body}{RESET}\r\n")
+    format!(
+        "{DIM}{}{RESET} {CYAN}{source:<10}{RESET} {body}{RESET}\r\n",
+        at.text()
+    )
 }
 
 /// Formats one alert. `\r\n` line ends, as on a raw serial line.
-pub fn render(alert: &Alert, uptime: f64) -> String {
+pub fn render(alert: &Alert, at: &Stamp) -> String {
+    let stamp = at.text();
+    // The tail is indented to line up after the stamp.
+    let indent = " ".repeat(stamp.chars().count() + 1);
     let mut out = String::new();
     let mut line = |s: String| {
         out.push_str(&s);
@@ -239,36 +279,38 @@ pub fn render(alert: &Alert, uptime: f64) -> String {
         format!("{RED}{BOLD} FAILURE ")
     };
     line(format!(
-        "{DIM}[{uptime:>9.2}]{RESET} {tag}{RESET} {BOLD}{}{RESET}: {RED}{}",
+        "{DIM}{stamp}{RESET} {tag}{RESET} {BOLD}{}{RESET}: {RED}{}",
         alert.service, alert.headline
     ));
     if !alert.tail.is_empty() {
         line(format!(
-            "{DIM}            last {} log lines of {}:",
+            "{DIM}{indent}last {} log lines of {}:",
             alert.tail.len(),
             alert.service
         ));
         for entry in &alert.tail {
-            line(format!("{DIM}            │{RESET} {YELLOW}{entry}"));
+            line(format!("{DIM}{indent}│{RESET} {YELLOW}{entry}"));
         }
-        line(format!(
-            "{DIM}            full log: logs/{}.log",
-            alert.service
-        ));
+        line(format!("{DIM}{indent}full log: logs/{}.log", alert.service));
     }
     out
 }
 
+/// Seconds since boot, as `/proc/uptime` shows them.
 pub fn uptime() -> f64 {
-    std::fs::read_to_string("/proc/uptime")
-        .ok()
-        .and_then(|t| t.split_whitespace().next()?.parse().ok())
-        .unwrap_or(0.0)
+    os::time::uptime().as_secs_f64()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn at(uptime: f64, clock: Option<&str>) -> Stamp {
+        Stamp {
+            uptime,
+            clock: clock.map(str::to_owned),
+        }
+    }
 
     fn strip(s: &str) -> String {
         let mut out = String::new();
@@ -292,7 +334,7 @@ mod tests {
             critical: true,
             tail: vec!["err open /dev/watchdog: busy".into()],
         };
-        let text = strip(&render(&alert, 12.5));
+        let text = strip(&render(&alert, &at(12.5, None)));
         assert_eq!(
             text,
             "[    12.50]  CRITICAL  wdt_feeder: killed by signal 9\r\n\
@@ -305,7 +347,7 @@ mod tests {
     #[test]
     fn service_lines_get_level_colour_and_source() {
         let text = strip(&render_log(
-            3.0,
+            &at(3.0, None),
             "web",
             "  INFO listening on 0.0.0.0:80",
             false,
@@ -314,10 +356,15 @@ mod tests {
             text,
             "[     3.00] web         INFO listening on 0.0.0.0:80\r\n"
         );
-        let text = strip(&render_log(3.0, "wifi", " WARN no lease yet", false));
+        let text = strip(&render_log(
+            &at(3.0, None),
+            "wifi",
+            " WARN no lease yet",
+            false,
+        ));
         assert_eq!(text, "[     3.00] wifi        WARN no lease yet\r\n");
         // A demo's plain println! is shown as INFO, unchanged.
-        let text = strip(&render_log(3.0, "rtsp", "frame 12", false));
+        let text = strip(&render_log(&at(3.0, None), "rtsp", "frame 12", false));
         assert_eq!(text, "[     3.00] rtsp        INFO frame 12\r\n");
     }
 
@@ -341,7 +388,35 @@ mod tests {
             critical: false,
             tail: vec![],
         };
-        let text = strip(&render(&alert, 1.0));
+        let text = strip(&render(&alert, &at(1.0, None)));
         assert_eq!(text, "[     1.00]  FAILURE  web: exited with 1\r\n");
+    }
+
+    #[test]
+    fn wall_clock_comes_first_once_set() {
+        let text = strip(&render_log(
+            &at(281.48, Some("14:03:07")),
+            "web",
+            "  INFO listening on 0.0.0.0:80",
+            false,
+        ));
+        assert_eq!(
+            text,
+            "[14:03:07] [   281.48] web         INFO listening on 0.0.0.0:80\r\n"
+        );
+        let alert = Alert {
+            service: "web".into(),
+            headline: "exited with 1".into(),
+            critical: false,
+            tail: vec!["err boom".into()],
+        };
+        let text = strip(&render(&alert, &at(1.0, Some("14:03:07"))));
+        assert_eq!(
+            text,
+            "[14:03:07] [     1.00]  FAILURE  web: exited with 1\r\n\
+             \x20                      last 1 log lines of web:\r\n\
+             \x20                      │ err boom\r\n\
+             \x20                      full log: logs/web.log\r\n"
+        );
     }
 }

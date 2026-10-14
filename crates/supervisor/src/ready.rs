@@ -21,13 +21,13 @@ use std::net::Ipv6Addr;
 use std::path::PathBuf;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use crate::console::Stamp;
+
 /// A service counts as up once it has run this long without restarting.
 const SETTLE: Duration = Duration::from_secs(3);
 /// Give up waiting and report what is missing after this long.
 const READY_TIMEOUT: Duration = Duration::from_secs(120);
 const POLL: Duration = Duration::from_secs(1);
-/// Clocks before this are unset (no RTC: the camera boots at 1970).
-const CLOCK_VALID_AFTER: u64 = 1_609_459_200; // 2021-01-01
 
 const RESET: &str = "\x1b[0m";
 const BOLD: &str = "\x1b[1m";
@@ -51,19 +51,21 @@ impl StartTime {
             .duration_since(UNIX_EPOCH)
             .ok()
             .map(|d| d.as_secs())
-            .filter(|secs| *secs >= CLOCK_VALID_AFTER);
+            // No RTC: the camera boots at 1970 until NTP sets the clock.
+            .filter(|secs| *secs >= os::time::CLOCK_VALID_FLOOR_UNIX as u64);
         Self {
             uptime: crate::console::uptime(),
             wall,
         }
     }
 
-    /// Banner rows: kernel boot and supervisor start.
+    /// Banner rows: kernel boot and supervisor start, in local time with
+    /// its UTC offset (`TZ` from `init.sh`).
     pub fn banner_rows(&self) -> [(&'static str, String); 2] {
         let boot = match self.wall {
             Some(wall) => format!(
                 "{}  {DIM}({:.2} s before start){RESET}",
-                utc(wall.saturating_sub(self.uptime as u64)),
+                local(wall.saturating_sub(self.uptime as u64)),
                 self.uptime
             ),
             None => format!(
@@ -72,7 +74,7 @@ impl StartTime {
             ),
         };
         let start = match self.wall {
-            Some(wall) => format!("{}  {DIM}(uptime {:.2} s){RESET}", utc(wall), self.uptime),
+            Some(wall) => format!("{}  {DIM}(uptime {:.2} s){RESET}", local(wall), self.uptime),
             None => format!("uptime {:.2} s", self.uptime),
         };
         [("Booted", boot), ("Started", start)]
@@ -134,14 +136,7 @@ pub async fn watch(
     let report = tokio::task::spawn_blocking(move || {
         let net = Network::probe(&wpa_dirs, &iface);
         let ports = service_ports(&statuses);
-        render(
-            &start,
-            crate::console::uptime(),
-            ready,
-            &statuses,
-            &net,
-            &ports,
-        )
+        render(&start, &Stamp::now(), ready, &statuses, &net, &ports)
     })
     .await;
     let Ok(report) = report else { return };
@@ -391,7 +386,7 @@ fn socket_inodes(pid: u32) -> Vec<u64> {
 
 fn render(
     start: &StartTime,
-    now_uptime: f64,
+    now: &Stamp,
     ready: bool,
     statuses: &[ServiceStatus],
     net: &Network,
@@ -404,17 +399,19 @@ fn render(
         out.push_str("\r\n");
     };
     let field = |name: &str, value: &str| format!("    {CYAN}{BOLD}{name:<10}{RESET} {value}");
+    let now_uptime = now.uptime;
+    let stamp = now.text();
     let took = now_uptime - start.uptime;
 
     line(String::new());
     if ready {
         line(format!(
-            "{DIM}[{now_uptime:>9.2}]{RESET} {BLACK_ON_GREEN} READY {RESET} {BOLD}{} ready in {took:.1} s{RESET} {DIM}({now_uptime:.1} s after kernel boot)",
+            "{DIM}{stamp}{RESET} {BLACK_ON_GREEN} READY {RESET} {BOLD}{} ready in {took:.1} s{RESET} {DIM}({now_uptime:.1} s after kernel boot)",
             crate::banner::PROJECT
         ));
     } else {
         line(format!(
-            "{DIM}[{now_uptime:>9.2}]{RESET} {WHITE_ON_RED} NOT READY {RESET} {BOLD}after {took:.0} s{RESET}, still waiting for: {}",
+            "{DIM}{stamp}{RESET} {WHITE_ON_RED} NOT READY {RESET} {BOLD}after {took:.0} s{RESET}, still waiting for: {}",
             missing(statuses, net)
         ));
     }
@@ -521,25 +518,9 @@ fn signal(dbm: i32) -> String {
     format!("{colour}{dbm} dBm{RESET} {DIM}({word})")
 }
 
-/// `YYYY-MM-DD HH:MM:SS UTC`.
-pub fn utc(epoch: u64) -> String {
-    let days = (epoch / 86_400) as i64;
-    let secs = epoch % 86_400;
-    let z = days + 719_468;
-    let era = z.div_euclid(146_097);
-    let doe = z.rem_euclid(146_097);
-    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
-    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
-    let mp = (5 * doy + 2) / 153;
-    let day = doy - (153 * mp + 2) / 5 + 1;
-    let month = if mp < 10 { mp + 3 } else { mp - 9 };
-    let year = yoe + era * 400 + i64::from(month <= 2);
-    format!(
-        "{year:04}-{month:02}-{day:02} {:02}:{:02}:{:02} UTC",
-        secs / 3600,
-        secs % 3600 / 60,
-        secs % 60
-    )
+/// `YYYY-MM-DD HH:MM:SS -0300`: Unix time `epoch` in the local zone.
+pub fn local(epoch: u64) -> String {
+    os::time::local(epoch as i64, 0).seconds()
 }
 
 #[cfg(test)]
@@ -648,8 +629,28 @@ mod tests {
     }
 
     #[test]
-    fn utc_formats_known_instants() {
-        assert_eq!(utc(0), "1970-01-01 00:00:00 UTC");
-        assert_eq!(utc(1791072000), "2026-10-04 00:00:00 UTC");
+    fn banner_rows_show_local_time_once_the_clock_is_set() {
+        let unset = StartTime {
+            uptime: 4.5,
+            wall: None,
+        };
+        let [(_, boot), (_, start)] = unset.banner_rows();
+        assert!(boot.contains("clock not set yet"), "{boot}");
+        assert_eq!(start, "uptime 4.50 s");
+
+        let set = StartTime {
+            uptime: 4.5,
+            wall: Some(1_791_997_387),
+        };
+        let [(_, boot), (_, start)] = set.banner_rows();
+        // The offset depends on the host's TZ; the shape does not.
+        let shape = |s: &str| {
+            let stamp = &s[..25];
+            assert!(stamp.starts_with("2026-10-1"), "{s}");
+            assert!(matches!(&stamp[20..21], "+" | "-"), "{s}");
+        };
+        shape(&boot);
+        shape(&start);
+        assert!(start.contains("(uptime 4.50 s)"), "{start}");
     }
 }

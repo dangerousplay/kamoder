@@ -39,12 +39,11 @@ use metrics::{describe_counter, describe_gauge, Unit};
 /// first (the owner is in Brazil), then the global pool.
 pub const DEFAULT_SERVERS: &str = "a.st1.ntp.br b.st1.ntp.br pool.ntp.org";
 
-/// Earliest time any reply may claim, as Unix seconds: 2026-10-01T00:00:00Z,
-/// shortly before this crate was written. A reply before it is a broken or
-/// hostile server, never the real time, so it is rejected (spec edge case
-/// "before the build date"). A constant, not the build machine's clock, so
-/// release builds stay reproducible; bump it now and then.
-pub const BUILD_FLOOR_UNIX: i64 = 1_790_812_800;
+/// Earliest time any reply may claim, as Unix seconds (2026-10-01T00:00:00Z).
+/// A reply before it is a broken or hostile server, never the real time, so
+/// it is rejected (spec edge case "before the build date"). The same floor
+/// below which log lines carry no wall time: one constant, owned by `os`.
+pub const BUILD_FLOOR_UNIX: i64 = os::time::CLOCK_VALID_FLOOR_UNIX;
 
 /// Offset measured on the last successful sync, before it was corrected.
 pub const METRIC_OFFSET: &str = "kamoder_ntp_offset_seconds";
@@ -97,12 +96,5 @@ mod tests {
             server_list("   "),
             ["a.st1.ntp.br", "b.st1.ntp.br", "pool.ntp.org"]
         );
-    }
-
-    #[test]
-    fn floor_is_2026_10_01() {
-        // 56 years of days, 14 of them leap days, plus Jan..Sep 2026.
-        let days = 56 * 365 + 14 + (31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30);
-        assert_eq!(BUILD_FLOOR_UNIX, days * 86_400);
     }
 }

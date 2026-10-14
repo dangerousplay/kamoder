@@ -76,6 +76,11 @@ const Line = React.memo(function Line({ line }: { line: LogLine }) {
         KIND_CLASS[line.kind]
       )}
     >
+      {line.wall !== undefined && (
+        <span className="text-muted-foreground select-none" title={line.wall}>
+          [{line.wall.replace(/ [+-]\d{4}$/, "")}]{" "}
+        </span>
+      )}
       {line.stamp !== undefined && (
         <span className="text-muted-foreground select-none">
           [{line.stamp.padStart(9)}]{" "}

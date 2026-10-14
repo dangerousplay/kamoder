@@ -7,6 +7,7 @@
 
 pub mod compat;
 pub mod shutdown;
+pub mod time;
 pub mod watchdog;
 
 pub use watchdog::CharDevWatchdog;

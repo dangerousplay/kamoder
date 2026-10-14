@@ -18,7 +18,7 @@ FIRMWARE = ("libc.so.0", "ld-uClibc.so.0", "ld-uClibc.so.1")
 
 def binaries(camera) -> list[str]:
     # One name per line. The serial console also carries kernel and
-    # supervisor log lines (`[  281.48] …`) that can interleave with the
+    # supervisor log lines (`[14:03:07] [  281.48] …`) that can interleave with the
     # output; no binary name starts with `[`.
     out = camera.check(f'for f in {RUST}/bin/*; do echo "${{f##*/}}"; done')
     return [name for name in out.splitlines() if name and not name.startswith("[")]

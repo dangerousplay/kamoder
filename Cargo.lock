@@ -3468,6 +3468,7 @@ dependencies = [
  "file-rotate",
  "metrics",
  "metrics-exporter-prometheus",
+ "os",
  "snafu",
  "tracing",
  "tracing-subscriber",

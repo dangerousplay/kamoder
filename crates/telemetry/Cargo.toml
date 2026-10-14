@@ -9,6 +9,9 @@ license.workspace = true
 publish = false
 
 [dependencies]
+# The wall-clock/uptime prefix of `ANYKA_LOG_FILE` lines, shared with the
+# supervisor's per-service log files.
+os.workspace = true
 metrics.workspace = true
 snafu.workspace = true
 tracing.workspace = true

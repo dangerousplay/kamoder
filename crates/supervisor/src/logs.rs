@@ -164,7 +164,7 @@ pub fn start(
                         if let (Some(console), Some(threshold)) = (&console, console_level) {
                             if Level::of_line(&line) <= threshold {
                                 console.print(console::render_log(
-                                    console::uptime(),
+                                    &console::Stamp::now(),
                                     &service,
                                     &line,
                                     false,
@@ -260,11 +260,9 @@ fn write_line(
         )
     });
 
-    // Monotonic milliseconds since boot rather than a wall clock: the camera
-    // has no RTC and reads as 1970 until NTP lands, so a timestamp would be
-    // actively misleading. Whatever collects these can add a real time.
-    let uptime = uptime_ms();
-    if writeln!(file, "[{uptime:>10}] {tag} {line}").is_err() {
+    let text = format_line(os::time::LogPrefix::now(), tag, line);
+    // One write per line, so rotation never splits one.
+    if file.write_all(text.as_bytes()).is_err() {
         // Nothing useful to do — the SD card may be full or gone. Drop the
         // line rather than take the supervisor down with it.
         counter!("kamoder_supervisor_log_errors_total", "service" => service.to_owned())
@@ -272,15 +270,40 @@ fn write_line(
     }
 }
 
-/// Milliseconds since boot, read from `/proc/uptime`.
-fn uptime_ms() -> u64 {
-    std::fs::read_to_string("/proc/uptime")
-        .ok()
-        .and_then(|text| {
-            text.split_whitespace()
-                .next()
-                .and_then(|seconds| seconds.parse::<f64>().ok())
-        })
-        .map(|seconds| (seconds * 1000.0) as u64)
-        .unwrap_or(0)
+/// One log file line:
+///
+/// ```text
+/// [2026-10-14 14:03:07.123 -0300] [     81234] out  INFO listening
+/// [     81234] out  INFO listening                (clock not set yet)
+/// ```
+///
+/// Local wall time once NTP has set the clock, and always the milliseconds
+/// since boot: the camera has no RTC and reads as 1970 until NTP lands, when
+/// a wall time would be actively misleading (see [`os::time::LogPrefix`]).
+/// The web log viewer parses both shapes.
+fn format_line(prefix: os::time::LogPrefix, tag: &str, line: &str) -> String {
+    format!("{prefix} {tag} {line}\n")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use os::time::{LocalTime, LogPrefix};
+
+    #[test]
+    fn line_has_wall_time_once_the_clock_is_set() {
+        let wall = LocalTime::from_unix(1_791_997_387, 123, -10_800);
+        let prefix = |wall| LogPrefix {
+            wall,
+            uptime_ms: 81_234,
+        };
+        assert_eq!(
+            format_line(prefix(Some(wall)), "out", " INFO listening"),
+            "[2026-10-14 14:03:07.123 -0300] [     81234] out  INFO listening\n"
+        );
+        assert_eq!(
+            format_line(prefix(None), "err", "boom"),
+            "[     81234] err boom\n"
+        );
+    }
 }

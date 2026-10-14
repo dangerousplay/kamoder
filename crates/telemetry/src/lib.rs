@@ -222,10 +222,13 @@ impl Write for RotatingLog {
 /// is written there and rotated by size — which is what the camera wants,
 /// since stderr from a boot script otherwise ends up nowhere.
 ///
-/// Timestamps are deliberately omitted: the camera has no RTC and boots at the
-/// epoch until NTP runs, so a wall clock in the log is actively misleading.
-/// Whatever reads the log — `logread`, a serial console, a collector — stamps
-/// it on arrival.
+/// Timestamps: stderr carries none, because under the supervisor stderr is a
+/// pipe into the service's log file and the supervisor stamps every line it
+/// writes there (a second stamp would only repeat it). The `ANYKA_LOG_FILE`
+/// mode — the supervisor's own `supervisor.log` — has no one else to stamp
+/// it, so it gets the same prefix ([`FileStamp`]): local wall time once NTP
+/// has set the clock (the camera has no RTC and boots at 1970), and always
+/// milliseconds since boot.
 fn install_tracing(console: Option<(ConsoleSink, String)>) {
     use tracing_subscriber::filter::EnvFilter;
     use tracing_subscriber::fmt;
@@ -234,11 +237,12 @@ fn install_tracing(console: Option<(ConsoleSink, String)>) {
     use tracing_subscriber::Layer;
 
     let filter = EnvFilter::try_from_env(LOG_ENV).unwrap_or_else(|_| EnvFilter::new("info"));
-    let main = fmt::layer().without_time().with_target(false);
+    let main = fmt::layer().with_target(false);
     let main = match log_file() {
         // No ANSI: this is going into a file that will be read over a
         // serial console or copied off the card.
         Some(writer) => main
+            .with_timer(FileStamp)
             .with_ansi(false)
             .with_writer(fmt::writer::BoxMakeWriter::new(move || writer.clone()))
             .with_filter(filter)
@@ -248,7 +252,8 @@ fn install_tracing(console: Option<(ConsoleSink, String)>) {
             // pipe into the service's log file, and escape codes there make
             // the logs unreadable and ungreppable.
             use std::io::IsTerminal;
-            main.with_ansi(std::io::stderr().is_terminal())
+            main.without_time()
+                .with_ansi(std::io::stderr().is_terminal())
                 .with_writer(fmt::writer::BoxMakeWriter::new(std::io::stderr))
                 .with_filter(filter)
                 .boxed()
@@ -272,6 +277,20 @@ fn install_tracing(console: Option<(ConsoleSink, String)>) {
         .with(main)
         .with(console)
         .try_init();
+}
+
+/// The `ANYKA_LOG_FILE` line prefix, the same one the supervisor writes in
+/// front of every service's lines ([`os::time::LogPrefix`]):
+///
+/// ```text
+/// [2026-10-14 14:03:07.123 -0300] [     81234]  INFO supervisor started
+/// ```
+struct FileStamp;
+
+impl tracing_subscriber::fmt::time::FormatTime for FileStamp {
+    fn format_time(&self, w: &mut tracing_subscriber::fmt::format::Writer<'_>) -> std::fmt::Result {
+        write!(w, "{}", os::time::LogPrefix::now())
+    }
 }
 
 /// Collects one event's bytes and hands them to the sink as a line.
@@ -437,4 +456,24 @@ fn write_atomically(path: &Path, contents: &[u8]) -> std::io::Result<()> {
         file.sync_all()?;
     }
     std::fs::rename(&temporary, path)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tracing_subscriber::fmt::{format::Writer, time::FormatTime};
+
+    #[test]
+    fn log_file_lines_get_wall_time_and_uptime() {
+        let mut out = String::new();
+        FileStamp.format_time(&mut Writer::new(&mut out)).unwrap();
+        // The host clock is set: `[YYYY-MM-DD HH:MM:SS.mmm ±HHMM] [  uptime]`.
+        assert_eq!(&out[..1], "[");
+        assert_eq!(&out[30..33], "] [", "{out}");
+        assert!(out.ends_with(']'), "{out}");
+        assert!(
+            out[33..out.len() - 1].trim().parse::<u64>().is_ok(),
+            "{out}"
+        );
+    }
 }

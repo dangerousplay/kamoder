@@ -201,7 +201,7 @@ fn main() -> Result<()> {
     let console_sink = console.clone().zip(console_level).map(|(console, level)| {
         let sink: telemetry::ConsoleSink = std::sync::Arc::new(move |line: String| {
             console.print(console::render_log(
-                console::uptime(),
+                &console::Stamp::now(),
                 "supervisor",
                 &line,
                 true,

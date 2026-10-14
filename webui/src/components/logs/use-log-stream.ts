@@ -15,7 +15,10 @@ export type LineKind = "out" | "err" | "sup" | "plain" | "marker"
 export interface LogLine {
   id: number
   kind: LineKind
-  /** Supervisor uptime prefix, e.g. "  12345", when the line has one. */
+  /** Local wall time, e.g. "2026-10-14 14:03:07.123 -0300", when the line
+   *  was written after the clock was set. */
+  wall?: string
+  /** Uptime prefix (ms, or s in init.log), e.g. "12345", when the line has one. */
   stamp?: string
   text: string
 }
@@ -28,8 +31,13 @@ export type StreamStatus =
   | { kind: "error"; message: string }
   | { kind: "idle" }
 
-// `[  uptime_ms] out|err|sup text`
-const LINE_RE = /^\[\s*(\d+)\]\s(out|err|sup)\s?(.*)$/
+// Service logs:  `[2026-10-14 14:03:07.123 -0300] [  uptime_ms] out|err|sup text`
+// supervisor.log: `[2026-10-14 14:03:07.123 -0300] [  uptime_ms]  INFO text`
+// init.log:       `[2026-10-14 14:03:07 -0300] [123.45] init: text`
+// The wall time is absent before NTP has set the clock, and in lines written
+// by older builds (`[  uptime_ms] out text`); both shapes stay on the card.
+const LINE_RE =
+  /^(?:\[(\d{4}-\d\d-\d\d \d\d:\d\d:\d\d(?:\.\d+)? [+-]\d{4})\] )?\[\s*(\d+(?:\.\d+)?)\]\s(?:(out|err|sup)(?:\s|$))?(.*)$/
 
 let nextId = 1
 
@@ -38,9 +46,10 @@ function parse(raw: string): LogLine {
   if (m) {
     return {
       id: nextId++,
-      kind: m[2] as LineKind,
-      stamp: m[1],
-      text: m[3] ?? "",
+      kind: (m[3] as LineKind | undefined) ?? "plain",
+      wall: m[1],
+      stamp: m[2],
+      text: m[4] ?? "",
     }
   }
   return { id: nextId++, kind: "plain", text: raw }

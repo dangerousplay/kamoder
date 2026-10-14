@@ -80,11 +80,19 @@ MAX_SUPERVISOR_RESTARTS=10
 # Logging
 # --------------------------------------------------------------------------
 
-# Milliseconds since boot. The camera has no RTC, so a wall clock would read
-# 1970 until NTP lands.
+# `[2026-10-14 14:03:07 -0300] [123.45]`: local wall time (TZ, once set
+# below) and seconds since boot. The camera has no RTC and reads 1970 until
+# the ntp service sets the clock, so the wall time is left out while the year
+# is before 2026 (os::time::CLOCK_VALID_FLOOR_UNIX is 2026-10-01; the year is
+# what a `case` can check without arithmetic). Uptime is always there: it is
+# the only time before the first sync and orders lines across the clock step.
 uptime_stamp() {
     read -r up _ < /proc/uptime 2>/dev/null || up="?"
-    printf '[%s]' "$up"
+    wall=$(date '+%Y-%m-%d %H:%M:%S %z' 2>/dev/null) || wall=
+    case $wall in
+        19* | 20[01]* | 202[0-5]* | '') printf '[%s]' "$up" ;;
+        *) printf '[%s] [%s]' "$wall" "$up" ;;
+    esac
 }
 
 log() {
