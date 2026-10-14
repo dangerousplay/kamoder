@@ -10,15 +10,24 @@
 # Record every call in RAM, before anything can fail: /tmp is always
 # writable, the card may not be mounted yet. This is how to tell whether the
 # firmware ran this hook at all on a given boot.
-read -r _up _ < /proc/uptime
-echo "[$_up] config.sh called as $0 $*" >> /tmp/anyka_config_sh.log
+# "[uptime]", or "[local time] [uptime]" once the clock has been set (NTP):
+# at boot the camera has no RTC and reads 1970, so only uptime means anything.
+stamp() {
+  read -r _up _ < /proc/uptime
+  _wall=$(date '+%Y-%m-%d %H:%M:%S %z' 2>/dev/null) || _wall=
+  case $_wall in
+    19* | 20[01]* | 202[0-5]* | '') printf '[%s]' "$_up" ;;
+    *) printf '[%s] [%s]' "$_wall" "$_up" ;;
+  esac
+}
+echo "$(stamp) config.sh called as $0 $*" >> /tmp/anyka_config_sh.log
 
 # On the AV100, /ipc/setup.sh mounts the card only to look for vendor files
 # and unmounts it again, so a hook that runs later can find it unmounted.
 # Mount it here unless something already has.
 if ! grep -q '^/dev/mmcblk0' /proc/mounts && [ -b /dev/mmcblk0p1 ]; then
   mkdir -p /mnt/disc1
-  mount /dev/mmcblk0p1 /mnt/disc1 && echo "[$_up] config.sh mounted the card" >> /tmp/anyka_config_sh.log
+  mount /dev/mmcblk0p1 /mnt/disc1 && echo "$(stamp) config.sh mounted the card" >> /tmp/anyka_config_sh.log
 fi
 
 # The card is /mnt/disc1 on the AV100 (/mnt is a 16 MB tmpfs there) and /mnt
@@ -46,8 +55,7 @@ if [ -n "$SD" ] && [ "$run_rust" = 1 ] && [ -f "$RUST/init.sh" ]; then
     fi
   done
   {
-    read -r up _ < /proc/uptime
-    echo "[$up] config.sh: rust stack from $RUST"
+    echo "$(stamp) config.sh: rust stack from $RUST"
 
     # Rescue shell first: if anything below fails, this is the way back in.
     if [ "$start_telnetd" = 1 ]; then
@@ -58,7 +66,8 @@ if [ -n "$SD" ] && [ "$run_rust" = 1 ] && [ -f "$RUST/init.sh" ]; then
     # reconciles it continuously, with rollback to the last working network.
     # Never /ipc/ipc: it resets the Wi-Fi configuration.
     sh "$RUST/init.sh"
-    echo "[$up] config.sh: init.sh returned $?"
+    status=$?
+    echo "$(stamp) config.sh: init.sh returned $status"
   } >> "$BOOT_LOG" 2>&1
   exit 0
 fi
