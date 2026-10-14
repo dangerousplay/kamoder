@@ -142,7 +142,6 @@ args = [
     "--port", "8000",
     "--secret", "etc/onvif.secret",
     "--rtsp-port", "554",
-    "--rtsp-path", "vs0",
     "--web-port", "80",
     "--snapshot-path", "/api/snapshot.jpg",
     "--ptz-presets", "etc/ptz-presets.json",

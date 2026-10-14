@@ -44,6 +44,11 @@ ptz-proto.workspace = true
 # day/night mode. Protocol only, no GPIO code linked.
 lights-proto.workspace = true
 serde_json.workspace = true
+# The producer's `/status` types and the RTSP naming/port (PRO-02/03).
+video-proto.workspace = true
+# Sensors, their configured streams and the model name, from the board
+# profile.
+board.workspace = true
 
 [build-dependencies]
 # The SDK PTZ backend's `$ORIGIN` RPATH, only with the `sdk` feature (build.rs).

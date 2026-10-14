@@ -30,7 +30,7 @@ from onvif import ONVIFCamera
 from onvif.exceptions import ONVIFError
 from zeep.exceptions import Fault
 
-PROFILE = "main"
+PROFILE = "Profile_vs0"
 SOAP_ENV = "http://www.w3.org/2003/05/soap-envelope"
 
 
@@ -243,7 +243,7 @@ def test_stream_uri(loop, media):
 
 def test_snapshot_uri(loop, media):
     answer = loop.run_until_complete(media.GetSnapshotUri({"ProfileToken": PROFILE}))
-    assert re.fullmatch(r"http://[\d.]+(:80)?/api/snapshot\.jpg", answer.Uri), answer.Uri
+    assert re.fullmatch(r"http://[\d.]+(:80)?/api/snapshot\.jpg\?camera=0", answer.Uri), answer.Uri
 
 
 # --- PTZ service -------------------------------------------------------------------

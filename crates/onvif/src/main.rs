@@ -20,6 +20,16 @@
 //! supplies what only the camera knows: its identity, its address, where
 //! `rtsp` and `web` serve video.
 //!
+//! The board profile (`board::current()`, normally the supervisor's
+//! `KAMODER_BOARD` handoff) names the sensors and their configured streams;
+//! the producer's `/status` (`--producer`) says what is actually encoded.
+//! Without a board profile the service refuses to start: it would not know
+//! which streams exist. Device identity: the model is the profile's
+//! description (else its name), the hardware id the kernel's cpuinfo
+//! `Hardware` line (else the profile name), and the manufacturer is
+//! "Kamoder" — the firmware answering, since nothing on the board reliably
+//! names the camera's vendor.
+//!
 //! Why things are the way they are:
 //!
 //! - **A separate process on its own port (8000)**, not a route in web:
@@ -54,6 +64,7 @@ mod device;
 mod imaging;
 mod media;
 mod net;
+mod producer;
 mod ptz;
 mod ptz_soap;
 mod ptz_socket;
@@ -66,6 +77,7 @@ use auth::onvif_secret as secret;
 use announce::{Advert, Announcer};
 use clap::Parser;
 use eyre::{Context, Result};
+use media::VideoStream;
 use net::AddressSource;
 use onvif_device_rs::config::DeviceConfig;
 use ptz::PtzMode;
@@ -96,16 +108,18 @@ struct Cli {
     /// camera and move its PTZ head.
     #[arg(long)]
     no_auth: bool,
-    /// Port of the RTSP server (rtsp).
-    #[arg(long, default_value_t = 554)]
+    /// Port of the RTSP server (rtsp). Sensor N is served at `/vsN`.
+    #[arg(long, default_value_t = video_proto::DEFAULT_RTSP_PORT)]
     rtsp_port: u16,
-    /// RTSP path of the main stream.
-    #[arg(long, default_value = "vs0")]
-    rtsp_path: String,
+    /// `host:port` of the video producer (the camera service), whose
+    /// `/status` gives each sensor's stream parameters. Empty: use the board
+    /// profile's values only.
+    #[arg(long, default_value = video_proto::DEFAULT_PRODUCER)]
+    producer: String,
     /// HTTP port of web, which serves the snapshot.
     #[arg(long, default_value_t = 80)]
     web_port: u16,
-    /// Snapshot path on web.
+    /// Snapshot path on web; `?camera=N` is appended per sensor.
     #[arg(long, default_value = "/api/snapshot.jpg")]
     snapshot_path: String,
     /// Friendly name, shown by NVRs and in the discovery scopes.
@@ -160,8 +174,24 @@ fn serve(cli: Cli) -> Result<()> {
         Some(Secret::load(&cli.secret)?)
     };
 
+    let board = board::current().wrap_err(
+        "cannot determine the board profile (set KAMODER_BOARD, or BOARD and \
+         KAMODER_BOARDS_DIR, or install boards/ next to bin/)",
+    )?;
+    let video = board_streams(&board.profile.video);
+    if video.is_empty() {
+        eyre::bail!("board profile {} lists no video sensor", board.name);
+    }
+    tracing::info!(board = %board.name, sensors = video.len(), "board profile");
+
     let mac = net::mac_address(&mac_candidates(cli.interface.as_deref()));
-    let identity = device_identity(&cli.name, mac.as_deref());
+    let cpuinfo = std::fs::read_to_string("/proc/cpuinfo").ok();
+    let identity = device_identity(
+        &cli.name,
+        mac.as_deref(),
+        &board.profile,
+        cpuinfo.as_deref(),
+    );
     let source = match (&cli.address, &cli.interface) {
         (Some(address), _) => AddressSource::Fixed(*address),
         (None, Some(name)) => AddressSource::Interface(name.clone()),
@@ -194,7 +224,8 @@ fn serve(cli: Cli) -> Result<()> {
         device_ip: initial_ip.unwrap_or(Ipv4Addr::LOCALHOST).to_string(),
         identity: identity.clone(),
         rtsp_port: cli.rtsp_port,
-        rtsp_path: leading_slash(&cli.rtsp_path),
+        producer: (!cli.producer.is_empty()).then(|| cli.producer.clone()),
+        video,
         web_port: cli.web_port,
         snapshot_path: leading_slash(&cli.snapshot_path),
         secret,
@@ -269,15 +300,35 @@ fn mac_candidates(interface: Option<&str>) -> Vec<&str> {
     names
 }
 
-fn device_identity(name: &str, mac: Option<&str>) -> DeviceConfig {
-    let model = std::fs::read_to_string("/proc/cpuinfo")
-        .ok()
-        .and_then(|text| net::cpuinfo_hardware(&text))
-        .unwrap_or_else(|| "AK3918".to_owned());
+/// The board's stream settings, one per sensor (the Media profiles while
+/// the producer has none).
+fn board_streams(video: &board::Video) -> Vec<VideoStream> {
+    video
+        .sensors
+        .iter()
+        .map(|&index| VideoStream::from_board(index, &video.stream_for(index)))
+        .collect()
+}
+
+/// What GetDeviceInformation reports; see the module doc.
+fn device_identity(
+    name: &str,
+    mac: Option<&str>,
+    board: &board::Profile,
+    cpuinfo: Option<&str>,
+) -> DeviceConfig {
+    let model = board
+        .description
+        .clone()
+        .filter(|d| !d.is_empty())
+        .unwrap_or_else(|| board.name.clone());
+    let hardware_id = cpuinfo
+        .and_then(net::cpuinfo_hardware)
+        .unwrap_or_else(|| board.name.clone());
     DeviceConfig {
         name: name.to_owned(),
-        manufacturer: "Anyka".to_owned(),
-        hardware_id: model.clone(),
+        manufacturer: "Kamoder".to_owned(),
+        hardware_id,
         model,
         firmware: env!("CARGO_PKG_VERSION").to_owned(),
         serial_number: mac.unwrap_or_default().to_owned(),
@@ -306,7 +357,7 @@ mod cli_tests {
         assert_eq!(cli.port, 8000);
         assert_eq!(cli.secret, PathBuf::from("etc/onvif.secret"));
         assert_eq!(cli.rtsp_port, 554);
-        assert_eq!(cli.rtsp_path, "vs0");
+        assert_eq!(cli.producer, "127.0.0.1:3000");
         assert_eq!(cli.web_port, 80);
         assert_eq!(cli.snapshot_path, "/api/snapshot.jpg");
         assert_eq!(cli.ptz, PtzMode::Auto);
@@ -380,17 +431,52 @@ mod cli_tests {
 
     #[test]
     fn paths_get_one_leading_slash() {
-        assert_eq!(leading_slash("vs0"), "/vs0");
+        assert_eq!(leading_slash("api"), "/api");
         assert_eq!(leading_slash("/api/snapshot.jpg"), "/api/snapshot.jpg");
         assert_eq!(leading_slash("//x"), "/x");
     }
 
+    fn av100() -> board::Profile {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../boards/anyka-av100-ptz.toml");
+        board::load(&path).unwrap()
+    }
+
     #[test]
     fn identity_is_valid_for_the_library() {
-        let identity = device_identity("Cam", Some("001a2b3c4d5e"));
-        assert_eq!(identity.manufacturer, "Anyka");
+        let board = av100();
+        let cpuinfo = "Processor\t: ARM926EJ-S rev 5 (v5l)\nHardware\t: AK3918AV100\n";
+        let identity = device_identity("Cam", Some("001a2b3c4d5e"), &board, Some(cpuinfo));
+        assert_eq!(identity.manufacturer, "Kamoder");
+        assert_eq!(identity.model, board.description.clone().unwrap());
+        assert_eq!(identity.hardware_id, "AK3918AV100");
         assert_eq!(identity.firmware, env!("CARGO_PKG_VERSION"));
         assert_eq!(identity.serial_number, "001a2b3c4d5e");
         identity.validate().unwrap();
+
+        // No cpuinfo, no description: the profile name stands in.
+        let board = board::Profile {
+            description: None,
+            ..board
+        };
+        let identity = device_identity("Cam", None, &board, None);
+        assert_eq!(identity.model, "anyka-av100-ptz");
+        assert_eq!(identity.hardware_id, "anyka-av100-ptz");
+        identity.validate().unwrap();
+    }
+
+    #[test]
+    fn one_stream_per_board_sensor() {
+        let streams = board_streams(&av100().video);
+        assert_eq!(streams.iter().map(|s| s.index).collect::<Vec<_>>(), [0, 1]);
+        assert_eq!(
+            (
+                streams[1].width,
+                streams[1].height,
+                streams[1].fps,
+                streams[1].kbps
+            ),
+            (1280, 720, 15, 2048)
+        );
     }
 }

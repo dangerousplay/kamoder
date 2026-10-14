@@ -3,7 +3,8 @@
 
 use crate::device::{Endpoints, GetCapabilities, GetServices};
 use crate::imaging;
-use crate::media::{self, Media};
+use crate::media::{self, Media, VideoStream};
+use crate::producer::Producer;
 use crate::ptz::Ptz;
 use crate::ptz_soap;
 use crate::secret::Secret;
@@ -14,15 +15,6 @@ use onvif_device_rs::metrics::MetricsHooks;
 use onvif_device_rs::server::{OnvifConfig, OnvifServer};
 use onvif_device_rs::types::OnvifError;
 use std::sync::Arc;
-
-/// The main channel as `rtsp_demo` encodes it by default.
-pub const VIDEO_WIDTH: u32 = 1280;
-pub const VIDEO_HEIGHT: u32 = 720;
-pub const VIDEO_FPS: u32 = 25;
-pub const VIDEO_BITRATE: u32 = 2_000_000;
-
-/// Token of the single media profile.
-pub const PROFILE_TOKEN: &str = "main";
 
 /// Device service actions answered by the library's `DeviceHandler`, whose
 /// output for these is already namespace-qualified. GetCapabilities and
@@ -40,8 +32,12 @@ pub struct Settings {
     pub device_ip: String,
     pub identity: DeviceConfig,
     pub rtsp_port: u16,
-    /// With a leading `/`.
-    pub rtsp_path: String,
+    /// The video producer's `host:port`, whose `/status` gives each
+    /// sensor's stream parameters; `None` = use `video` only.
+    pub producer: Option<String>,
+    /// The board's streams, one per sensor: the Media profiles while the
+    /// producer has none. Must not be empty.
+    pub video: Vec<VideoStream>,
     pub web_port: u16,
     /// With a leading `/`.
     pub snapshot_path: String,
@@ -75,10 +71,17 @@ pub fn build(settings: &Settings) -> Result<OnvifServer, OnvifError> {
         read_timeout: std::time::Duration::from_secs(10),
         ..Default::default()
     };
+    let first = settings
+        .video
+        .first()
+        .ok_or_else(|| OnvifError::Internal("the board profile lists no video sensor".into()))?;
+    // The motor turns the whole head; its configuration hangs off the first
+    // sensor's profile, which is what single-stream clients pick.
+    let ptz_profile = media::profile_token(first.index);
     let mut server = OnvifServer::new(&config).with_metrics(Arc::new(Metrics));
 
     if let Some(motor) = &settings.ptz {
-        ptz_soap::register(&mut server, motor, PROFILE_TOKEN);
+        ptz_soap::register(&mut server, motor, &ptz_profile);
     }
     let ptz = settings.ptz.is_some();
     if let Some(lights) = &settings.lights {
@@ -111,17 +114,14 @@ pub fn build(settings: &Settings) -> Result<OnvifServer, OnvifError> {
     media::register(
         &mut server,
         Media {
-            profile_token: PROFILE_TOKEN.into(),
-            width: VIDEO_WIDTH,
-            height: VIDEO_HEIGHT,
-            fps: VIDEO_FPS,
-            bitrate: VIDEO_BITRATE,
+            producer: settings.producer.as_deref().map(Producer::new),
+            fallback: settings.video.clone(),
             rtsp_port: settings.rtsp_port,
-            rtsp_path: settings.rtsp_path.clone(),
             snapshot_port: settings.web_port,
             snapshot_path: settings.snapshot_path.clone(),
             device_ip: settings.device_ip.clone(),
-            ptz,
+            ptz_profile: ptz.then_some(ptz_profile),
+            on_fallback: Default::default(),
         },
     );
 
@@ -203,7 +203,7 @@ pub mod tests {
     pub fn identity() -> DeviceConfig {
         DeviceConfig {
             name: "Test camera".into(),
-            manufacturer: "Anyka".into(),
+            manufacturer: "Kamoder".into(),
             model: "AK3918AV100".into(),
             firmware: "0.1.0".into(),
             hardware_id: "AK3918AV100".into(),
@@ -217,7 +217,16 @@ pub mod tests {
             device_ip: "192.0.2.10".into(),
             identity: identity(),
             rtsp_port: 554,
-            rtsp_path: "/vs0".into(),
+            producer: None,
+            video: vec![VideoStream {
+                index: 0,
+                width: 1280,
+                height: 720,
+                fps: 25,
+                kbps: 2000,
+                gop: 50,
+                profile: "main".into(),
+            }],
             web_port: 80,
             snapshot_path: "/api/snapshot.jpg".into(),
             secret: Some(Secret {
@@ -351,7 +360,7 @@ pub mod tests {
         let (status, body) = call(addr, "", "<tds:GetDeviceInformation/>").await;
         assert_eq!(status, 401, "{body}");
         assert!(body.contains("soap:Fault"), "{body}");
-        assert!(!body.contains("Anyka"), "{body}");
+        assert!(!body.contains("Kamoder"), "{body}");
 
         // (c) PasswordDigest.
         let (status, body) = call(
@@ -362,7 +371,7 @@ pub mod tests {
         .await;
         assert_eq!(status, 200, "{body}");
         let info: tds::GetDeviceInformationResponse = parse(&body);
-        assert_eq!(info.manufacturer, "Anyka");
+        assert_eq!(info.manufacturer, "Kamoder");
         assert_eq!(info.model, "AK3918AV100");
         assert_eq!(info.serial_number, "001a2b3c4d5e");
 
@@ -393,7 +402,7 @@ pub mod tests {
         let (status, body) = call(
             addr,
             &auth(),
-            r#"<trt:GetStreamUri><trt:StreamSetup><tt:Stream>RTP-Unicast</tt:Stream><tt:Transport><tt:Protocol>RTSP</tt:Protocol></tt:Transport></trt:StreamSetup><trt:ProfileToken>main</trt:ProfileToken></trt:GetStreamUri>"#,
+            r#"<trt:GetStreamUri><trt:StreamSetup><tt:Stream>RTP-Unicast</tt:Stream><tt:Transport><tt:Protocol>RTSP</tt:Protocol></tt:Transport></trt:StreamSetup><trt:ProfileToken>Profile_vs0</trt:ProfileToken></trt:GetStreamUri>"#,
         )
         .await;
         assert_eq!(status, 200, "{body}");
@@ -403,12 +412,15 @@ pub mod tests {
         let (status, body) = call(
             addr,
             &auth(),
-            "<trt:GetSnapshotUri><trt:ProfileToken>main</trt:ProfileToken></trt:GetSnapshotUri>",
+            "<trt:GetSnapshotUri><trt:ProfileToken>Profile_vs0</trt:ProfileToken></trt:GetSnapshotUri>",
         )
         .await;
         assert_eq!(status, 200, "{body}");
         let uri: trt::GetSnapshotUriResponse = parse(&body);
-        assert_eq!(uri.media_uri.uri, "http://192.0.2.10:80/api/snapshot.jpg");
+        assert_eq!(
+            uri.media_uri.uri,
+            "http://192.0.2.10:80/api/snapshot.jpg?camera=0"
+        );
         let (status, _) = call(
             addr,
             &auth(),
@@ -422,7 +434,7 @@ pub mod tests {
         let profiles: trt::GetProfilesResponse = parse(&body);
         assert_eq!(profiles.profiles.len(), 1);
         let profile = &profiles.profiles[0];
-        assert_eq!(profile.token, "main");
+        assert_eq!(profile.token, "Profile_vs0");
         let encoder = profile.video_encoder_configuration.as_ref().unwrap();
         assert!(matches!(encoder.encoding, tt::VideoEncodingType::H264));
         assert_eq!(encoder.resolution.width, 1280);
@@ -542,7 +554,7 @@ pub mod tests {
         let compatible: trt::GetCompatibleVideoEncoderConfigurationsResponse = parse(&ok(call(
             addr,
             &auth(),
-            "<trt:GetCompatibleVideoEncoderConfigurations><trt:ProfileToken>main</trt:ProfileToken></trt:GetCompatibleVideoEncoderConfigurations>",
+            "<trt:GetCompatibleVideoEncoderConfigurations><trt:ProfileToken>Profile_vs0</trt:ProfileToken></trt:GetCompatibleVideoEncoderConfigurations>",
         )
         .await));
         assert_eq!(compatible.configurations.len(), 1);
@@ -606,7 +618,7 @@ pub mod tests {
             call(
                 addr,
                 &text_header("nvr", "correct horse"),
-                "<tptz:GetStatus><tptz:ProfileToken>main</tptz:ProfileToken></tptz:GetStatus>",
+                "<tptz:GetStatus><tptz:ProfileToken>Profile_vs0</tptz:ProfileToken></tptz:GetStatus>",
             )
             .await
         }
@@ -677,7 +689,7 @@ pub mod tests {
         assert_eq!(ptz_status(&body), (0.0, 0.0, "IDLE"));
 
         // ContinuousMove, then Stop.
-        ok(call(addr, &auth(), r#"<tptz:ContinuousMove><tptz:ProfileToken>main</tptz:ProfileToken><tptz:Velocity><tt:PanTilt x="1" y="0" space="http://www.onvif.org/ver10/tptz/PanTiltSpaces/VelocityGenericSpace"/></tptz:Velocity><tptz:Timeout>PT60S</tptz:Timeout></tptz:ContinuousMove>"#).await);
+        ok(call(addr, &auth(), r#"<tptz:ContinuousMove><tptz:ProfileToken>Profile_vs0</tptz:ProfileToken><tptz:Velocity><tt:PanTilt x="1" y="0" space="http://www.onvif.org/ver10/tptz/PanTiltSpaces/VelocityGenericSpace"/></tptz:Velocity><tptz:Timeout>PT60S</tptz:Timeout></tptz:ContinuousMove>"#).await);
         clock.advance(std::time::Duration::from_secs(1));
         let (x, y, status) = ptz_status(&ok(get_status().await));
         assert!(x > 0.0 && y == 0.0, "{x} {y}");
@@ -685,24 +697,24 @@ pub mod tests {
         ok(call(
             addr,
             &auth(),
-            "<tptz:Stop><tptz:ProfileToken>main</tptz:ProfileToken></tptz:Stop>",
+            "<tptz:Stop><tptz:ProfileToken>Profile_vs0</tptz:ProfileToken></tptz:Stop>",
         )
         .await);
         assert_eq!(ptz_status(&ok(get_status().await)).2, "IDLE");
 
         // AbsoluteMove in the generic space.
-        ok(call(addr, &auth(), r#"<tptz:AbsoluteMove><tptz:ProfileToken>main</tptz:ProfileToken><tptz:Position><tt:PanTilt x="-1" y="1"/></tptz:Position></tptz:AbsoluteMove>"#).await);
+        ok(call(addr, &auth(), r#"<tptz:AbsoluteMove><tptz:ProfileToken>Profile_vs0</tptz:ProfileToken><tptz:Position><tt:PanTilt x="-1" y="1"/></tptz:Position></tptz:AbsoluteMove>"#).await);
         clock.advance(std::time::Duration::from_secs(60));
         assert_eq!(ptz_status(&ok(get_status().await)), (-1.0, 1.0, "IDLE"));
-        fault(call(addr, &auth(), r#"<tptz:AbsoluteMove><tptz:ProfileToken>main</tptz:ProfileToken><tptz:Position><tt:PanTilt x="2" y="0"/></tptz:Position></tptz:AbsoluteMove>"#).await);
+        fault(call(addr, &auth(), r#"<tptz:AbsoluteMove><tptz:ProfileToken>Profile_vs0</tptz:ProfileToken><tptz:Position><tt:PanTilt x="2" y="0"/></tptz:Position></tptz:AbsoluteMove>"#).await);
 
         // Presets: set here, move away, go back, remove.
-        let set: tptz::SetPresetResponse = parse(&ok(call(addr, &auth(), "<tptz:SetPreset><tptz:ProfileToken>main</tptz:ProfileToken><tptz:PresetName>Door&amp;hall</tptz:PresetName></tptz:SetPreset>").await));
+        let set: tptz::SetPresetResponse = parse(&ok(call(addr, &auth(), "<tptz:SetPreset><tptz:ProfileToken>Profile_vs0</tptz:ProfileToken><tptz:PresetName>Door&amp;hall</tptz:PresetName></tptz:SetPreset>").await));
         assert_eq!(set.preset_token, "1");
         let body = ok(call(
             addr,
             &auth(),
-            "<tptz:GetPresets><tptz:ProfileToken>main</tptz:ProfileToken></tptz:GetPresets>",
+            "<tptz:GetPresets><tptz:ProfileToken>Profile_vs0</tptz:ProfileToken></tptz:GetPresets>",
         )
         .await);
         // (onvif-device-rs trims the text around an entity when it copies the
@@ -720,30 +732,30 @@ pub mod tests {
             .as_ref()
             .unwrap();
         assert_eq!((position.x, position.y), (-1.0, 1.0));
-        ok(call(addr, &auth(), r#"<tptz:RelativeMove><tptz:ProfileToken>main</tptz:ProfileToken><tptz:Translation><tt:PanTilt x="1" y="-1"/></tptz:Translation></tptz:RelativeMove>"#).await);
+        ok(call(addr, &auth(), r#"<tptz:RelativeMove><tptz:ProfileToken>Profile_vs0</tptz:ProfileToken><tptz:Translation><tt:PanTilt x="1" y="-1"/></tptz:Translation></tptz:RelativeMove>"#).await);
         clock.advance(std::time::Duration::from_secs(60));
         assert_eq!(ptz_status(&ok(get_status().await)), (0.0, 0.0, "IDLE"));
-        ok(call(addr, &auth(), "<tptz:GotoPreset><tptz:ProfileToken>main</tptz:ProfileToken><tptz:PresetToken>1</tptz:PresetToken></tptz:GotoPreset>").await);
+        ok(call(addr, &auth(), "<tptz:GotoPreset><tptz:ProfileToken>Profile_vs0</tptz:ProfileToken><tptz:PresetToken>1</tptz:PresetToken></tptz:GotoPreset>").await);
         assert_eq!(ptz_status(&ok(get_status().await)).2, "MOVING");
         clock.advance(std::time::Duration::from_secs(60));
         assert_eq!(ptz_status(&ok(get_status().await)), (-1.0, 1.0, "IDLE"));
-        fault(call(addr, &auth(), "<tptz:GotoPreset><tptz:ProfileToken>main</tptz:ProfileToken><tptz:PresetToken>9</tptz:PresetToken></tptz:GotoPreset>").await);
-        ok(call(addr, &auth(), "<tptz:RemovePreset><tptz:ProfileToken>main</tptz:ProfileToken><tptz:PresetToken>1</tptz:PresetToken></tptz:RemovePreset>").await);
+        fault(call(addr, &auth(), "<tptz:GotoPreset><tptz:ProfileToken>Profile_vs0</tptz:ProfileToken><tptz:PresetToken>9</tptz:PresetToken></tptz:GotoPreset>").await);
+        ok(call(addr, &auth(), "<tptz:RemovePreset><tptz:ProfileToken>Profile_vs0</tptz:ProfileToken><tptz:PresetToken>1</tptz:PresetToken></tptz:RemovePreset>").await);
         let presets: tptz::GetPresetsResponse = parse(&ok(call(
             addr,
             &auth(),
-            "<tptz:GetPresets><tptz:ProfileToken>main</tptz:ProfileToken></tptz:GetPresets>",
+            "<tptz:GetPresets><tptz:ProfileToken>Profile_vs0</tptz:ProfileToken></tptz:GetPresets>",
         )
         .await));
         assert!(presets.preset.is_empty());
 
         // Home: the sim's homing run ends at the minimum of both axes.
-        ok(call(addr, &auth(), "<tptz:GotoHomePosition><tptz:ProfileToken>main</tptz:ProfileToken></tptz:GotoHomePosition>").await);
+        ok(call(addr, &auth(), "<tptz:GotoHomePosition><tptz:ProfileToken>Profile_vs0</tptz:ProfileToken></tptz:GotoHomePosition>").await);
         clock.advance(std::time::Duration::from_secs(60));
         assert_eq!(ptz_status(&ok(get_status().await)), (-1.0, -1.0, "IDLE"));
 
         // A ContinuousMove Timeout stops the head on its own.
-        ok(call(addr, &auth(), r#"<tptz:ContinuousMove><tptz:ProfileToken>main</tptz:ProfileToken><tptz:Velocity><tt:PanTilt x="1" y="1"/></tptz:Velocity><tptz:Timeout>PT0.1S</tptz:Timeout></tptz:ContinuousMove>"#).await);
+        ok(call(addr, &auth(), r#"<tptz:ContinuousMove><tptz:ProfileToken>Profile_vs0</tptz:ProfileToken><tptz:Velocity><tt:PanTilt x="1" y="1"/></tptz:Velocity><tptz:Timeout>PT0.1S</tptz:Timeout></tptz:ContinuousMove>"#).await);
         assert_eq!(ptz_status(&ok(get_status().await)).2, "MOVING");
         tokio::time::sleep(std::time::Duration::from_millis(300)).await;
         assert_eq!(ptz_status(&ok(get_status().await)).2, "IDLE");
@@ -757,13 +769,13 @@ pub mod tests {
             )
             .await,
         );
-        let body = fault(call(addr, &auth(), r#"<tptz:ContinuousMove><tptz:ProfileToken>main</tptz:ProfileToken><tptz:Velocity><tt:Zoom x="1"/></tptz:Velocity></tptz:ContinuousMove>"#).await);
+        let body = fault(call(addr, &auth(), r#"<tptz:ContinuousMove><tptz:ProfileToken>Profile_vs0</tptz:ProfileToken><tptz:Velocity><tt:Zoom x="1"/></tptz:Velocity></tptz:ContinuousMove>"#).await);
         assert!(body.contains("no zoom"), "{body}");
-        let body = fault(call(addr, &auth(), r#"<tptz:ContinuousMove><tptz:ProfileToken>main</tptz:ProfileToken><tptz:Velocity><tt:PanTilt x="1" y="0" space="http://example.com/other"/></tptz:Velocity></tptz:ContinuousMove>"#).await);
+        let body = fault(call(addr, &auth(), r#"<tptz:ContinuousMove><tptz:ProfileToken>Profile_vs0</tptz:ProfileToken><tptz:Velocity><tt:PanTilt x="1" y="0" space="http://example.com/other"/></tptz:Velocity></tptz:ContinuousMove>"#).await);
         assert!(body.contains("unsupported space"), "{body}");
         // Not schema-valid: ProfileToken is required.
         fault(call(addr, &auth(), r#"<tptz:ContinuousMove><tptz:Velocity><tt:PanTilt x="1" y="0"/></tptz:Velocity></tptz:ContinuousMove>"#).await);
-        let body = fault(call(addr, &auth(), "<tptz:SetHomePosition><tptz:ProfileToken>main</tptz:ProfileToken></tptz:SetHomePosition>").await);
+        let body = fault(call(addr, &auth(), "<tptz:SetHomePosition><tptz:ProfileToken>Profile_vs0</tptz:ProfileToken></tptz:SetHomePosition>").await);
         assert!(body.contains("unsupported action"), "{body}");
 
         // PTZ needs credentials like everything else.
@@ -785,7 +797,7 @@ pub mod tests {
         let (status, body) = post(
             addr,
             &format!(
-                r#"<?xml version="1.0" encoding="UTF-8"?><SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope" xmlns:sch="http://www.onvif.org/ver10/schema" xmlns:ptz="http://www.onvif.org/ver20/ptz/wsdl">{}<SOAP-ENV:Body><ptz:ContinuousMove><ptz:ProfileToken>main</ptz:ProfileToken><ptz:Velocity><sch:PanTilt x="-0.5" y="0.5"/></ptz:Velocity><ptz:Timeout>PT30S</ptz:Timeout></ptz:ContinuousMove></SOAP-ENV:Body></SOAP-ENV:Envelope>"#,
+                r#"<?xml version="1.0" encoding="UTF-8"?><SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope" xmlns:sch="http://www.onvif.org/ver10/schema" xmlns:ptz="http://www.onvif.org/ver20/ptz/wsdl">{}<SOAP-ENV:Body><ptz:ContinuousMove><ptz:ProfileToken>Profile_vs0</ptz:ProfileToken><ptz:Velocity><sch:PanTilt x="-0.5" y="0.5"/></ptz:Velocity><ptz:Timeout>PT30S</ptz:Timeout></ptz:ContinuousMove></SOAP-ENV:Body></SOAP-ENV:Envelope>"#,
                 auth.replace("s:Header", "SOAP-ENV:Header")
             ),
         )
@@ -796,7 +808,7 @@ pub mod tests {
         let (status, body) = call(
             addr,
             &auth,
-            "<tptz:GetStatus><tptz:ProfileToken>main</tptz:ProfileToken></tptz:GetStatus>",
+            "<tptz:GetStatus><tptz:ProfileToken>Profile_vs0</tptz:ProfileToken></tptz:GetStatus>",
         )
         .await;
         assert_eq!(status, 200, "{body}");
@@ -808,7 +820,7 @@ pub mod tests {
         let (status, body) = post(
             addr,
             &format!(
-                r#"<soap-env:Envelope xmlns:soap-env="http://www.w3.org/2003/05/soap-envelope">{}<soap-env:Body><ns0:Stop xmlns:ns0="http://www.onvif.org/ver20/ptz/wsdl"><ns0:ProfileToken>main</ns0:ProfileToken><ns0:PanTilt>true</ns0:PanTilt></ns0:Stop></soap-env:Body></soap-env:Envelope>"#,
+                r#"<soap-env:Envelope xmlns:soap-env="http://www.w3.org/2003/05/soap-envelope">{}<soap-env:Body><ns0:Stop xmlns:ns0="http://www.onvif.org/ver20/ptz/wsdl"><ns0:ProfileToken>Profile_vs0</ns0:ProfileToken><ns0:PanTilt>true</ns0:PanTilt></ns0:Stop></soap-env:Body></soap-env:Envelope>"#,
                 text_header("nvr", "correct horse").replace("s:Header", "soap-env:Header")
             ),
         )
@@ -817,7 +829,7 @@ pub mod tests {
         let (status, body) = call(
             addr,
             &auth,
-            "<tptz:GetStatus><tptz:ProfileToken>main</tptz:ProfileToken></tptz:GetStatus>",
+            "<tptz:GetStatus><tptz:ProfileToken>Profile_vs0</tptz:ProfileToken></tptz:GetStatus>",
         )
         .await;
         assert_eq!(status, 200, "{body}");
@@ -844,7 +856,7 @@ pub mod tests {
         };
         assert_eq!(
             (profile.token.as_str(), profile.name.as_str()),
-            ("main", "main")
+            ("Profile_vs0", "Profile_vs0")
         );
 
         let source = profile.video_source_configuration.as_ref().unwrap();
@@ -888,6 +900,240 @@ pub mod tests {
         );
         assert_eq!(soap.action, "GetProfilesResponse");
 
+        handle.shutdown().await.unwrap();
+    }
+
+    /// Settings for the AV100 board profile (two sensors, 1280x720 at 15 fps,
+    /// 2048 kbit/s) with the producer at `producer`.
+    fn av100_settings(producer: String) -> Settings {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../boards/anyka-av100-ptz.toml");
+        let video = board::load(&path).unwrap().video;
+        Settings {
+            producer: Some(producer),
+            video: video
+                .sensors
+                .iter()
+                .map(|&i| VideoStream::from_board(i, &video.stream_for(i)))
+                .collect(),
+            ..settings(None)
+        }
+    }
+
+    /// `(token, width, height, fps, kbit/s, GOP, H.264 profile)` of each
+    /// profile.
+    fn summary(
+        profiles: &trt::GetProfilesResponse,
+    ) -> Vec<(String, i32, i32, i32, i32, i32, String)> {
+        profiles
+            .profiles
+            .iter()
+            .map(|p| {
+                let encoder = p.video_encoder_configuration.as_ref().unwrap();
+                let rate = encoder.rate_control.as_ref().unwrap();
+                let h264 = encoder.h264.as_ref().unwrap();
+                (
+                    p.token.clone(),
+                    encoder.resolution.width,
+                    encoder.resolution.height,
+                    rate.frame_rate_limit,
+                    rate.bitrate_limit,
+                    h264.gov_length,
+                    format!("{:?}", h264.h264_profile),
+                )
+            })
+            .collect()
+    }
+
+    fn running(index: u32, stream: video_proto::StreamInfo) -> video_proto::Status {
+        video_proto::Status {
+            index,
+            state: "running".into(),
+            stream: Some(stream),
+            ..Default::default()
+        }
+    }
+
+    /// PRO-02: one profile per sensor the producer reports, with its
+    /// stream's parameters; each profile has its own stream and snapshot.
+    #[tokio::test(flavor = "current_thread")]
+    async fn profiles_follow_the_producer() {
+        let statuses = vec![
+            running(
+                0,
+                video_proto::StreamInfo {
+                    codec: "H.264".into(),
+                    profile: "High".into(),
+                    width: 1920,
+                    height: 1080,
+                    fps: 25,
+                    gop: 50,
+                    target_kbps: 4096,
+                    kbps: 4000.0,
+                    encoder: "fake".into(),
+                },
+            ),
+            running(
+                1,
+                video_proto::StreamInfo {
+                    codec: "H.264".into(),
+                    profile: "Baseline".into(),
+                    width: 640,
+                    height: 360,
+                    fps: 10,
+                    gop: 20,
+                    target_kbps: 512,
+                    kbps: 500.0,
+                    encoder: "fake".into(),
+                },
+            ),
+        ];
+        let (producer, requests) = crate::producer::fake::serve(statuses).await;
+        let (addr, mut handle) = start(av100_settings(producer)).await;
+        let auth = || text_header("nvr", "correct horse");
+
+        let (status, body) = call(addr, &auth(), "<trt:GetProfiles/>").await;
+        assert_eq!(status, 200, "{body}");
+        let profiles: trt::GetProfilesResponse = parse(&body);
+        let s = |t: &str| t.to_owned();
+        assert_eq!(
+            summary(&profiles),
+            [
+                (s("Profile_vs0"), 1920, 1080, 25, 4096, 50, s("High")),
+                (s("Profile_vs1"), 640, 360, 10, 512, 20, s("Baseline")),
+            ]
+        );
+        let source = profiles.profiles[1]
+            .video_source_configuration
+            .as_ref()
+            .unwrap();
+        assert_eq!(
+            (source.token.as_str(), source.bounds.width),
+            ("videoSrc1", 640)
+        );
+        assert_eq!(
+            profiles.profiles[1]
+                .video_encoder_configuration
+                .as_ref()
+                .unwrap()
+                .token,
+            "enc1"
+        );
+
+        for (index, token) in [(0, "Profile_vs0"), (1, "Profile_vs1")] {
+            let (status, body) = call(addr, &auth(), &format!(
+                "<trt:GetStreamUri><trt:StreamSetup><tt:Stream>RTP-Unicast</tt:Stream><tt:Transport><tt:Protocol>RTSP</tt:Protocol></tt:Transport></trt:StreamSetup><trt:ProfileToken>{token}</trt:ProfileToken></trt:GetStreamUri>"
+            ))
+            .await;
+            assert_eq!(status, 200, "{body}");
+            let uri: trt::GetStreamUriResponse = parse(&body);
+            assert_eq!(
+                uri.media_uri.uri,
+                format!("rtsp://192.0.2.10:554/vs{index}")
+            );
+            let (status, body) = call(addr, &auth(), &format!(
+                "<trt:GetSnapshotUri><trt:ProfileToken>{token}</trt:ProfileToken></trt:GetSnapshotUri>"
+            ))
+            .await;
+            assert_eq!(status, 200, "{body}");
+            let uri: trt::GetSnapshotUriResponse = parse(&body);
+            assert_eq!(
+                uri.media_uri.uri,
+                format!("http://192.0.2.10:80/api/snapshot.jpg?camera={index}")
+            );
+        }
+        let (status, _) = call(
+            addr,
+            &auth(),
+            "<trt:GetStreamUri><trt:StreamSetup><tt:Stream>RTP-Unicast</tt:Stream><tt:Transport><tt:Protocol>RTSP</tt:Protocol></tt:Transport></trt:StreamSetup><trt:ProfileToken>Profile_vs2</trt:ProfileToken></trt:GetStreamUri>",
+        )
+        .await;
+        assert_eq!(status, 400);
+
+        // Per-sensor configuration lookups.
+        let one: trt::GetVideoEncoderConfigurationResponse = parse(&call(
+            addr,
+            &auth(),
+            "<trt:GetVideoEncoderConfiguration><trt:ConfigurationToken>enc1</trt:ConfigurationToken></trt:GetVideoEncoderConfiguration>",
+        )
+        .await
+        .1);
+        assert_eq!(one.configuration.resolution.width, 640);
+        let options: trt::GetVideoEncoderConfigurationOptionsResponse = parse(&call(
+            addr,
+            &auth(),
+            "<trt:GetVideoEncoderConfigurationOptions><trt:ProfileToken>Profile_vs1</trt:ProfileToken></trt:GetVideoEncoderConfigurationOptions>",
+        )
+        .await
+        .1);
+        let h264 = options.options.h264.unwrap();
+        assert_eq!(h264.resolutions_available[0].width, 640);
+        assert_eq!(h264.frame_rate_range.max, 10);
+        let sources: trt::GetVideoSourcesResponse =
+            parse(&call(addr, &auth(), "<trt:GetVideoSources/>").await.1);
+        assert_eq!(sources.video_sources.len(), 2);
+
+        // The burst above was answered from one /status fetch.
+        assert_eq!(requests.load(std::sync::atomic::Ordering::SeqCst), 1);
+
+        handle.shutdown().await.unwrap();
+    }
+
+    /// PRO-04: with the producer down, the board's streams are described
+    /// and the URIs still answer.
+    #[tokio::test(flavor = "current_thread")]
+    async fn profiles_fall_back_to_the_board() {
+        let settings = av100_settings(crate::producer::fake::dead_address());
+        let (addr, mut handle) = start(settings).await;
+        let auth = || text_header("nvr", "correct horse");
+
+        let (status, body) = call(addr, &auth(), "<trt:GetProfiles/>").await;
+        assert_eq!(status, 200, "{body}");
+        let profiles: trt::GetProfilesResponse = parse(&body);
+        let s = |t: &str| t.to_owned();
+        assert_eq!(
+            summary(&profiles),
+            [
+                (s("Profile_vs0"), 1280, 720, 15, 2048, 30, s("Main")),
+                (s("Profile_vs1"), 1280, 720, 15, 2048, 30, s("Main")),
+            ]
+        );
+        let (status, body) = call(
+            addr,
+            &auth(),
+            "<trt:GetStreamUri><trt:StreamSetup><tt:Stream>RTP-Unicast</tt:Stream><tt:Transport><tt:Protocol>RTSP</tt:Protocol></tt:Transport></trt:StreamSetup><trt:ProfileToken>Profile_vs1</trt:ProfileToken></trt:GetStreamUri>",
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
+        let uri: trt::GetStreamUriResponse = parse(&body);
+        assert_eq!(uri.media_uri.uri, "rtsp://192.0.2.10:554/vs1");
+
+        handle.shutdown().await.unwrap();
+    }
+
+    /// PTZ hangs off the first sensor's profile only.
+    #[tokio::test(flavor = "current_thread")]
+    async fn ptz_is_on_the_first_profile() {
+        let (ptz, _clock) = manual_sim();
+        let settings = Settings {
+            ptz: Some(ptz),
+            ..av100_settings(crate::producer::fake::dead_address())
+        };
+        let (addr, mut handle) = start(settings).await;
+        let (status, body) = call(
+            addr,
+            &text_header("nvr", "correct horse"),
+            "<trt:GetProfiles/>",
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
+        let profiles: trt::GetProfilesResponse = parse(&body);
+        let with_ptz: Vec<_> = profiles
+            .profiles
+            .iter()
+            .map(|p| p.ptz_configuration.is_some())
+            .collect();
+        assert_eq!(with_ptz, [true, false]);
         handle.shutdown().await.unwrap();
     }
 
