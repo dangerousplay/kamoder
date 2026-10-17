@@ -1,0 +1,15 @@
+[package]
+name = "kboot"
+description = "Boot-time A/B slot selector and trial guard, run by Factory/config.sh"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+# Boot-critical and run before anything else: kept to `bootctl` (itself only
+# crc32fast + snafu) and `libc` for sync/reboot/fstat. No tokio, no clap, no
+# tracing, no serde (status JSON is a handful of fixed fields, escaped by hand).
+[dependencies]
+bootctl.workspace = true
+libc.workspace = true
+snafu.workspace = true

@@ -30,5 +30,19 @@ quick-xml = "0.38"
 roxmltree = "0.21"
 url = "2"
 
+# `./x kup` (src/kup.rs): builds and signs the OTA update package. The
+# manifest types, canonical JSON and signature check come from the same crate
+# the camera's updater uses, so what xtask signs is what the device verifies.
+ota-manifest = { path = "../crates/ota-manifest" }
+# Reproducible payload archives: tar entries written with fixed headers, gzip
+# through flate2's default pure-Rust backend (miniz_oxide), as on the camera.
+tar = { version = "0.4.46", default-features = false }
+flate2 = "1.1"
+sha2 = "0.10"
+# Repository name for the release notes link, from cliff.toml. Same version
+# as the board crate, so the lockfile keeps one toml.
+toml = { version = "0.9", default-features = false, features = ["parse", "serde"] }
+serde = { version = "1", features = ["derive"] }
+
 [profile.release]
 opt-level = 1

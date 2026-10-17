@@ -1,0 +1,25 @@
+[package]
+name = "ota-manifest"
+description = "Signed update manifest: types, minisign verification and install policy"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+# Shared by the camera-side updater (verify + policy) and the host-side
+# `xtask kup` (build + serialize). Kept dependency-light: no I/O, no async.
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+snafu.workspace = true
+# Pure Rust, no dependencies; gives semver §11 precedence (`cmp_precedence`)
+# so "0.2.0-rc.1" < "0.2.0" without a hand-rolled parser.
+semver = { version = "1.0.28", features = ["serde"] }
+# Ed25519 + BLAKE2b minisign verification with no dependencies (OTA-03).
+minisign-verify = "0.3"
+
+[features]
+# Exposes `TrustedKeys::test_key()` (the committed TEST-ONLY key under
+# keys/test/) to other crates' tests. Enable it only as a dev-dependency
+# feature; a release build must never trust that key.
+test-key = []

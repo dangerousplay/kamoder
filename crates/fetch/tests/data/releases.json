@@ -1,0 +1,91 @@
+[
+  {
+    "url": "https://api.github.com/repos/owner/repo/releases/4",
+    "html_url": "https://github.com/owner/repo/releases/tag/untagged-1",
+    "id": 4,
+    "author": {"login": "owner", "id": 1, "type": "User"},
+    "tag_name": "v0.5.0",
+    "target_commitish": "main",
+    "name": "Draft 0.5.0",
+    "draft": true,
+    "prerelease": false,
+    "created_at": "2026-10-16T10:00:00Z",
+    "published_at": null,
+    "assets": [],
+    "body": "work in progress"
+  },
+  {
+    "url": "https://api.github.com/repos/owner/repo/releases/2",
+    "html_url": "https://github.com/owner/repo/releases/tag/v0.3.0",
+    "id": 2,
+    "author": {"login": "owner", "id": 1, "type": "User"},
+    "tag_name": "v0.3.0",
+    "target_commitish": "main",
+    "name": "Kamoder 0.3.0",
+    "draft": false,
+    "prerelease": false,
+    "created_at": "2026-10-01T09:00:00Z",
+    "published_at": "2026-10-01T09:30:00Z",
+    "assets": [
+      {
+        "url": "https://api.github.com/repos/owner/repo/releases/assets/21",
+        "id": 21,
+        "name": "kamoder-0.3.0-update.kup",
+        "label": "",
+        "uploader": {"login": "github-actions[bot]", "id": 41898282, "type": "Bot"},
+        "content_type": "application/x-tar",
+        "state": "uploaded",
+        "size": 5242880,
+        "download_count": 12,
+        "created_at": "2026-10-01T09:20:00Z",
+        "updated_at": "2026-10-01T09:20:00Z",
+        "browser_download_url": "https://github.com/owner/repo/releases/download/v0.3.0/kamoder-0.3.0-update.kup"
+      },
+      {
+        "id": 22,
+        "name": "manifest.json",
+        "size": 2048,
+        "browser_download_url": "https://github.com/owner/repo/releases/download/v0.3.0/manifest.json"
+      },
+      {
+        "id": 23,
+        "name": "manifest.json.minisig",
+        "size": 300,
+        "browser_download_url": "https://github.com/owner/repo/releases/download/v0.3.0/manifest.json.minisig"
+      }
+    ],
+    "body": "## Changes\n- things"
+  },
+  {
+    "url": "https://api.github.com/repos/owner/repo/releases/3",
+    "html_url": "https://github.com/owner/repo/releases/tag/v0.4.0-rc1",
+    "id": 3,
+    "tag_name": "v0.4.0-rc1",
+    "name": "Kamoder 0.4.0 rc1",
+    "draft": false,
+    "prerelease": true,
+    "created_at": "2026-09-30T08:00:00Z",
+    "published_at": "2026-10-10T08:00:00Z",
+    "assets": [
+      {
+        "id": 31,
+        "name": "manifest.json",
+        "size": 2100,
+        "browser_download_url": "https://github.com/owner/repo/releases/download/v0.4.0-rc1/manifest.json"
+      }
+    ],
+    "body": null
+  },
+  {
+    "url": "https://api.github.com/repos/owner/repo/releases/1",
+    "html_url": "https://github.com/owner/repo/releases/tag/v0.2.0",
+    "id": 1,
+    "tag_name": "v0.2.0",
+    "name": null,
+    "draft": false,
+    "prerelease": false,
+    "created_at": "2026-08-01T09:00:00Z",
+    "published_at": "2026-08-01T09:30:00Z",
+    "assets": []
+  }
+]

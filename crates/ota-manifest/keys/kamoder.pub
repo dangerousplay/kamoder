@@ -1,0 +1,9 @@
+# PLACEHOLDER: no project update key exists yet.
+#
+# Replace this whole file with the public key written by
+#     minisign -G -p kamoder.pub -s kamoder.key
+# (two lines: "untrusted comment: ..." and the "RW..." base64 key), or build
+# with KAMODER_UPDATE_PUBKEY set to the "RW..." line. While this file holds
+# only `#` lines and the variable is unset, the updater trusts no key and
+# rejects every manifest ("no trusted update key built in").
+# See crates/ota-manifest/src/keys.rs.

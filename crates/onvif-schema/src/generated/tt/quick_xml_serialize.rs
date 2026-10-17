@@ -15665,6 +15665,1432 @@ impl<'ser> Serializer<'ser> for AudioSourceTypeSerializer<'ser> {
     }
 }
 #[derive(Debug)]
+pub struct AudioSourceConfigurationOptionsTypeSerializer<'ser> {
+    pub(super) value: &'ser super::AudioSourceConfigurationOptionsType,
+    pub(super) state: ::std::boxed::Box<AudioSourceConfigurationOptionsTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum AudioSourceConfigurationOptionsTypeSerializerState<'ser> {
+    Init__,
+    InputTokensAvailable(
+        IterSerializer<'ser, &'ser [::std::string::String], ::std::string::String>,
+    ),
+    Extension(
+        IterSerializer<
+            'ser,
+            ::core::option::Option<&'ser super::AudioSourceOptionsExtensionType>,
+            super::AudioSourceOptionsExtensionType,
+        >,
+    ),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> AudioSourceConfigurationOptionsTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                AudioSourceConfigurationOptionsTypeSerializerState::Init__ => {
+                    *self.state =
+                        AudioSourceConfigurationOptionsTypeSerializerState::InputTokensAvailable(
+                            IterSerializer::new(
+                                &self.value.input_tokens_available[..],
+                                Some("tt:InputTokensAvailable"),
+                                false,
+                            ),
+                        );
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TT),
+                            &super::super::NS_TT,
+                        );
+                    }
+                    bytes.extend_attributes(self.value.any_attribute.attributes());
+                    return Ok(Some(Event::Start(bytes)));
+                }
+                AudioSourceConfigurationOptionsTypeSerializerState::InputTokensAvailable(x) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => {
+                            *self.state =
+                                AudioSourceConfigurationOptionsTypeSerializerState::Extension(
+                                    IterSerializer::new(
+                                        self.value.extension.as_ref(),
+                                        Some("tt:Extension"),
+                                        false,
+                                    ),
+                                )
+                        }
+                    }
+                }
+                AudioSourceConfigurationOptionsTypeSerializerState::Extension(x) => match x
+                    .next(helper)
+                    .transpose()?
+                {
+                    Some(event) => return Ok(Some(event)),
+                    None => *self.state = AudioSourceConfigurationOptionsTypeSerializerState::End__,
+                },
+                AudioSourceConfigurationOptionsTypeSerializerState::End__ => {
+                    *self.state = AudioSourceConfigurationOptionsTypeSerializerState::Done__;
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::End(BytesEnd::new(self.name))));
+                }
+                AudioSourceConfigurationOptionsTypeSerializerState::Done__ => return Ok(None),
+                AudioSourceConfigurationOptionsTypeSerializerState::Phantom__(_) => unreachable!(),
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for AudioSourceConfigurationOptionsTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state = AudioSourceConfigurationOptionsTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct AudioSourceOptionsExtensionTypeSerializer<'ser> {
+    pub(super) value: &'ser super::AudioSourceOptionsExtensionType,
+    pub(super) state: ::std::boxed::Box<AudioSourceOptionsExtensionTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum AudioSourceOptionsExtensionTypeSerializerState<'ser> {
+    Init__,
+    Any(IterSerializer<'ser, &'ser [AnyElement], AnyElement>),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> AudioSourceOptionsExtensionTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                AudioSourceOptionsExtensionTypeSerializerState::Init__ => {
+                    *self.state = AudioSourceOptionsExtensionTypeSerializerState::Any(
+                        IterSerializer::new(&self.value.any[..], None, false),
+                    );
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TT),
+                            &super::super::NS_TT,
+                        );
+                    }
+                    return Ok(Some(Event::Start(bytes)));
+                }
+                AudioSourceOptionsExtensionTypeSerializerState::Any(x) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => *self.state = AudioSourceOptionsExtensionTypeSerializerState::End__,
+                    }
+                }
+                AudioSourceOptionsExtensionTypeSerializerState::End__ => {
+                    *self.state = AudioSourceOptionsExtensionTypeSerializerState::Done__;
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::End(BytesEnd::new(self.name))));
+                }
+                AudioSourceOptionsExtensionTypeSerializerState::Done__ => return Ok(None),
+                AudioSourceOptionsExtensionTypeSerializerState::Phantom__(_) => unreachable!(),
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for AudioSourceOptionsExtensionTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state = AudioSourceOptionsExtensionTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct AudioEncoderConfigurationOptionsTypeSerializer<'ser> {
+    pub(super) value: &'ser super::AudioEncoderConfigurationOptionsType,
+    pub(super) state: ::std::boxed::Box<AudioEncoderConfigurationOptionsTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum AudioEncoderConfigurationOptionsTypeSerializerState<'ser> {
+    Init__,
+    Options(
+        IterSerializer<
+            'ser,
+            &'ser [super::AudioEncoderConfigurationOptionType],
+            super::AudioEncoderConfigurationOptionType,
+        >,
+    ),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> AudioEncoderConfigurationOptionsTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                AudioEncoderConfigurationOptionsTypeSerializerState::Init__ => {
+                    *self.state = AudioEncoderConfigurationOptionsTypeSerializerState::Options(
+                        IterSerializer::new(&self.value.options[..], Some("tt:Options"), false),
+                    );
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TT),
+                            &super::super::NS_TT,
+                        );
+                    }
+                    bytes.extend_attributes(self.value.any_attribute.attributes());
+                    return Ok(Some(Event::Start(bytes)));
+                }
+                AudioEncoderConfigurationOptionsTypeSerializerState::Options(x) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => {
+                            *self.state = AudioEncoderConfigurationOptionsTypeSerializerState::End__
+                        }
+                    }
+                }
+                AudioEncoderConfigurationOptionsTypeSerializerState::End__ => {
+                    *self.state = AudioEncoderConfigurationOptionsTypeSerializerState::Done__;
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::End(BytesEnd::new(self.name))));
+                }
+                AudioEncoderConfigurationOptionsTypeSerializerState::Done__ => return Ok(None),
+                AudioEncoderConfigurationOptionsTypeSerializerState::Phantom__(_) => unreachable!(),
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for AudioEncoderConfigurationOptionsTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state = AudioEncoderConfigurationOptionsTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct AudioEncoderConfigurationOptionTypeSerializer<'ser> {
+    pub(super) value: &'ser super::AudioEncoderConfigurationOptionType,
+    pub(super) state: ::std::boxed::Box<AudioEncoderConfigurationOptionTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum AudioEncoderConfigurationOptionTypeSerializerState<'ser> {
+    Init__,
+    Encoding(<super::AudioEncodingType as WithSerializer>::Serializer<'ser>),
+    BitrateList(<super::IntItemsType as WithSerializer>::Serializer<'ser>),
+    SampleRateList(<super::IntItemsType as WithSerializer>::Serializer<'ser>),
+    Any(IterSerializer<'ser, &'ser [AnyElement], AnyElement>),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> AudioEncoderConfigurationOptionTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                AudioEncoderConfigurationOptionTypeSerializerState::Init__ => {
+                    *self.state = AudioEncoderConfigurationOptionTypeSerializerState::Encoding(
+                        WithSerializer::serializer(
+                            &self.value.encoding,
+                            Some("tt:Encoding"),
+                            false,
+                        )?,
+                    );
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TT),
+                            &super::super::NS_TT,
+                        );
+                    }
+                    bytes.extend_attributes(self.value.any_attribute.attributes());
+                    return Ok(Some(Event::Start(bytes)));
+                }
+                AudioEncoderConfigurationOptionTypeSerializerState::Encoding(x) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => {
+                            *self.state =
+                                AudioEncoderConfigurationOptionTypeSerializerState::BitrateList(
+                                    WithSerializer::serializer(
+                                        &self.value.bitrate_list,
+                                        Some("tt:BitrateList"),
+                                        false,
+                                    )?,
+                                )
+                        }
+                    }
+                }
+                AudioEncoderConfigurationOptionTypeSerializerState::BitrateList(x) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => {
+                            *self.state =
+                                AudioEncoderConfigurationOptionTypeSerializerState::SampleRateList(
+                                    WithSerializer::serializer(
+                                        &self.value.sample_rate_list,
+                                        Some("tt:SampleRateList"),
+                                        false,
+                                    )?,
+                                )
+                        }
+                    }
+                }
+                AudioEncoderConfigurationOptionTypeSerializerState::SampleRateList(x) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => {
+                            *self.state = AudioEncoderConfigurationOptionTypeSerializerState::Any(
+                                IterSerializer::new(&self.value.any[..], None, false),
+                            )
+                        }
+                    }
+                }
+                AudioEncoderConfigurationOptionTypeSerializerState::Any(x) => match x
+                    .next(helper)
+                    .transpose()?
+                {
+                    Some(event) => return Ok(Some(event)),
+                    None => *self.state = AudioEncoderConfigurationOptionTypeSerializerState::End__,
+                },
+                AudioEncoderConfigurationOptionTypeSerializerState::End__ => {
+                    *self.state = AudioEncoderConfigurationOptionTypeSerializerState::Done__;
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::End(BytesEnd::new(self.name))));
+                }
+                AudioEncoderConfigurationOptionTypeSerializerState::Done__ => return Ok(None),
+                AudioEncoderConfigurationOptionTypeSerializerState::Phantom__(_) => unreachable!(),
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for AudioEncoderConfigurationOptionTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state = AudioEncoderConfigurationOptionTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct IntItemsTypeSerializer<'ser> {
+    pub(super) value: &'ser super::IntItemsType,
+    pub(super) state: ::std::boxed::Box<IntItemsTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum IntItemsTypeSerializerState<'ser> {
+    Init__,
+    Items(IterSerializer<'ser, &'ser [::core::primitive::i32], ::core::primitive::i32>),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> IntItemsTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                IntItemsTypeSerializerState::Init__ => {
+                    *self.state = IntItemsTypeSerializerState::Items(IterSerializer::new(
+                        &self.value.items[..],
+                        Some("tt:Items"),
+                        false,
+                    ));
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TT),
+                            &super::super::NS_TT,
+                        );
+                    }
+                    return Ok(Some(Event::Start(bytes)));
+                }
+                IntItemsTypeSerializerState::Items(x) => match x.next(helper).transpose()? {
+                    Some(event) => return Ok(Some(event)),
+                    None => *self.state = IntItemsTypeSerializerState::End__,
+                },
+                IntItemsTypeSerializerState::End__ => {
+                    *self.state = IntItemsTypeSerializerState::Done__;
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::End(BytesEnd::new(self.name))));
+                }
+                IntItemsTypeSerializerState::Done__ => return Ok(None),
+                IntItemsTypeSerializerState::Phantom__(_) => unreachable!(),
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for IntItemsTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state = IntItemsTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct AudioOutputTypeSerializer<'ser> {
+    pub(super) value: &'ser super::AudioOutputType,
+    pub(super) state: ::std::boxed::Box<AudioOutputTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum AudioOutputTypeSerializerState<'ser> {
+    Init__,
+    Any(IterSerializer<'ser, &'ser [AnyElement], AnyElement>),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> AudioOutputTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                AudioOutputTypeSerializerState::Init__ => {
+                    *self.state = AudioOutputTypeSerializerState::Any(IterSerializer::new(
+                        &self.value.any[..],
+                        None,
+                        false,
+                    ));
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TT),
+                            &super::super::NS_TT,
+                        );
+                    }
+                    helper.write_attrib(&mut bytes, "token", &self.value.token)?;
+                    bytes.extend_attributes(self.value.any_attribute.attributes());
+                    return Ok(Some(Event::Start(bytes)));
+                }
+                AudioOutputTypeSerializerState::Any(x) => match x.next(helper).transpose()? {
+                    Some(event) => return Ok(Some(event)),
+                    None => *self.state = AudioOutputTypeSerializerState::End__,
+                },
+                AudioOutputTypeSerializerState::End__ => {
+                    *self.state = AudioOutputTypeSerializerState::Done__;
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::End(BytesEnd::new(self.name))));
+                }
+                AudioOutputTypeSerializerState::Done__ => return Ok(None),
+                AudioOutputTypeSerializerState::Phantom__(_) => unreachable!(),
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for AudioOutputTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state = AudioOutputTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct AudioOutputConfigurationOptionsTypeSerializer<'ser> {
+    pub(super) value: &'ser super::AudioOutputConfigurationOptionsType,
+    pub(super) state: ::std::boxed::Box<AudioOutputConfigurationOptionsTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum AudioOutputConfigurationOptionsTypeSerializerState<'ser> {
+    Init__,
+    OutputTokensAvailable(
+        IterSerializer<'ser, &'ser [::std::string::String], ::std::string::String>,
+    ),
+    SendPrimacyOptions(IterSerializer<'ser, &'ser [::std::string::String], ::std::string::String>),
+    OutputLevelRange(<super::IntRangeType as WithSerializer>::Serializer<'ser>),
+    EqPresetScheduleSupport(
+        IterSerializer<
+            'ser,
+            ::core::option::Option<&'ser ::core::primitive::bool>,
+            ::core::primitive::bool,
+        >,
+    ),
+    EqPresets(IterSerializer<'ser, &'ser [super::EqPresetType], super::EqPresetType>),
+    Any(IterSerializer<'ser, &'ser [AnyElement], AnyElement>),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> AudioOutputConfigurationOptionsTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                AudioOutputConfigurationOptionsTypeSerializerState::Init__ => {
+                    *self.state =
+                        AudioOutputConfigurationOptionsTypeSerializerState::OutputTokensAvailable(
+                            IterSerializer::new(
+                                &self.value.output_tokens_available[..],
+                                Some("tt:OutputTokensAvailable"),
+                                false,
+                            ),
+                        );
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TT),
+                            &super::super::NS_TT,
+                        );
+                    }
+                    bytes.extend_attributes(self.value.any_attribute.attributes());
+                    return Ok(Some(Event::Start(bytes)));
+                }
+                AudioOutputConfigurationOptionsTypeSerializerState::OutputTokensAvailable(x) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => *self.state =
+                            AudioOutputConfigurationOptionsTypeSerializerState::SendPrimacyOptions(
+                                IterSerializer::new(
+                                    &self.value.send_primacy_options[..],
+                                    Some("tt:SendPrimacyOptions"),
+                                    false,
+                                ),
+                            ),
+                    }
+                }
+                AudioOutputConfigurationOptionsTypeSerializerState::SendPrimacyOptions(x) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => {
+                            *self.state =
+                                AudioOutputConfigurationOptionsTypeSerializerState::OutputLevelRange(
+                                    WithSerializer::serializer(
+                                        &self.value.output_level_range,
+                                        Some("tt:OutputLevelRange"),
+                                        false,
+                                    )?,
+                                )
+                        }
+                    }
+                }
+                AudioOutputConfigurationOptionsTypeSerializerState::OutputLevelRange(x) => match x
+                    .next(helper)
+                    .transpose()?
+                {
+                    Some(event) => return Ok(Some(event)),
+                    None => *self.state =
+                        AudioOutputConfigurationOptionsTypeSerializerState::EqPresetScheduleSupport(
+                            IterSerializer::new(
+                                self.value.eq_preset_schedule_support.as_ref(),
+                                Some("tt:EQPresetScheduleSupport"),
+                                false,
+                            ),
+                        ),
+                },
+                AudioOutputConfigurationOptionsTypeSerializerState::EqPresetScheduleSupport(x) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => {
+                            *self.state =
+                                AudioOutputConfigurationOptionsTypeSerializerState::EqPresets(
+                                    IterSerializer::new(
+                                        &self.value.eq_presets[..],
+                                        Some("tt:EQPresets"),
+                                        false,
+                                    ),
+                                )
+                        }
+                    }
+                }
+                AudioOutputConfigurationOptionsTypeSerializerState::EqPresets(x) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => {
+                            *self.state = AudioOutputConfigurationOptionsTypeSerializerState::Any(
+                                IterSerializer::new(&self.value.any[..], None, false),
+                            )
+                        }
+                    }
+                }
+                AudioOutputConfigurationOptionsTypeSerializerState::Any(x) => match x
+                    .next(helper)
+                    .transpose()?
+                {
+                    Some(event) => return Ok(Some(event)),
+                    None => *self.state = AudioOutputConfigurationOptionsTypeSerializerState::End__,
+                },
+                AudioOutputConfigurationOptionsTypeSerializerState::End__ => {
+                    *self.state = AudioOutputConfigurationOptionsTypeSerializerState::Done__;
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::End(BytesEnd::new(self.name))));
+                }
+                AudioOutputConfigurationOptionsTypeSerializerState::Done__ => return Ok(None),
+                AudioOutputConfigurationOptionsTypeSerializerState::Phantom__(_) => unreachable!(),
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for AudioOutputConfigurationOptionsTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state = AudioOutputConfigurationOptionsTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct EqPresetTypeSerializer<'ser> {
+    pub(super) value: &'ser super::EqPresetType,
+    pub(super) state: ::std::boxed::Box<EqPresetTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum EqPresetTypeSerializerState<'ser> {
+    Init__,
+    Token(<::std::string::String as WithSerializer>::Serializer<'ser>),
+    Name(<::std::string::String as WithSerializer>::Serializer<'ser>),
+    IsDefault(<::core::primitive::bool as WithSerializer>::Serializer<'ser>),
+    ScheduleToken(
+        IterSerializer<
+            'ser,
+            ::core::option::Option<&'ser ::std::string::String>,
+            ::std::string::String,
+        >,
+    ),
+    IsFrequencyDecibelEditable(<::core::primitive::bool as WithSerializer>::Serializer<'ser>),
+    FrequencyDecibelPair(
+        IterSerializer<
+            'ser,
+            &'ser [super::FrequencyDecibelPairType],
+            super::FrequencyDecibelPairType,
+        >,
+    ),
+    Any(IterSerializer<'ser, &'ser [AnyElement], AnyElement>),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> EqPresetTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                EqPresetTypeSerializerState::Init__ => {
+                    *self.state = EqPresetTypeSerializerState::Token(WithSerializer::serializer(
+                        &self.value.token,
+                        Some("tt:Token"),
+                        false,
+                    )?);
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TT),
+                            &super::super::NS_TT,
+                        );
+                    }
+                    return Ok(Some(Event::Start(bytes)));
+                }
+                EqPresetTypeSerializerState::Token(x) => match x.next(helper).transpose()? {
+                    Some(event) => return Ok(Some(event)),
+                    None => {
+                        *self.state = EqPresetTypeSerializerState::Name(WithSerializer::serializer(
+                            &self.value.name,
+                            Some("tt:Name"),
+                            false,
+                        )?)
+                    }
+                },
+                EqPresetTypeSerializerState::Name(x) => match x.next(helper).transpose()? {
+                    Some(event) => return Ok(Some(event)),
+                    None => {
+                        *self.state =
+                            EqPresetTypeSerializerState::IsDefault(WithSerializer::serializer(
+                                &self.value.is_default,
+                                Some("tt:isDefault"),
+                                false,
+                            )?)
+                    }
+                },
+                EqPresetTypeSerializerState::IsDefault(x) => match x.next(helper).transpose()? {
+                    Some(event) => return Ok(Some(event)),
+                    None => {
+                        *self.state =
+                            EqPresetTypeSerializerState::ScheduleToken(IterSerializer::new(
+                                self.value.schedule_token.as_ref(),
+                                Some("tt:ScheduleToken"),
+                                false,
+                            ))
+                    }
+                },
+                EqPresetTypeSerializerState::ScheduleToken(x) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => {
+                            *self.state = EqPresetTypeSerializerState::IsFrequencyDecibelEditable(
+                                WithSerializer::serializer(
+                                    &self.value.is_frequency_decibel_editable,
+                                    Some("tt:isFrequencyDecibelEditable"),
+                                    false,
+                                )?,
+                            )
+                        }
+                    }
+                }
+                EqPresetTypeSerializerState::IsFrequencyDecibelEditable(x) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => {
+                            *self.state = EqPresetTypeSerializerState::FrequencyDecibelPair(
+                                IterSerializer::new(
+                                    &self.value.frequency_decibel_pair[..],
+                                    Some("tt:FrequencyDecibelPair"),
+                                    false,
+                                ),
+                            )
+                        }
+                    }
+                }
+                EqPresetTypeSerializerState::FrequencyDecibelPair(x) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => {
+                            *self.state = EqPresetTypeSerializerState::Any(IterSerializer::new(
+                                &self.value.any[..],
+                                None,
+                                false,
+                            ))
+                        }
+                    }
+                }
+                EqPresetTypeSerializerState::Any(x) => match x.next(helper).transpose()? {
+                    Some(event) => return Ok(Some(event)),
+                    None => *self.state = EqPresetTypeSerializerState::End__,
+                },
+                EqPresetTypeSerializerState::End__ => {
+                    *self.state = EqPresetTypeSerializerState::Done__;
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::End(BytesEnd::new(self.name))));
+                }
+                EqPresetTypeSerializerState::Done__ => return Ok(None),
+                EqPresetTypeSerializerState::Phantom__(_) => unreachable!(),
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for EqPresetTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state = EqPresetTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct FrequencyDecibelPairTypeSerializer<'ser> {
+    pub(super) value: &'ser super::FrequencyDecibelPairType,
+    pub(super) state: ::std::boxed::Box<FrequencyDecibelPairTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum FrequencyDecibelPairTypeSerializerState<'ser> {
+    Init__,
+    CenterFrequency(<::core::primitive::i32 as WithSerializer>::Serializer<'ser>),
+    Decibel(<::core::primitive::f32 as WithSerializer>::Serializer<'ser>),
+    Any(IterSerializer<'ser, &'ser [AnyElement], AnyElement>),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> FrequencyDecibelPairTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                FrequencyDecibelPairTypeSerializerState::Init__ => {
+                    *self.state = FrequencyDecibelPairTypeSerializerState::CenterFrequency(
+                        WithSerializer::serializer(
+                            &self.value.center_frequency,
+                            Some("tt:CenterFrequency"),
+                            false,
+                        )?,
+                    );
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TT),
+                            &super::super::NS_TT,
+                        );
+                    }
+                    return Ok(Some(Event::Start(bytes)));
+                }
+                FrequencyDecibelPairTypeSerializerState::CenterFrequency(x) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => {
+                            *self.state = FrequencyDecibelPairTypeSerializerState::Decibel(
+                                WithSerializer::serializer(
+                                    &self.value.decibel,
+                                    Some("tt:Decibel"),
+                                    false,
+                                )?,
+                            )
+                        }
+                    }
+                }
+                FrequencyDecibelPairTypeSerializerState::Decibel(x) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => {
+                            *self.state = FrequencyDecibelPairTypeSerializerState::Any(
+                                IterSerializer::new(&self.value.any[..], None, false),
+                            )
+                        }
+                    }
+                }
+                FrequencyDecibelPairTypeSerializerState::Any(x) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => *self.state = FrequencyDecibelPairTypeSerializerState::End__,
+                    }
+                }
+                FrequencyDecibelPairTypeSerializerState::End__ => {
+                    *self.state = FrequencyDecibelPairTypeSerializerState::Done__;
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::End(BytesEnd::new(self.name))));
+                }
+                FrequencyDecibelPairTypeSerializerState::Done__ => return Ok(None),
+                FrequencyDecibelPairTypeSerializerState::Phantom__(_) => unreachable!(),
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for FrequencyDecibelPairTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state = FrequencyDecibelPairTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct AudioDecoderConfigurationOptionsTypeSerializer<'ser> {
+    pub(super) value: &'ser super::AudioDecoderConfigurationOptionsType,
+    pub(super) state: ::std::boxed::Box<AudioDecoderConfigurationOptionsTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum AudioDecoderConfigurationOptionsTypeSerializerState<'ser> {
+    Init__,
+    AacDecOptions(
+        IterSerializer<
+            'ser,
+            ::core::option::Option<&'ser super::AacDecOptionsType>,
+            super::AacDecOptionsType,
+        >,
+    ),
+    G711DecOptions(
+        IterSerializer<
+            'ser,
+            ::core::option::Option<&'ser super::G711DecOptionsType>,
+            super::G711DecOptionsType,
+        >,
+    ),
+    G726DecOptions(
+        IterSerializer<
+            'ser,
+            ::core::option::Option<&'ser super::G726DecOptionsType>,
+            super::G726DecOptionsType,
+        >,
+    ),
+    Extension(
+        IterSerializer<
+            'ser,
+            ::core::option::Option<&'ser super::AudioDecoderConfigurationOptionsExtensionType>,
+            super::AudioDecoderConfigurationOptionsExtensionType,
+        >,
+    ),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> AudioDecoderConfigurationOptionsTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                AudioDecoderConfigurationOptionsTypeSerializerState::Init__ => {
+                    *self.state =
+                        AudioDecoderConfigurationOptionsTypeSerializerState::AacDecOptions(
+                            IterSerializer::new(
+                                self.value.aac_dec_options.as_ref(),
+                                Some("tt:AACDecOptions"),
+                                false,
+                            ),
+                        );
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TT),
+                            &super::super::NS_TT,
+                        );
+                    }
+                    bytes.extend_attributes(self.value.any_attribute.attributes());
+                    return Ok(Some(Event::Start(bytes)));
+                }
+                AudioDecoderConfigurationOptionsTypeSerializerState::AacDecOptions(x) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => {
+                            *self.state =
+                                AudioDecoderConfigurationOptionsTypeSerializerState::G711DecOptions(
+                                    IterSerializer::new(
+                                        self.value.g711_dec_options.as_ref(),
+                                        Some("tt:G711DecOptions"),
+                                        false,
+                                    ),
+                                )
+                        }
+                    }
+                }
+                AudioDecoderConfigurationOptionsTypeSerializerState::G711DecOptions(x) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => {
+                            *self.state =
+                                AudioDecoderConfigurationOptionsTypeSerializerState::G726DecOptions(
+                                    IterSerializer::new(
+                                        self.value.g726_dec_options.as_ref(),
+                                        Some("tt:G726DecOptions"),
+                                        false,
+                                    ),
+                                )
+                        }
+                    }
+                }
+                AudioDecoderConfigurationOptionsTypeSerializerState::G726DecOptions(x) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => {
+                            *self.state =
+                                AudioDecoderConfigurationOptionsTypeSerializerState::Extension(
+                                    IterSerializer::new(
+                                        self.value.extension.as_ref(),
+                                        Some("tt:Extension"),
+                                        false,
+                                    ),
+                                )
+                        }
+                    }
+                }
+                AudioDecoderConfigurationOptionsTypeSerializerState::Extension(x) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => {
+                            *self.state = AudioDecoderConfigurationOptionsTypeSerializerState::End__
+                        }
+                    }
+                }
+                AudioDecoderConfigurationOptionsTypeSerializerState::End__ => {
+                    *self.state = AudioDecoderConfigurationOptionsTypeSerializerState::Done__;
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::End(BytesEnd::new(self.name))));
+                }
+                AudioDecoderConfigurationOptionsTypeSerializerState::Done__ => return Ok(None),
+                AudioDecoderConfigurationOptionsTypeSerializerState::Phantom__(_) => unreachable!(),
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for AudioDecoderConfigurationOptionsTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state = AudioDecoderConfigurationOptionsTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct AacDecOptionsTypeSerializer<'ser> {
+    pub(super) value: &'ser super::AacDecOptionsType,
+    pub(super) state: ::std::boxed::Box<AacDecOptionsTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum AacDecOptionsTypeSerializerState<'ser> {
+    Init__,
+    Bitrate(<super::IntItemsType as WithSerializer>::Serializer<'ser>),
+    SampleRateRange(<super::IntItemsType as WithSerializer>::Serializer<'ser>),
+    Any(IterSerializer<'ser, &'ser [AnyElement], AnyElement>),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> AacDecOptionsTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                AacDecOptionsTypeSerializerState::Init__ => {
+                    *self.state = AacDecOptionsTypeSerializerState::Bitrate(
+                        WithSerializer::serializer(&self.value.bitrate, Some("tt:Bitrate"), false)?,
+                    );
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TT),
+                            &super::super::NS_TT,
+                        );
+                    }
+                    bytes.extend_attributes(self.value.any_attribute.attributes());
+                    return Ok(Some(Event::Start(bytes)));
+                }
+                AacDecOptionsTypeSerializerState::Bitrate(x) => match x.next(helper).transpose()? {
+                    Some(event) => return Ok(Some(event)),
+                    None => {
+                        *self.state = AacDecOptionsTypeSerializerState::SampleRateRange(
+                            WithSerializer::serializer(
+                                &self.value.sample_rate_range,
+                                Some("tt:SampleRateRange"),
+                                false,
+                            )?,
+                        )
+                    }
+                },
+                AacDecOptionsTypeSerializerState::SampleRateRange(x) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => {
+                            *self.state = AacDecOptionsTypeSerializerState::Any(
+                                IterSerializer::new(&self.value.any[..], None, false),
+                            )
+                        }
+                    }
+                }
+                AacDecOptionsTypeSerializerState::Any(x) => match x.next(helper).transpose()? {
+                    Some(event) => return Ok(Some(event)),
+                    None => *self.state = AacDecOptionsTypeSerializerState::End__,
+                },
+                AacDecOptionsTypeSerializerState::End__ => {
+                    *self.state = AacDecOptionsTypeSerializerState::Done__;
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::End(BytesEnd::new(self.name))));
+                }
+                AacDecOptionsTypeSerializerState::Done__ => return Ok(None),
+                AacDecOptionsTypeSerializerState::Phantom__(_) => unreachable!(),
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for AacDecOptionsTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state = AacDecOptionsTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct G711DecOptionsTypeSerializer<'ser> {
+    pub(super) value: &'ser super::G711DecOptionsType,
+    pub(super) state: ::std::boxed::Box<G711DecOptionsTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum G711DecOptionsTypeSerializerState<'ser> {
+    Init__,
+    Bitrate(<super::IntItemsType as WithSerializer>::Serializer<'ser>),
+    SampleRateRange(<super::IntItemsType as WithSerializer>::Serializer<'ser>),
+    Any(IterSerializer<'ser, &'ser [AnyElement], AnyElement>),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> G711DecOptionsTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                G711DecOptionsTypeSerializerState::Init__ => {
+                    *self.state = G711DecOptionsTypeSerializerState::Bitrate(
+                        WithSerializer::serializer(&self.value.bitrate, Some("tt:Bitrate"), false)?,
+                    );
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TT),
+                            &super::super::NS_TT,
+                        );
+                    }
+                    bytes.extend_attributes(self.value.any_attribute.attributes());
+                    return Ok(Some(Event::Start(bytes)));
+                }
+                G711DecOptionsTypeSerializerState::Bitrate(x) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => {
+                            *self.state = G711DecOptionsTypeSerializerState::SampleRateRange(
+                                WithSerializer::serializer(
+                                    &self.value.sample_rate_range,
+                                    Some("tt:SampleRateRange"),
+                                    false,
+                                )?,
+                            )
+                        }
+                    }
+                }
+                G711DecOptionsTypeSerializerState::SampleRateRange(x) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => {
+                            *self.state = G711DecOptionsTypeSerializerState::Any(
+                                IterSerializer::new(&self.value.any[..], None, false),
+                            )
+                        }
+                    }
+                }
+                G711DecOptionsTypeSerializerState::Any(x) => match x.next(helper).transpose()? {
+                    Some(event) => return Ok(Some(event)),
+                    None => *self.state = G711DecOptionsTypeSerializerState::End__,
+                },
+                G711DecOptionsTypeSerializerState::End__ => {
+                    *self.state = G711DecOptionsTypeSerializerState::Done__;
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::End(BytesEnd::new(self.name))));
+                }
+                G711DecOptionsTypeSerializerState::Done__ => return Ok(None),
+                G711DecOptionsTypeSerializerState::Phantom__(_) => unreachable!(),
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for G711DecOptionsTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state = G711DecOptionsTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct G726DecOptionsTypeSerializer<'ser> {
+    pub(super) value: &'ser super::G726DecOptionsType,
+    pub(super) state: ::std::boxed::Box<G726DecOptionsTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum G726DecOptionsTypeSerializerState<'ser> {
+    Init__,
+    Bitrate(<super::IntItemsType as WithSerializer>::Serializer<'ser>),
+    SampleRateRange(<super::IntItemsType as WithSerializer>::Serializer<'ser>),
+    Any(IterSerializer<'ser, &'ser [AnyElement], AnyElement>),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> G726DecOptionsTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                G726DecOptionsTypeSerializerState::Init__ => {
+                    *self.state = G726DecOptionsTypeSerializerState::Bitrate(
+                        WithSerializer::serializer(&self.value.bitrate, Some("tt:Bitrate"), false)?,
+                    );
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TT),
+                            &super::super::NS_TT,
+                        );
+                    }
+                    bytes.extend_attributes(self.value.any_attribute.attributes());
+                    return Ok(Some(Event::Start(bytes)));
+                }
+                G726DecOptionsTypeSerializerState::Bitrate(x) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => {
+                            *self.state = G726DecOptionsTypeSerializerState::SampleRateRange(
+                                WithSerializer::serializer(
+                                    &self.value.sample_rate_range,
+                                    Some("tt:SampleRateRange"),
+                                    false,
+                                )?,
+                            )
+                        }
+                    }
+                }
+                G726DecOptionsTypeSerializerState::SampleRateRange(x) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => {
+                            *self.state = G726DecOptionsTypeSerializerState::Any(
+                                IterSerializer::new(&self.value.any[..], None, false),
+                            )
+                        }
+                    }
+                }
+                G726DecOptionsTypeSerializerState::Any(x) => match x.next(helper).transpose()? {
+                    Some(event) => return Ok(Some(event)),
+                    None => *self.state = G726DecOptionsTypeSerializerState::End__,
+                },
+                G726DecOptionsTypeSerializerState::End__ => {
+                    *self.state = G726DecOptionsTypeSerializerState::Done__;
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::End(BytesEnd::new(self.name))));
+                }
+                G726DecOptionsTypeSerializerState::Done__ => return Ok(None),
+                G726DecOptionsTypeSerializerState::Phantom__(_) => unreachable!(),
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for G726DecOptionsTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state = G726DecOptionsTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct AudioDecoderConfigurationOptionsExtensionTypeSerializer<'ser> {
+    pub(super) value: &'ser super::AudioDecoderConfigurationOptionsExtensionType,
+    pub(super) state:
+        ::std::boxed::Box<AudioDecoderConfigurationOptionsExtensionTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum AudioDecoderConfigurationOptionsExtensionTypeSerializerState<'ser> {
+    Init__,
+    Any(IterSerializer<'ser, &'ser [AnyElement], AnyElement>),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> AudioDecoderConfigurationOptionsExtensionTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                AudioDecoderConfigurationOptionsExtensionTypeSerializerState::Init__ => {
+                    *self.state = AudioDecoderConfigurationOptionsExtensionTypeSerializerState::Any(
+                        IterSerializer::new(&self.value.any[..], None, false),
+                    );
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TT),
+                            &super::super::NS_TT,
+                        );
+                    }
+                    return Ok(Some(Event::Start(bytes)));
+                }
+                AudioDecoderConfigurationOptionsExtensionTypeSerializerState::Any(x) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => {
+                            *self.state =
+                                AudioDecoderConfigurationOptionsExtensionTypeSerializerState::End__
+                        }
+                    }
+                }
+                AudioDecoderConfigurationOptionsExtensionTypeSerializerState::End__ => {
+                    *self.state =
+                        AudioDecoderConfigurationOptionsExtensionTypeSerializerState::Done__;
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::End(BytesEnd::new(self.name))));
+                }
+                AudioDecoderConfigurationOptionsExtensionTypeSerializerState::Done__ => {
+                    return Ok(None)
+                }
+                AudioDecoderConfigurationOptionsExtensionTypeSerializerState::Phantom__(_) => {
+                    unreachable!()
+                }
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for AudioDecoderConfigurationOptionsExtensionTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state = AudioDecoderConfigurationOptionsExtensionTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
 pub struct PtzNodeTypeSerializer<'ser> {
     pub(super) value: &'ser super::PtzNodeType,
     pub(super) state: ::std::boxed::Box<PtzNodeTypeSerializerState<'ser>>,

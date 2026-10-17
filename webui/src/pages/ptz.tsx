@@ -1,6 +1,7 @@
 import * as React from "react"
 import { MoveIcon } from "lucide-react"
 
+import { FollowCard } from "@/components/ptz/follow-card"
 import { PtzPad } from "@/components/ptz/ptz-pad"
 import { PtzPresets } from "@/components/ptz/ptz-presets"
 import { usePtzControl } from "@/components/ptz/use-ptz-control"
@@ -168,6 +169,7 @@ export default function PtzPage() {
           </CardContent>
         </Card>
       </div>
+      <FollowCard />
       {isAdmin && <PtzPresets isAdmin onGoto={() => setBoost(true)} />}
     </div>
   )

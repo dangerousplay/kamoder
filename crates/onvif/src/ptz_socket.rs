@@ -14,7 +14,7 @@
 use crate::ptz::Ptz;
 use metrics::counter;
 use ptz_proto::{
-    ErrorCode, Request, Response, DEFAULT_MOVE_TIMEOUT_MS, MAX_LINE, MAX_MOVE_TIMEOUT_MS,
+    ErrorCode, Request, Response, Source, DEFAULT_MOVE_TIMEOUT_MS, MAX_LINE, MAX_MOVE_TIMEOUT_MS,
 };
 use snafu::{ResultExt, Snafu};
 use std::os::unix::fs::{FileTypeExt, PermissionsExt};
@@ -240,26 +240,32 @@ fn dispatch(ptz: &Ptz, request: Request) -> Response {
         Ok(()) => Response::Ok,
         Err(e) => backend_error(&e),
     };
+    // Absent = manual: clients that predate `source` are people.
+    let manual = |source: Option<Source>| source.unwrap_or(Source::Manual);
     match request {
         Request::Status => Response::Status {
             backend: ptz.name().to_owned(),
             limits: wire_limits(ptz.limits()),
             position: wire_position(ptz.position()),
+            last_manual_ms_ago: ptz
+                .last_manual_ago()
+                .map(|ago| u64::try_from(ago.as_millis()).unwrap_or(u64::MAX)),
         },
         Request::Move {
             pan,
             tilt,
             timeout_ms,
+            source,
         } => {
             let timeout_ms = timeout_ms.unwrap_or(DEFAULT_MOVE_TIMEOUT_MS);
             if timeout_ms == 0 {
                 return error(ErrorCode::InvalidArgument, "timeout_ms must be positive");
             }
             let timeout = Duration::from_millis(timeout_ms.min(MAX_MOVE_TIMEOUT_MS).into());
-            done(ptz.continuous_move(pan, tilt, Some(timeout)))
+            done(ptz.continuous_move(pan, tilt, Some(timeout), manual(source)))
         }
-        Request::Stop => done(ptz.stop()),
-        Request::Goto { pan, tilt } => done(ptz.goto(pan, tilt)),
+        Request::Stop { source } => done(ptz.stop(manual(source))),
+        Request::Goto { pan, tilt, source } => done(ptz.goto(pan, tilt, manual(source))),
         Request::Presets => Response::Presets {
             presets: ptz.presets().into_iter().map(wire_preset).collect(),
         },
@@ -269,9 +275,9 @@ fn dispatch(ptz: &Ptz, request: Request) -> Response {
             },
             Err(e) => backend_error(&e),
         },
-        Request::GotoPreset { token } => done(ptz.goto_preset(&token)),
+        Request::GotoPreset { token, source } => done(ptz.goto_preset(&token, manual(source))),
         Request::RemovePreset { token } => done(ptz.remove_preset(&token)),
-        Request::Home => done(ptz.home()),
+        Request::Home { source } => done(ptz.home(manual(source))),
     }
 }
 
@@ -408,6 +414,57 @@ mod tests {
 
         drop(server);
         assert!(!path.exists(), "socket removed on drop");
+    }
+
+    fn last_manual(response: Response) -> Option<u64> {
+        match response {
+            Response::Status {
+                last_manual_ms_ago, ..
+            } => last_manual_ms_ago,
+            other => panic!("expected status, got {other:?}"),
+        }
+    }
+
+    /// Socket requests tagged `follow` leave the manual time alone; untagged
+    /// (old clients) and `manual` ones set it.
+    #[tokio::test(flavor = "current_thread", start_paused = true)]
+    async fn status_reports_the_last_manual_command() {
+        let ptz = crate::ptz::tests::sim();
+        let status = || handle(&ptz, Request::Status);
+        assert_eq!(last_manual(status()), None);
+
+        let follow = Some(Source::Follow);
+        for request in [
+            Request::Move {
+                pan: 0.5,
+                tilt: 0.0,
+                timeout_ms: None,
+                source: follow,
+            },
+            Request::Goto {
+                pan: 10.0,
+                tilt: 10.0,
+                source: follow,
+            },
+            Request::Home { source: follow },
+            Request::Stop { source: follow },
+        ] {
+            assert_eq!(handle(&ptz, request), Response::Ok);
+        }
+        assert_eq!(last_manual(status()), None, "follow is not manual");
+
+        // An old client's line, without `source`.
+        let old: Request = serde_json::from_str(r#"{"op":"stop"}"#).unwrap();
+        assert_eq!(handle(&ptz, old), Response::Ok);
+        assert_eq!(last_manual(status()), Some(0));
+        tokio::time::advance(Duration::from_millis(2500)).await;
+        assert_eq!(handle(&ptz, Request::Stop { source: follow }), Response::Ok);
+        assert_eq!(last_manual(status()), Some(2500));
+        let manual = Request::Stop {
+            source: Some(Source::Manual),
+        };
+        assert_eq!(handle(&ptz, manual), Response::Ok);
+        assert_eq!(last_manual(status()), Some(0));
     }
 
     #[test]

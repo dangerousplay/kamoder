@@ -2,7 +2,8 @@
 //! vendor library: the ISP tuning loader (`conf`), the camera host driver's
 //! V4L2 interface (`v4l2`, `device`) and the hardware H.264 encoder
 //! (`venc`), adapted as [`Av100Backend`] (ISP + V4L2 capture) and
-//! [`Av100Encoder`] (one `/dev/venc` channel per sensor).
+//! [`Av100Encoder`] (one `/dev/venc` channel per sensor). `pcm` holds the
+//! audio codec's ioctl ABI (`ak_pcm.ko`) for the `audio` service.
 //!
 //! Hardware rules kept here, not in the generic service:
 //! - all sensors are opened, then all started ([`Av100Backend::start`]):
@@ -14,6 +15,7 @@
 
 pub mod conf;
 pub mod device;
+pub mod pcm;
 pub mod v4l2;
 pub mod venc;
 
@@ -24,6 +26,7 @@ use snafu::{ensure, ResultExt, Snafu};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
+use video_proto::motion::MotionGrid;
 
 /// Where the kernel lists the sensors (`v4l-subdevN`) and their names.
 pub const SYSFS: &str = "/sys/class/video4linux";
@@ -211,6 +214,21 @@ impl backend::Session for Av100Session {
             })
         })?
     }
+
+    /// The ISP's 3D-NR motion grid (UNVERIFIED on hardware: the command
+    /// comes from the vendor library's disassembly, see
+    /// [`conf::GET_3D_NR_STAT`]).
+    fn motion_grid(&mut self, slot: usize) -> Result<Option<MotionGrid>, BoxError> {
+        let stat = self.sensors[slot].motion_grid()?;
+        Ok(Some(MotionGrid::new(
+            0,
+            0,
+            conf::NR3D_STAT_COLS as u8,
+            conf::NR3D_STAT_ROWS as u8,
+            stat.max,
+            stat.cells.to_vec(),
+        )?))
+    }
 }
 
 /// Writes `value` to a procfs knob, ignoring failure (not root, no such knob).
@@ -395,6 +413,18 @@ mod tests {
             Err(TuningError::NoSensor { index: 0, .. })
         ));
         std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    /// The 3D-NR grid fits the motion socket's limits as is.
+    #[test]
+    fn motion_stat_fits_a_motion_grid() {
+        use video_proto::motion::{MAX_COLS, MAX_ROWS};
+        assert_eq!(conf::NR3D_STAT_COLS, usize::from(MAX_COLS));
+        assert_eq!(conf::NR3D_STAT_ROWS, usize::from(MAX_ROWS));
+        let raw = [0u8; conf::NR3D_STAT_LEN];
+        let stat = device::MotionStat::parse(&raw);
+        let g = MotionGrid::new(0, 0, 32, 24, stat.max, stat.cells.to_vec()).unwrap();
+        assert_eq!(g.cells.len(), 768);
     }
 
     #[test]

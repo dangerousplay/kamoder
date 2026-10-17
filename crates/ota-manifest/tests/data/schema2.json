@@ -1,0 +1,16 @@
+{
+  "schema": 2,
+  "version": "0.2.0",
+  "channel": "stable",
+  "seq": 1760700000,
+  "security_floor": "0.1.0",
+  "min_updater": "0.1.0",
+  "boards": [
+    "test-board",
+    "other-board"
+  ],
+  "target": "armv5te-unknown-linux-uclibceabi",
+  "created": "2026-10-17T12:00:00Z",
+  "notes_url": "https://example.invalid/releases/v0.2.0",
+  "components": "whatever, new layout"
+}

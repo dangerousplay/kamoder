@@ -2,42 +2,53 @@
 //!
 //! Serves the precompressed React SPA from `www/` and a small JSON API under
 //! `/api` for it: login, service status and control through the supervisor's
-//! control socket, logs, `camera.conf`, Wi-Fi, users, snapshot and PTZ.
+//! control socket, logs, `camera.conf`, Wi-Fi, users, snapshot, PTZ, lights
+//! and audio (device list, push-to-talk, listen).
 //!
 //! ```text
 //! # provisioning (init.sh does this from camera.conf's web_admin_password)
 //! echo "$PASSWORD" | web hash admin > etc/web-users
 //!
 //! # serving (supervisor.toml runs this with working directory anyka_rust/)
-//! web --listen 0.0.0.0:80
+//! web --listen 0.0.0.0:80 --tls-listen 0.0.0.0:443
 //! ```
 //!
 //! Built for a 400 MHz ARMv5TE with 32 MB of RAM, which shapes everything:
 //!
 //! - a **current-thread** tokio runtime, as in the other services — no
 //!   worker thread per core, only the blocking pool for PBKDF2;
-//! - axum with **no default features** (HTTP/1, JSON, query strings only)
-//!   and tower-http's `fs` only; no TLS (trusted-LAN tool, like sshd);
+//! - axum with **no default features** (HTTP/1, JSON, query strings and
+//!   WebSockets only) and tower-http's `fs` only;
+//! - **optional HTTPS** (`--tls-listen`) beside plain HTTP, with a
+//!   self-signed certificate generated on first start (see [`web::tls`]).
+//!   It exists because browsers only allow the microphone (push-to-talk) on
+//!   a secure context; the rest of the UI works over HTTP as before, and a
+//!   TLS setup failure only costs talk, never the server;
 //! - the SPA is served from the SD card, gzip/brotli'd at build time, never
 //!   embedded and never compressed on the camera;
 //! - **stateless sessions** (HS256 JWTs, see [`web::auth`]) plus a per-user
 //!   generation counter, so a request costs one HMAC and one table lookup
 //!   while PBKDF2 (≈1 s) runs only at login;
-//! - live logs use **SSE** (plain HTTP/1 responses axum already has)
-//!   rather than WebSockets, which would add a dependency and a protocol for
-//!   what is a one-way stream.
+//! - live logs use **SSE** (plain HTTP/1 responses axum already has), a
+//!   one-way stream; **WebSockets** are used only where the browser has to
+//!   send continuously or binary: push-to-talk audio up, live audio down
+//!   (see [`web::audio`]).
 
 // See lib.rs: keeps the uClibc `pthread_setname_np` shim linked.
 extern crate os;
 
 use ::auth::Role;
+use axum::serve::ListenerExt;
 use clap::{Parser, Subcommand};
 use eyre::{bail, Result, WrapErr};
+use std::future::IntoFuture;
 use std::net::SocketAddr;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::time::Duration;
 use web::app;
 use web::state::{AppState, Config, Tuning};
+use web::tls::TlsListener;
 
 /// How long open connections (log streams, MJPEG) get to finish after
 /// SIGTERM before the process exits anyway. Well under the supervisor's
@@ -73,6 +84,17 @@ enum Command {
 struct Options {
     #[arg(long, default_value = "0.0.0.0:80")]
     listen: SocketAddr,
+    /// Also serve HTTPS here (e.g. 0.0.0.0:443), needed for push-to-talk.
+    /// Off when not given.
+    #[arg(long)]
+    tls_listen: Option<SocketAddr>,
+    /// TLS certificate (PEM); a self-signed one is generated if missing or
+    /// unusable.
+    #[arg(long, default_value = "etc/web-tls.crt")]
+    tls_cert: PathBuf,
+    /// TLS private key (PEM, mode 0600), generated with the certificate.
+    #[arg(long, default_value = "etc/web-tls.key")]
+    tls_key: PathBuf,
     /// Directory holding the built SPA (index.html plus .gz/.br assets).
     #[arg(long, default_value = "www")]
     www: PathBuf,
@@ -96,6 +118,12 @@ struct Options {
     ptz_socket: PathBuf,
     #[arg(long, default_value = lights_proto::DEFAULT_SOCKET)]
     lights_socket: PathBuf,
+    #[arg(long, default_value = follow_proto::DEFAULT_SOCKET)]
+    follow_socket: PathBuf,
+    #[arg(long, default_value = audio_proto::DEFAULT_SOCKET)]
+    audio_socket: PathBuf,
+    #[arg(long, default_value = update_proto::DEFAULT_SOCKET)]
+    update_socket: PathBuf,
     /// Port of the rtsp service, for the stream URLs /api/cameras reports.
     #[arg(long, default_value_t = video_proto::DEFAULT_RTSP_PORT)]
     rtsp_port: u16,
@@ -138,7 +166,22 @@ struct Options {
 /// Interface used when neither `--wifi-iface` nor the board profile names one.
 const FALLBACK_WIFI_IFACE: &str = "wlan0"; // board-literal-ok: same fallback as the wifi service (no profile readable)
 
+/// What `--tls-*` asked for.
+struct TlsOptions {
+    listen: SocketAddr,
+    cert: PathBuf,
+    key: PathBuf,
+}
+
 impl Options {
+    fn tls_options(&self) -> Option<TlsOptions> {
+        Some(TlsOptions {
+            listen: self.tls_listen?,
+            cert: self.tls_cert.clone(),
+            key: self.tls_key.clone(),
+        })
+    }
+
     fn into_config(self, board: Option<board::Resolved>) -> Config {
         let wifi_iface = self
             .wifi_iface
@@ -155,6 +198,13 @@ impl Options {
             supervisor_socket: self.supervisor_socket,
             ptz_socket: self.ptz_socket,
             lights_socket: self.lights_socket,
+            follow_socket: self.follow_socket,
+            audio_socket: self.audio_socket,
+            update_socket: self.update_socket,
+            // The working directory, like every relative path above.
+            data_root: PathBuf::from("."),
+            // Set by `serve_command` once the HTTPS listener is bound.
+            https_port: None,
             rtsp_port: self.rtsp_port,
             board,
             snapshot_url: self.snapshot_url,
@@ -185,7 +235,10 @@ fn main() -> Result<()> {
 
     match cli.command {
         Some(Command::Hash { user, role }) => hash_command(&user, role),
-        Some(Command::Serve) | None => serve_command(cli.options.into_config(current_board())),
+        Some(Command::Serve) | None => {
+            let tls = cli.options.tls_options();
+            serve_command(cli.options.into_config(current_board()), tls)
+        }
     }
 }
 
@@ -221,7 +274,38 @@ fn current_board() -> Option<board::Resolved> {
     }
 }
 
-fn serve_command(config: Config) -> Result<()> {
+/// A bound HTTPS socket and its TLS configuration.
+type Tls = (std::net::TcpListener, Arc<rustls::ServerConfig>);
+
+/// Loads or generates the certificate and binds the HTTPS port. Any failure
+/// is logged and leaves the server on HTTP only (AUD-18 edge case).
+fn prepare_tls(options: &TlsOptions) -> Option<Tls> {
+    let config = match web::tls::load_or_generate(&options.cert, &options.key) {
+        Ok(config) => config,
+        Err(error) => {
+            tracing::error!(%error, "TLS setup failed; serving HTTP only");
+            return None;
+        }
+    };
+    let listener = std::net::TcpListener::bind(options.listen).and_then(|listener| {
+        listener.set_nonblocking(true)?;
+        Ok(listener)
+    });
+    match listener {
+        Ok(listener) => Some((listener, config)),
+        Err(error) => {
+            tracing::error!(listen = %options.listen, %error, "cannot bind HTTPS; serving HTTP only");
+            None
+        }
+    }
+}
+
+fn serve_command(mut config: Config, tls: Option<TlsOptions>) -> Result<()> {
+    let tls = tls.as_ref().and_then(prepare_tls);
+    config.https_port = tls
+        .as_ref()
+        .and_then(|(listener, _)| listener.local_addr().ok())
+        .map(|addr| addr.port());
     tracing::info!(
         listen = %config.listen,
         www = %config.www.display(),
@@ -231,6 +315,10 @@ fn serve_command(config: Config) -> Result<()> {
         supervisor_socket = %config.supervisor_socket.display(),
         ptz_socket = %config.ptz_socket.display(),
         lights_socket = %config.lights_socket.display(),
+        follow_socket = %config.follow_socket.display(),
+        audio_socket = %config.audio_socket.display(),
+        update_socket = %config.update_socket.display(),
+        https_port = ?config.https_port,
         snapshot_url = %config.snapshot_url,
         rtsp_port = config.rtsp_port,
         wifi_iface = %config.wifi.iface,
@@ -241,10 +329,10 @@ fn serve_command(config: Config) -> Result<()> {
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()?;
-    runtime.block_on(serve(state))
+    runtime.block_on(serve(state, tls))
 }
 
-async fn serve(state: AppState) -> Result<()> {
+async fn serve(state: AppState, tls: Option<Tls>) -> Result<()> {
     let listen = state.config.listen;
     let listener = tokio::net::TcpListener::bind(listen)
         .await
@@ -261,17 +349,32 @@ async fn serve(state: AppState) -> Result<()> {
         let _ = stop_tx.send(true);
     });
 
-    let mut graceful_rx = stop_rx.clone();
-    let server = axum::serve(
-        listener,
-        app::app(state).into_make_service_with_connect_info::<SocketAddr>(),
-    )
-    .with_graceful_shutdown(async move {
-        let _ = graceful_rx.wait_for(|stop| *stop).await;
-    });
+    let graceful = |mut rx: tokio::sync::watch::Receiver<bool>| async move {
+        let _ = rx.wait_for(|stop| *stop).await;
+    };
+    let service = app::app(state).into_make_service_with_connect_info::<SocketAddr>();
+    let http = axum::serve(listener, service.clone())
+        .with_graceful_shutdown(graceful(stop_rx.clone()))
+        .into_future();
+    let https_stop = stop_rx.clone();
+    let https = async move {
+        let Some((listener, config)) = tls else {
+            return Ok(());
+        };
+        let listener = tokio::net::TcpListener::from_std(listener)?;
+        tracing::info!(listen = %listener.local_addr()?, "HTTPS listening");
+        // `tap_io` only to reach axum's `ConnectInfo<SocketAddr>` impl for
+        // custom listeners; the login throttle keys on the peer address.
+        let listener = TlsListener::new(listener, config).tap_io(|_| {});
+        axum::serve(listener, service)
+            .with_graceful_shutdown(graceful(https_stop))
+            .await
+    };
 
     tokio::select! {
-        result = server => result.wrap_err("web server failed")?,
+        result = async { tokio::try_join!(http, https) } => {
+            result.wrap_err("web server failed")?;
+        }
         _ = async {
             let _ = stop_rx.wait_for(|stop| *stop).await;
             tokio::time::sleep(SHUTDOWN_GRACE).await;
@@ -315,6 +418,20 @@ mod cli_tests {
         let cli = Cli::try_parse_from(["web"]).unwrap();
         assert!(cli.command.is_none());
         assert_eq!(cli.options.listen, "0.0.0.0:80".parse().unwrap());
+        assert!(cli.options.tls_options().is_none());
+        assert_eq!(cli.options.tls_cert, PathBuf::from("etc/web-tls.crt"));
+        assert_eq!(cli.options.tls_key, PathBuf::from("etc/web-tls.key"));
+        assert_eq!(
+            cli.options.audio_socket,
+            PathBuf::from(audio_proto::DEFAULT_SOCKET)
+        );
+        assert_eq!(
+            cli.options.update_socket,
+            PathBuf::from(update_proto::DEFAULT_SOCKET)
+        );
+        let cli = Cli::try_parse_from(["web", "--tls-listen", "0.0.0.0:443"]).unwrap();
+        let tls = cli.options.tls_options().unwrap();
+        assert_eq!(tls.listen, "0.0.0.0:443".parse().unwrap());
         let cli = Cli::try_parse_from(["web", "hash", "bob", "--role", "viewer"]).unwrap();
         assert!(matches!(
             cli.command,

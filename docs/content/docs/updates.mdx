@@ -1,0 +1,86 @@
+---
+title: Updates (OTA)
+description: Signed A/B updates from GitHub or a file upload, with automatic rollback.
+icon: RefreshCw
+---
+
+Kamoder keeps **two copies** of the firmware on the SD card. An update is
+written to the copy that is not running and checked file by file. It then
+boots **on trial**. If the new version does not prove healthy, the camera
+goes back to the previous copy by itself, without a UART cable or a PC.
+
+## Using it
+
+Open **Updates** in the web UI.
+
+- **Check now** looks for a new release on GitHub. The **stable** channel
+  follows normal releases and **beta** also takes pre-releases. The camera
+  also checks every 12 h once its clock is set by NTP.
+- A found update downloads in the background. Downloads resume after Wi-Fi
+  drops and are capped at 256 KiB/s. The download is verified, then the page
+  shows *Update available*.
+- **Install & reboot** writes the inactive slot and restarts into it.
+- **Upload** installs a `kamoder-<version>-update.kup` file, for cameras
+  without internet access.
+- **Roll back** returns to the other slot, as long as that slot booted
+  successfully before.
+- **Settings**: channel, automatic checks, and automatic install inside a
+  maintenance window. Automatic install is off by default.
+
+Settings and data (`camera.conf`, `etc/`, logs, recordings) are shared by both
+slots and are never part of an update.
+
+## What happens on a trial boot
+
+1. At boot, `kboot` (run from `Factory/config.sh`) picks the slot. A new slot
+   gets 3 tries.
+2. The `update` service **commits** the slot once three things hold. Every
+   enabled service has run for 3 minutes, the web UI answers, and the slot's
+   own signed manifest verifies.
+3. If the slot is not committed within 10 minutes, the camera reboots. A
+   hang is caught by the hardware watchdog. Each failed boot uses up one try.
+4. After 3 failed tries the slot is marked bad and the previous one boots.
+
+The switch between slots is written as two small checksummed records, one at
+a time. Pulling the power at any moment leaves a bootable camera.
+
+## Security
+
+- Every update carries a `manifest.json` signed with the project's
+  **minisign** key. The public key is compiled into the firmware. File sizes
+  and SHA-256 hashes for everything installed are inside the signed
+  manifest.
+- The camera refuses a manifest that:
+  - is for another board;
+  - has a sequence number at or below one it has already accepted (replay or
+    downgrade);
+  - has a version below the security floor.
+- Releases are also signed with Sigstore. See
+  [Releases & verification](/docs/releases).
+
+To verify a package by hand:
+
+```sh
+minisign -Vm manifest.json -p kamoder.pub
+```
+
+## Recovery
+
+| Situation | Fix |
+| --- | --- |
+| Want the old version back | Updates → **Roll back**, or `boot/bin/kboot rollback --root /mnt/disc1/anyka_rust` over ssh, then reboot. |
+| Inspect the A/B state | `boot/bin/kboot status --root /mnt/disc1/anyka_rust`, and `logs/boot.log`. |
+| Both slots unusable | Delete `anyka_rust/boot/sel.0`, `sel.1` and `last` from a PC. The card then boots the plain tree in `anyka_rust/`. `./x flash` does the same. |
+| Boot shim broken | telnetd starts before `kboot`. The UART console and the stock recovery in flash are untouched. |
+
+## For maintainers
+
+`./x kup` builds the signed, reproducible package from `./x dist`. The release
+workflow publishes `*.kup`, `manifest.json` and `manifest.json.minisig` when
+the `MINISIGN_SECRET_KEY` and `MINISIGN_PASSWORD` secrets are set. Key setup
+and rotation are in `crates/ota-manifest/keys/README.md`, and the design is in
+`docs/notes/OTA.md`.
+
+The updater core is not tied to the SD card. MTD partitions found **by name**
+and a U-Boot environment backend already exist for a future flash firmware
+with its own partition layout. Both are host-tested only.

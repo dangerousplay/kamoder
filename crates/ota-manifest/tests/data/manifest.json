@@ -1,0 +1,71 @@
+{
+  "schema": 1,
+  "version": "0.2.0",
+  "channel": "stable",
+  "seq": 1760700000,
+  "security_floor": "0.1.0",
+  "min_updater": "0.1.0",
+  "boards": [
+    "test-board",
+    "other-board"
+  ],
+  "target": "armv5te-unknown-linux-uclibceabi",
+  "created": "2026-10-17T12:00:00Z",
+  "notes_url": "https://example.invalid/releases/v0.2.0",
+  "components": [
+    {
+      "name": "slot",
+      "kind": "sd-tree",
+      "path": "payload.tar.gz",
+      "size": 1048576,
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "files": [
+        {
+          "path": "VERSION",
+          "size": 6,
+          "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+          "mode": 420
+        },
+        {
+          "path": "bin/web",
+          "size": 524288,
+          "sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+          "mode": 493
+        },
+        {
+          "path": "lib/sys/libc.so.0",
+          "size": 300000,
+          "sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+          "mode": 493
+        },
+        {
+          "path": "www/index.html",
+          "size": 1234,
+          "sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+          "mode": 420
+        }
+      ]
+    },
+    {
+      "name": "boot",
+      "kind": "boot-shim",
+      "path": "boot.tar.gz",
+      "size": 65536,
+      "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "files": [
+        {
+          "path": "boot/bin/kboot",
+          "size": 60000,
+          "sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+          "mode": 493
+        },
+        {
+          "path": "config.sh",
+          "size": 2048,
+          "sha256": "6666666666666666666666666666666666666666666666666666666666666666",
+          "mode": 493
+        }
+      ]
+    }
+  ]
+}

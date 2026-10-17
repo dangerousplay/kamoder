@@ -68,6 +68,29 @@ role = "amp"
 gpio = 37
 active_low = true
 
+# The ak_pcm.ko codec: ALSA-style node names but a vendor char device
+# (major 248, no /dev/snd). Live-tested 2026-10-17 with pcm-probe: capture
+# runs natively at 8 kHz mono S16 (512 B periods, 32 ms reads, real signal),
+# the same 8 kHz as the wire format, so nothing is resampled. Gain ranges:
+# DAC 0-6 per the SDK (0 = mute); ADC range unverified, driver default 3.
+[audio]
+backend = "ak-pcm"
+rate = 8000
+
+[[audio.input]]
+id = "mic0"
+name = "Microphone"
+device = "/dev/pcmC0D0c"
+gain = 3
+gain_range = [0, 7]
+
+[[audio.output]]
+id = "spk0"
+name = "Speaker"
+device = "/dev/pcmC0D0p"
+gain = 4
+gain_range = [0, 6]
+
 [wifi]
 iface = "wlan0"
 module = "/ipc/modules/wifi/ssv6x5x.ko"
@@ -83,3 +106,24 @@ module = "/ipc/patch/ko/presetmotor.ko"
 pan = [0, 175]
 tilt = [0, 70]
 steps_per_degree = 1.0
+
+# Motion following (only boards with a [ptz] head get this table). Every key
+# is optional and an empty table enables following with the built-in
+# defaults; delete the table to turn the feature off for this board. The
+# values below are those defaults, written out to be tuned on hardware:
+# fov_deg was never measured on this unit, and t_on/t_off are in the ISP's
+# u16 per-cell motion-energy units.
+[ptz.follow]
+hz = 10
+dead_zone_permille = [300, 400]
+max_step_deg = 15.0
+fov_deg = [90.0, 50.0]
+decision_frames = 5
+settle_ms = 300
+return_after_s = 15
+manual_hold_s = 60
+t_on = 600
+t_off = 300
+min_cells = 2
+max_fraction_permille = 600
+# home = [87.5, 35.0]   # unset = return to the PTZ home

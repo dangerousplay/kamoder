@@ -9,6 +9,7 @@ mod checks;
 mod flash;
 mod gen_onvif;
 mod itest;
+mod kup;
 mod tasks;
 
 use eyre::Result;
@@ -35,6 +36,7 @@ fn main() -> Result<()> {
         "itest" => itest::itest(rest),
         "qemu" => tasks::qemu(rest),
         "deploy" => tasks::deploy(rest),
+        "kup" => kup::kup(rest),
         "check-boards" => checks::check_boards(rest),
         "check-literals" => checks::check_literals(rest),
         "ci" => tasks::ci(rest),

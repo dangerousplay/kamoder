@@ -1,0 +1,60 @@
+[package]
+name = "ota"
+description = "Over-the-air updates: slot stores, update package installer, downloads, and the update service"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+os.workspace = true
+# Manifest types, minisign verification and policy (OTA-02..04).
+ota-manifest.workspace = true
+# Boot-control record: invalidate before writing a slot, activate after.
+bootctl.workspace = true
+# `.kup` container and the payload tarballs. No `xattr` feature: payload
+# entries are plain files and directories, extended attributes are never read.
+tar = { version = "0.4", default-features = false }
+# gzip for payload.tar.gz; the default backend is miniz_oxide (pure Rust,
+# 32 KiB window), which is what the RAM budget in design §10 assumes.
+flate2 = "1"
+# SHA-256 of files, payloads and MTD read-back (already in the tree for TLS).
+ring.workspace = true
+# MTD ioctls (MEMGETINFO/MEMERASE/MEMUNLOCK) and statvfs for the free-space check.
+nix = { workspace = true, features = ["ioctl", "fs"] }
+snafu.workspace = true
+serde.workspace = true
+tracing.workspace = true
+
+# --- the `update` service (src/service/, bin `update`, design §6) ---
+update-proto.workspace = true
+# HTTPS downloads and GitHub discovery (hyper + rustls/ring).
+fetch.workspace = true
+# Control-socket client: service states for the trial health check (OTA-11).
+supervisor.workspace = true
+# This device's board profile name for the manifest policy.
+board.workspace = true
+telemetry.workspace = true
+metrics.workspace = true
+serde_json.workspace = true
+clap.workspace = true
+eyre.workspace = true
+# sync() + reboot(RB_AUTOBOOT) after an install.
+libc.workspace = true
+# A current-thread runtime, as everywhere on this 32 MB board; the installer
+# itself runs in spawn_blocking.
+tokio = { version = "1", features = ["rt", "net", "io-util", "macros", "time", "signal", "sync", "fs"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["test-util"] }
+# The committed TEST-ONLY key, to verify fixtures signed in-test.
+ota-manifest = { workspace = true, features = ["test-key"] }
+# Pure-Rust minisign signer: tests build and sign `.kup` fixtures at run time
+# with keys/test/test.key (unencrypted), no `minisign` CLI needed in CI.
+minisign = "0.10"
+# Decodes the test secret key line for `minisign::SecretKey::from_bytes`.
+base64.workspace = true
+
+[[bin]]
+name = "update"
+path = "src/main.rs"

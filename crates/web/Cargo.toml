@@ -9,8 +9,10 @@ publish = false
 [dependencies]
 # No default features: only the HTTP/1 server, JSON bodies, query strings and
 # the matched route (for metrics labels). No HTTP/2, forms, tower-log or
-# tracing layers — every feature is code and RAM on a 32 MB board.
-axum = { version = "0.8", default-features = false, features = ["http1", "tokio", "json", "query", "matched-path"] }
+# tracing layers — every feature is code and RAM on a 32 MB board. `ws` for
+# the push-to-talk and listen sockets (AUD-19, AUD-23): browsers stream audio
+# over WebSockets, and SSE cannot carry anything upstream.
+axum = { version = "0.8", default-features = false, features = ["http1", "tokio", "json", "query", "matched-path", "ws"] }
 # `fs` only: ServeDir for the precompressed SPA. No compression layer — the
 # assets are gzip/brotli'd at build time, the CPU never compresses anything.
 tower-http = { version = "0.7", default-features = false, features = ["fs"] }
@@ -31,6 +33,23 @@ wifi.workspace = true
 ptz-proto.workspace = true
 # Lights socket protocol + client (no GPIO code), like ptz-proto.
 lights-proto.workspace = true
+# Follow-movement socket protocol + client (no tracker code), like ptz-proto.
+follow-proto.workspace = true
+# Audio socket protocol + client (no codec driver), like ptz-proto.
+audio-proto.workspace = true
+# Update socket protocol + client (no TLS client or installer), like ptz-proto.
+update-proto.workspace = true
+# HTTPS (AUD-18): browsers only grant the microphone to a secure context.
+# Every TLS crate is pinned to the `ring` backend with default features off:
+# their defaults pull in aws-lc, which has no ARMv5TE support (see the
+# workspace `ring` comment and deny.toml). TLS 1.2 is kept for older phones.
+rustls = { version = "0.23", default-features = false, features = ["std", "ring", "tls12"] }
+tokio-rustls = { version = "0.26", default-features = false, features = ["ring", "tls12"] }
+# The self-signed certificate generated on first start; `pem` to write the
+# files in the format every tool reads.
+rcgen = { version = "0.14", default-features = false, features = ["crypto", "pem", "ring"] }
+# Validity dates for rcgen; already in the tree through it, no features.
+time = { version = "0.3", default-features = false }
 # Producer `/status` types, RTSP naming and default port (no capture code).
 video-proto.workspace = true
 # The board profile, for `/api/hardware` and the expected sensors.
@@ -41,6 +60,9 @@ os.workspace = true
 telemetry.workspace = true
 # CSPRNG for stream tokens; already linked through auth.
 ring.workspace = true
+base16ct.workspace = true
+# Constant-time stream-token comparison; ring's `constant_time` is deprecated.
+subtle = "2.6"
 serde.workspace = true
 serde_json.workspace = true
 clap.workspace = true
@@ -52,6 +74,9 @@ metrics.workspace = true
 [dev-dependencies]
 tower = { version = "0.5", default-features = false, features = ["util"] }
 tokio = { version = "1", features = ["rt", "macros"] }
+# WebSocket client for the talk/listen tests; the same version axum's `ws`
+# feature already builds.
+tokio-tungstenite = { version = "0.29", default-features = false, features = ["connect"] }
 
 [lib]
 path = "src/lib.rs"

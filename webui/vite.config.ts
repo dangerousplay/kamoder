@@ -20,6 +20,8 @@ export default defineConfig({
       "/api": {
         target,
         changeOrigin: true,
+        // Audio talk/listen are WebSockets.
+        ws: true,
         // SSE log streams stay open indefinitely: no proxy timeouts.
         timeout: 0,
         proxyTimeout: 0,
@@ -37,6 +39,9 @@ export default defineConfig({
       },
     },
   },
+  // Audio worklets (`?worker&url`) are loaded by audioWorklet.addModule(),
+  // which takes ES modules.
+  worker: { format: "es" },
   build: {
     outDir: "dist",
     emptyOutDir: true,

@@ -8,8 +8,8 @@
 use crate::error::api_not_found;
 use crate::state::AppState;
 use crate::{
-    cameras, config, hardware, lights, logs, onvif, ptz, services, session, setup, spa, ssh, stats,
-    system, users, video,
+    audio, cameras, config, follow, hardware, lights, logs, onvif, ptz, services, session, setup,
+    spa, ssh, stats, system, update, users, video,
 };
 use axum::extract::{DefaultBodyLimit, MatchedPath, Request};
 use axum::middleware::{self, Next};
@@ -53,6 +53,9 @@ fn api() -> Router<AppState> {
         .merge(video::routes())
         .merge(ptz::routes())
         .merge(lights::routes())
+        .merge(follow::routes())
+        .merge(audio::routes())
+        .merge(update::routes())
         .fallback(api_not_found)
 }
 
@@ -71,6 +74,7 @@ pub fn describe_metrics() {
         "kamoder_web_login_failures_total",
         "Failed login attempts (bad user or password)"
     );
+    audio::describe_metrics();
 }
 
 /// Counts requests by route template (not raw path, so the label set stays

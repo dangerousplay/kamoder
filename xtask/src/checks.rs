@@ -150,6 +150,16 @@ const GENERIC_CRATES: &[&str] = &[
     "supervisor",
     "lights",
     "lights-proto",
+    "follow-proto",
+    "follow",
+    "audio-proto",
+    "audio",
+    "ota-manifest",
+    "bootctl",
+    "update-proto",
+    "ota",
+    "kboot",
+    "fetch",
     "wifi",
     "ntp",
     "camera",
@@ -173,6 +183,7 @@ const HARDWARE_LITERALS: &[&str] = &[
     "/sys/user-gpio",
     "ssv6x5x",
     "presetmotor.ko",
+    "/dev/pcmC0D0",
 ];
 /// Lines carrying this marker are deliberate (say why after a colon).
 const ALLOW_MARKER: &str = "board-literal-ok";

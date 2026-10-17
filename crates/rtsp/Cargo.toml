@@ -15,8 +15,8 @@ publish = false
 # rest of the msf family: one maintainer, 0.x APIs. No default features:
 # `server` and the H.264 codec only — no client, no RTSP 2.0 time types.
 msf-rtsp = { version = "=0.3.1", default-features = false, features = ["server", "h264"] }
-# FU-A packetizer and the RTP packet type.
-msf-rtp = { version = "=0.4.2", features = ["h264"] }
+# FU-A and PCM packetizers and the RTP packet type.
+msf-rtp = { version = "=0.4.2", features = ["h264", "pcm"] }
 # SDP builder and the H.264 fmtp (profile-level-id, sprop-parameter-sets).
 msf-sdp = { version = "=0.2.4", features = ["h264"] }
 # Annex-B start-code scanning, the same routine the packetizer uses.
@@ -37,6 +37,8 @@ os.workspace = true
 telemetry.workspace = true
 # Video-socket framing and stream naming shared with the camera service.
 video-proto.workspace = true
+# Audio-socket client and the G.711 A-law encoder for the PCMA track.
+audio-proto.workspace = true
 # The board profile: which sensors to mount when no --stream is given.
 board.workspace = true
 snafu.workspace = true

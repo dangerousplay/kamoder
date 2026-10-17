@@ -37,6 +37,10 @@ pub struct Profile {
     pub wifi: Option<Wifi>,
     #[serde(default)]
     pub ptz: Option<Ptz>,
+    /// Microphone and speaker. Absent: no audio service, no RTSP audio
+    /// track, no ONVIF audio source (AUD-07).
+    #[serde(default)]
+    pub audio: Option<Audio>,
 }
 
 /// All listed rules must hold; the profile's score is how many there are.
@@ -252,10 +256,75 @@ pub struct Ptz {
     pub tilt: [f32; 2],
     #[serde(default = "default_steps_per_degree")]
     pub steps_per_degree: f32,
+    /// Motion following (D-F5). Absent: the board does not follow; an empty
+    /// `[ptz.follow]` turns it on with the defaults of [`Follow`].
+    #[serde(default)]
+    pub follow: Option<Follow>,
 }
 
 fn default_steps_per_degree() -> f32 {
     1.0
+}
+
+/// Tuning of the follow-movement controller, `[ptz.follow]`.
+///
+/// Every key is optional; the defaults below are first guesses, not
+/// measurements. `fov_deg` in particular was never measured on the AV100
+/// and `t_on`/`t_off` are in the units of the ISP's u16 per-cell motion
+/// energy, so both want tuning on hardware.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct Follow {
+    /// Motion grid samples per second, 1..=25.
+    pub hz: u8,
+    /// Centre dead zone as permille of the frame `[x, y]`: a target inside
+    /// it does not move the head.
+    pub dead_zone_permille: [u16; 2],
+    /// Largest single move, degrees.
+    pub max_step_deg: f32,
+    /// Horizontal and vertical field of view, degrees; turns a grid offset
+    /// into an angle. Unmeasured: tune on hardware.
+    pub fov_deg: [f32; 2],
+    /// Consecutive grids that must agree before the head moves.
+    pub decision_frames: u8,
+    /// Grids are ignored for this long after a move, while the image settles.
+    pub settle_ms: u32,
+    /// Seconds without motion before the head returns to `home`.
+    pub return_after_s: u32,
+    /// Seconds following stays paused after a manual (ONVIF/web) move.
+    pub manual_hold_s: u32,
+    /// Cell energy at which a cell becomes active. Tune on hardware.
+    pub t_on: u16,
+    /// Cell energy below which an active cell turns inactive (hysteresis);
+    /// must be below `t_on`. Tune on hardware.
+    pub t_off: u16,
+    /// Fewest active cells that count as a target (filters noise).
+    pub min_cells: u16,
+    /// Active cells above this permille of the grid are a global change
+    /// (light switch, IR-cut flip, own motion), not a target.
+    pub max_fraction_permille: u16,
+    /// Where to return to, `[pan, tilt]` degrees; `None` = the PTZ home.
+    pub home: Option<[f32; 2]>,
+}
+
+impl Default for Follow {
+    fn default() -> Self {
+        Self {
+            hz: 10,
+            dead_zone_permille: [300, 400],
+            max_step_deg: 15.0,
+            fov_deg: [90.0, 50.0],
+            decision_frames: 5,
+            settle_ms: 300,
+            return_after_s: 15,
+            manual_hold_s: 60,
+            t_on: 600,
+            t_off: 300,
+            min_cells: 2,
+            max_fraction_permille: 600,
+            home: None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -267,6 +336,45 @@ pub enum PtzBackend {
     Sdk,
     /// Simulated motor, for tests and the VM.
     Sim,
+}
+
+/// The board's audio codec, `[audio]`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Audio {
+    /// Codec driver the `audio` service talks to, e.g. `ak-pcm`.
+    pub backend: String,
+    /// Rate asked of the driver, Hz. The wire format is always 8 kHz; a
+    /// higher rate here is decimated in software (D-A5).
+    #[serde(default = "default_audio_rate")]
+    pub rate: u32,
+    /// Microphones, `[[audio.input]]`.
+    #[serde(default, rename = "input")]
+    pub inputs: Vec<AudioDevice>,
+    /// Speakers, `[[audio.output]]`.
+    #[serde(default, rename = "output")]
+    pub outputs: Vec<AudioDevice>,
+}
+
+fn default_audio_rate() -> u32 {
+    8000
+}
+
+/// One microphone or speaker.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AudioDevice {
+    /// Stable id used by the API and ONVIF tokens, e.g. `mic0`.
+    pub id: String,
+    /// Shown in the web UI.
+    pub name: String,
+    /// Driver device node.
+    pub device: PathBuf,
+    /// Gain (input) or volume (output) applied at start, in driver units.
+    #[serde(default)]
+    pub gain: Option<u32>,
+    /// Inclusive driver range of `gain`.
+    pub gain_range: [u32; 2],
 }
 
 /// A broken profile rule: which key and why.
@@ -335,6 +443,65 @@ impl Profile {
         }
         if let Some(ptz) = &self.ptz {
             ptz.validate()?;
+        }
+        if let Some(audio) = &self.audio {
+            audio.validate()?;
+        }
+        Ok(())
+    }
+}
+
+impl Audio {
+    fn validate(&self) -> Result<(), Violation> {
+        if self.backend.trim().is_empty() {
+            return Err(violation("audio.backend", "must not be empty"));
+        }
+        if self.rate == 0 || !self.rate.is_multiple_of(8000) || self.rate > 48000 {
+            return Err(violation(
+                "audio.rate",
+                format!(
+                    "{} must be 8000, 16000, 24000, 32000, 40000 or 48000",
+                    self.rate
+                ),
+            ));
+        }
+        if self.inputs.is_empty() && self.outputs.is_empty() {
+            return Err(violation("audio", "needs at least one input or output"));
+        }
+        let mut ids = HashSet::new();
+        let devices = self
+            .inputs
+            .iter()
+            .map(|d| ("input", d))
+            .chain(self.outputs.iter().map(|d| ("output", d)));
+        for (i, (kind, device)) in devices.enumerate() {
+            let index = if kind == "input" {
+                i
+            } else {
+                i - self.inputs.len()
+            };
+            let key = format!("audio.{kind}[{index}]");
+            if device.id.trim().is_empty() || !ids.insert(device.id.as_str()) {
+                return Err(violation(
+                    format!("{key}.id"),
+                    format!("{:?} must be non-empty and unique", device.id),
+                ));
+            }
+            let [min, max] = device.gain_range;
+            if min > max {
+                return Err(violation(
+                    format!("{key}.gain_range"),
+                    format!("[{min}, {max}] must be [min, max]"),
+                ));
+            }
+            if let Some(gain) = device.gain {
+                if !(min..=max).contains(&gain) {
+                    return Err(violation(
+                        format!("{key}.gain"),
+                        format!("{gain} is outside [{min}, {max}]"),
+                    ));
+                }
+            }
         }
         Ok(())
     }
@@ -477,6 +644,70 @@ impl Ptz {
                 "ptz.steps_per_degree",
                 format!("{} must be positive", self.steps_per_degree),
             ));
+        }
+        if let Some(follow) = &self.follow {
+            follow.validate(self)?;
+        }
+        Ok(())
+    }
+}
+
+impl Follow {
+    /// `ptz` is the enclosing section, for the range of `home`.
+    fn validate(&self, ptz: &Ptz) -> Result<(), Violation> {
+        const KEY: &str = "ptz.follow";
+        if !(1..=25).contains(&self.hz) {
+            return Err(violation(
+                format!("{KEY}.hz"),
+                format!("{} is outside 1..=25", self.hz),
+            ));
+        }
+        if self.t_off >= self.t_on {
+            return Err(violation(
+                format!("{KEY}.t_off"),
+                format!("{} must be below t_on ({})", self.t_off, self.t_on),
+            ));
+        }
+        let permilles = [
+            ("dead_zone_permille", self.dead_zone_permille[0]),
+            ("dead_zone_permille", self.dead_zone_permille[1]),
+            ("max_fraction_permille", self.max_fraction_permille),
+        ];
+        for (field, v) in permilles {
+            if v > 1000 {
+                return Err(violation(
+                    format!("{KEY}.{field}"),
+                    format!("{v} is above 1000"),
+                ));
+            }
+        }
+        let positive = [
+            ("fov_deg", self.fov_deg[0]),
+            ("fov_deg", self.fov_deg[1]),
+            ("max_step_deg", self.max_step_deg),
+        ];
+        for (field, v) in positive {
+            if !(v.is_finite() && v > 0.0) {
+                return Err(violation(
+                    format!("{KEY}.{field}"),
+                    format!("{v} must be positive"),
+                ));
+            }
+        }
+        if self.decision_frames == 0 {
+            return Err(violation(
+                format!("{KEY}.decision_frames"),
+                "must be at least 1",
+            ));
+        }
+        if let Some([pan, tilt]) = self.home {
+            let inside = |v: f32, [min, max]: [f32; 2]| v.is_finite() && (min..=max).contains(&v);
+            if !(inside(pan, ptz.pan) && inside(tilt, ptz.tilt)) {
+                return Err(violation(
+                    format!("{KEY}.home"),
+                    format!("[{pan}, {tilt}] is outside ptz.pan / ptz.tilt"),
+                ));
+            }
         }
         Ok(())
     }
@@ -676,5 +907,111 @@ tilt = [0, 70]
     fn ptz_ranges_must_be_ordered() {
         let v = violation_of(&SAMPLE.replace("pan = [0, 175]", "pan = [175, 0]"));
         assert_eq!(v.key, "ptz.pan");
+    }
+
+    /// SAMPLE with `[ptz.follow]` holding `body`.
+    fn with_follow(body: &str) -> String {
+        format!("{SAMPLE}\n[ptz.follow]\n{body}\n")
+    }
+
+    #[test]
+    fn follow_absent_is_none() {
+        assert_eq!(parse(SAMPLE).ptz.unwrap().follow, None);
+    }
+
+    #[test]
+    fn follow_empty_table_takes_defaults() {
+        let p = parse(&with_follow(""));
+        p.validate().unwrap();
+        let f = p.ptz.unwrap().follow.expect("table present");
+        assert_eq!(f, Follow::default());
+        assert_eq!(f.hz, 10);
+        assert_eq!(f.dead_zone_permille, [300, 400]);
+        assert_eq!(f.fov_deg, [90.0, 50.0]);
+        assert_eq!((f.t_on, f.t_off), (600, 300));
+        assert_eq!(f.home, None);
+    }
+
+    #[test]
+    fn follow_keys_override_defaults() {
+        let p = parse(&with_follow("hz = 5\nhome = [80, 20]\nt_on = 900"));
+        p.validate().unwrap();
+        let f = p.ptz.unwrap().follow.unwrap();
+        assert_eq!((f.hz, f.t_on, f.t_off), (5, 900, 300));
+        assert_eq!(f.home, Some([80.0, 20.0]));
+    }
+
+    #[test]
+    fn follow_unknown_key_is_rejected() {
+        let err = toml::from_str::<Profile>(&with_follow("hertz = 5")).unwrap_err();
+        assert!(err.to_string().contains("hertz"), "{err}");
+    }
+
+    #[test]
+    fn follow_invalid_values_are_rejected() {
+        let cases = [
+            ("hz = 0", "ptz.follow.hz"),
+            ("hz = 26", "ptz.follow.hz"),
+            ("t_on = 300\nt_off = 300", "ptz.follow.t_off"),
+            (
+                "dead_zone_permille = [300, 1001]",
+                "ptz.follow.dead_zone_permille",
+            ),
+            (
+                "max_fraction_permille = 1001",
+                "ptz.follow.max_fraction_permille",
+            ),
+            ("fov_deg = [0, 50]", "ptz.follow.fov_deg"),
+            ("fov_deg = [90, -1]", "ptz.follow.fov_deg"),
+            ("max_step_deg = 0", "ptz.follow.max_step_deg"),
+            ("decision_frames = 0", "ptz.follow.decision_frames"),
+            ("home = [200, 10]", "ptz.follow.home"),
+        ];
+        for (body, key) in cases {
+            assert_eq!(violation_of(&with_follow(body)).key, key, "{body}");
+        }
+    }
+
+    #[test]
+    fn follow_survives_the_json_handoff() {
+        let ptz = parse(&with_follow("home = [10, 5]")).ptz.unwrap();
+        let json = serde_json::to_string(&ptz).unwrap();
+        assert_eq!(serde_json::from_str::<Ptz>(&json).unwrap(), ptz);
+    }
+
+    /// SAMPLE with an `[audio]` section: one mic, one speaker.
+    fn with_audio(extra: &str) -> String {
+        format!(
+            "{SAMPLE}\n[audio]\nbackend = \"ak-pcm\"\n{extra}\n\
+             [[audio.input]]\nid = \"mic0\"\nname = \"Mic\"\ndevice = \"/dev/c\"\ngain = 3\ngain_range = [0, 7]\n\
+             [[audio.output]]\nid = \"spk0\"\nname = \"Speaker\"\ndevice = \"/dev/p\"\ngain_range = [0, 6]\n"
+        )
+    }
+
+    #[test]
+    fn audio_absent_is_none() {
+        assert_eq!(parse(SAMPLE).audio, None);
+    }
+
+    #[test]
+    fn audio_parses_with_default_rate() {
+        let p = parse(&with_audio(""));
+        p.validate().unwrap();
+        let a = p.audio.unwrap();
+        assert_eq!(a.rate, 8000);
+        assert_eq!(a.inputs[0].id, "mic0");
+        assert_eq!(a.inputs[0].gain, Some(3));
+        assert_eq!(a.outputs[0].gain_range, [0, 6]);
+    }
+
+    #[test]
+    fn audio_invalid_values_are_rejected() {
+        assert_eq!(violation_of(&with_audio("rate = 11025")).key, "audio.rate");
+        let dup = with_audio("").replace("\"spk0\"", "\"mic0\"");
+        assert_eq!(violation_of(&dup).key, "audio.output[0].id");
+        let gain = with_audio("").replace("gain = 3", "gain = 9");
+        assert_eq!(violation_of(&gain).key, "audio.input[0].gain");
+        let range = with_audio("").replace("[0, 6]", "[6, 0]");
+        assert_eq!(violation_of(&range).key, "audio.output[0].gain_range");
     }
 }

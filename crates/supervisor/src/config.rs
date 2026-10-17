@@ -1,4 +1,20 @@
 //! Supervisor configuration, loaded from TOML.
+//!
+//! Code and data may live in different directories (OTA-05, design D-O1):
+//! an A/B update installs code into `slots/<x>/` while camera.conf, `etc/`
+//! and `logs/` stay in the shared data root. Service `command`, `args` and
+//! `working_dir` may therefore name the code directory as `{slot}` and the
+//! data root as `{data}`; both are expanded once at load time. Services run
+//! with the data root as their working directory, so every data path stays
+//! relative (`etc/web-users`, `camera.conf`). Both directories default to
+//! the config file's own, which is the legacy single-tree layout: there
+//! `{slot}/bin/web` and `bin/web` name the same file.
+//!
+//! ```text
+//! command = "{slot}/bin/web"          ->  /mnt/disc1/anyka_rust/slots/b/bin/web
+//! args = ["--www", "{slot}/www"]      ->  --www /mnt/disc1/anyka_rust/slots/b/www
+//! args = ["--users", "etc/web-users"] ->  unchanged, relative to the data root
+//! ```
 
 use serde::Deserialize;
 use snafu::{ensure, ResultExt, Snafu};
@@ -69,15 +85,18 @@ pub enum Capability {
     /// The capture backend produces encoded video, i.e. it is not the
     /// `test-pattern` stand-in.
     VideoEncoder,
+    /// The profile has an `[audio]` section.
+    Audio,
 }
 
 impl Capability {
-    const ALL: [Capability; 5] = [
+    const ALL: [Capability; 6] = [
         Capability::Ptz,
         Capability::Lights,
         Capability::Wifi,
         Capability::Video,
         Capability::VideoEncoder,
+        Capability::Audio,
     ];
 
     pub fn as_str(self) -> &'static str {
@@ -87,6 +106,7 @@ impl Capability {
             Capability::Wifi => "wifi",
             Capability::Video => "video",
             Capability::VideoEncoder => "video.encoder",
+            Capability::Audio => "audio",
         }
     }
 
@@ -99,6 +119,7 @@ impl Capability {
             Capability::Wifi => profile.wifi.is_some(),
             Capability::Video => !backend.is_empty(),
             Capability::VideoEncoder => !backend.is_empty() && backend != "test-pattern",
+            Capability::Audio => profile.audio.is_some(),
         }
     }
 }
@@ -132,14 +153,17 @@ impl std::fmt::Display for Capability {
 pub struct Service {
     /// Identifier used in logs, metrics and the log file name.
     pub name: String,
-    /// Executable. A relative path is resolved against the config's directory.
+    /// Executable. `{slot}`/`{data}` are expanded; a relative path is
+    /// resolved against the config's directory.
     pub command: PathBuf,
+    /// Arguments; `{slot}`/`{data}` are expanded.
     #[serde(default)]
     pub args: Vec<String>,
     /// Extra environment entries, on top of the supervisor's own.
     #[serde(default)]
     pub env: Vec<(String, String)>,
-    /// Working directory. Defaults to the config's directory.
+    /// Working directory. `{slot}`/`{data}` are expanded; a relative path
+    /// is resolved against the data directory, which is also the default.
     #[serde(default)]
     pub working_dir: Option<PathBuf>,
     #[serde(default = "default_true")]
@@ -197,7 +221,8 @@ impl Service {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Settings {
-    /// Directory for the per-service log files. On the SD card by default.
+    /// Directory for the per-service log files. On the SD card by default;
+    /// a relative path is resolved against the data directory.
     #[serde(default = "default_log_dir")]
     pub log_dir: PathBuf,
     /// Rotate a log once it passes this size.
@@ -236,14 +261,67 @@ pub struct Config {
     pub supervisor: Settings,
     #[serde(default, rename = "service")]
     pub services: Vec<Service>,
-    /// Directory the config was loaded from; relative paths resolve here.
+    /// Directory the config was loaded from; relative commands resolve here.
     #[serde(skip)]
     pub base_dir: PathBuf,
+    /// Code directory, expanded for `{slot}` (`--slot-dir`, default
+    /// `base_dir`).
+    #[serde(skip)]
+    pub slot_dir: PathBuf,
+    /// Shared data directory, expanded for `{data}`: the services' working
+    /// directory and the base of a relative `log_dir` (`--data-dir`,
+    /// default `base_dir`).
+    #[serde(skip)]
+    pub data_dir: PathBuf,
+}
+
+/// Placeholder for the code (slot) directory in `command`, `args` and
+/// `working_dir`.
+pub const SLOT_PLACEHOLDER: &str = "{slot}";
+/// Placeholder for the shared data directory.
+pub const DATA_PLACEHOLDER: &str = "{data}";
+
+/// Replaces `{slot}` and `{data}` in `value`. Other braces are left alone.
+pub fn expand(value: &str, slot_dir: &Path, data_dir: &Path) -> String {
+    if !value.contains('{') {
+        return value.to_owned();
+    }
+    value
+        .replace(SLOT_PLACEHOLDER, &slot_dir.to_string_lossy())
+        .replace(DATA_PLACEHOLDER, &data_dir.to_string_lossy())
+}
+
+fn expand_path(path: &Path, slot_dir: &Path, data_dir: &Path) -> PathBuf {
+    match path.to_str() {
+        Some(text) => PathBuf::from(expand(text, slot_dir, data_dir)),
+        // Not UTF-8, so it cannot hold a placeholder either.
+        None => path.to_path_buf(),
+    }
+}
+
+/// Makes `dir` absolute without touching the file system, so an expanded
+/// `{slot}` means the same thing in a child whose working directory is the
+/// data directory. Falls back to `dir` as given if the cwd is unknown.
+fn absolute(dir: &Path) -> PathBuf {
+    std::path::absolute(dir).unwrap_or_else(|_| dir.to_path_buf())
 }
 
 impl Config {
-    /// Loads and validates a configuration file.
+    /// Loads and validates a configuration file, with the slot and data
+    /// directories both at the config's directory (the legacy layout).
+    #[cfg(test)]
     pub fn load(path: &Path) -> Result<Self> {
+        Self::load_with_dirs(path, None, None)
+    }
+
+    /// Loads and validates a configuration file and expands `{slot}` and
+    /// `{data}` to `slot_dir` and `data_dir` (each defaulting to the
+    /// config's directory).
+    pub fn load_with_dirs(
+        path: &Path,
+        slot_dir: Option<&Path>,
+        data_dir: Option<&Path>,
+    ) -> Result<Self> {
         let text = std::fs::read_to_string(path).context(ReadSnafu { path })?;
         let mut config: Config = toml::from_str(&text).context(ParseSnafu { path })?;
         config.base_dir = path
@@ -251,8 +329,26 @@ impl Config {
             .filter(|parent| !parent.as_os_str().is_empty())
             .unwrap_or(Path::new("."))
             .to_path_buf();
+        config.slot_dir = absolute(slot_dir.unwrap_or(&config.base_dir));
+        config.data_dir = absolute(data_dir.unwrap_or(&config.base_dir));
+        config.expand_placeholders();
         config.validate(path)?;
         Ok(config)
+    }
+
+    /// Expands `{slot}`/`{data}` in every service's command, args and
+    /// working directory.
+    fn expand_placeholders(&mut self) {
+        let (slot, data) = (&self.slot_dir, &self.data_dir);
+        for service in &mut self.services {
+            service.command = expand_path(&service.command, slot, data);
+            for arg in &mut service.args {
+                *arg = expand(arg, slot, data);
+            }
+            if let Some(dir) = &service.working_dir {
+                service.working_dir = Some(expand_path(dir, slot, data));
+            }
+        }
     }
 
     fn validate(&self, path: &Path) -> Result<()> {
@@ -367,6 +463,16 @@ impl Config {
             path.to_path_buf()
         } else {
             self.base_dir.join(path)
+        }
+    }
+
+    /// Resolves a data path (working directory, log directory) against the
+    /// data directory.
+    pub fn resolve_data(&self, path: &Path) -> PathBuf {
+        if path.is_absolute() {
+            path.to_path_buf()
+        } else {
+            self.data_dir.join(path)
         }
     }
 }
@@ -516,6 +622,10 @@ mod tests {
         command = "bin/rtsp"
         when = "video.encoder"
         [[service]]
+        name = "audio"
+        command = "bin/audio"
+        when = "audio"
+        [[service]]
         name = "web"
         command = "bin/web"
     "#;
@@ -537,6 +647,7 @@ mod tests {
                 Some(Capability::Wifi),
                 Some(Capability::Video),
                 Some(Capability::VideoEncoder),
+                Some(Capability::Audio),
                 None,
             ]
         );
@@ -580,7 +691,7 @@ mod tests {
         assert!(skipped.is_empty(), "{skipped:?}");
         assert_eq!(
             enabled(&config),
-            ["wdt", "ptz", "lights", "wifi", "camera", "rtsp", "web"]
+            ["wdt", "ptz", "lights", "wifi", "camera", "rtsp", "audio", "web"]
         );
     }
 
@@ -599,6 +710,7 @@ mod tests {
                 ("lights".to_owned(), Capability::Lights),
                 ("wifi".to_owned(), Capability::Wifi),
                 ("rtsp".to_owned(), Capability::VideoEncoder),
+                ("audio".to_owned(), Capability::Audio),
             ]
         );
         // The test pattern is still video, just not encoded video.
@@ -619,7 +731,7 @@ mod tests {
     fn an_unresolved_board_starts_conditional_services() {
         let mut config = load(GATED).unwrap();
         assert!(config.apply_board(None).is_empty());
-        assert_eq!(enabled(&config).len(), 7);
+        assert_eq!(enabled(&config).len(), 8);
     }
 
     #[test]
@@ -674,6 +786,162 @@ mod tests {
         );
     }
 
+    #[test]
+    fn expand_replaces_only_the_known_placeholders() {
+        let (slot, data) = (Path::new("/s"), Path::new("/d"));
+        assert_eq!(expand("{slot}/bin/web", slot, data), "/s/bin/web");
+        assert_eq!(expand("{data}/logs", slot, data), "/d/logs");
+        assert_eq!(expand("{slot}:{data}:{slot}", slot, data), "/s:/d:/s");
+        assert_eq!(expand("etc/web-users", slot, data), "etc/web-users");
+        assert_eq!(expand("{other} {}", slot, data), "{other} {}");
+    }
+
+    const SLOTTED: &str = r#"
+        [[service]]
+        name = "web"
+        command = "{slot}/bin/web"
+        args = ["--www", "{slot}/www", "--users", "etc/web-users", "--logs", "{data}/logs"]
+        [[service]]
+        name = "abs"
+        command = "/usr/bin/x"
+        working_dir = "{slot}/run"
+        [[service]]
+        name = "rel"
+        command = "bin/rel"
+        working_dir = "var"
+    "#;
+
+    fn load_with_dirs(text: &str, slot: Option<&Path>, data: Option<&Path>) -> (Config, PathBuf) {
+        let dir = std::env::temp_dir().join(format!(
+            "anyka-supervisor-dirs-{}-{:?}",
+            std::process::id(),
+            std::thread::current().id()
+        ));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("supervisor.toml");
+        std::fs::write(&path, text).unwrap();
+        let config = Config::load_with_dirs(&path, slot, data).unwrap();
+        let _ = std::fs::remove_dir_all(&dir);
+        (config, dir)
+    }
+
+    /// Without `--slot-dir`/`--data-dir` both are the config's directory:
+    /// the legacy tree, where `{slot}/bin/web` is `bin/web`.
+    #[test]
+    fn slot_and_data_default_to_the_config_directory() {
+        let (config, dir) = load_with_dirs(SLOTTED, None, None);
+        assert_eq!(config.slot_dir, dir);
+        assert_eq!(config.data_dir, dir);
+        let web = &config.services[0];
+        assert_eq!(config.resolve(&web.command), dir.join("bin/web"));
+        assert_eq!(
+            web.args,
+            [
+                "--www".to_owned(),
+                dir.join("www").to_string_lossy().into_owned(),
+                "--users".to_owned(),
+                "etc/web-users".to_owned(),
+                "--logs".to_owned(),
+                dir.join("logs").to_string_lossy().into_owned(),
+            ]
+        );
+        assert_eq!(config.resolve_data(Path::new("logs")), dir.join("logs"));
+        // A placeholder-free relative command still resolves against the
+        // config's directory, as before.
+        assert_eq!(
+            config.resolve(&config.services[2].command),
+            dir.join("bin/rel")
+        );
+    }
+
+    #[test]
+    fn slot_and_data_dirs_are_expanded_separately() {
+        let (config, dir) = load_with_dirs(
+            SLOTTED,
+            Some(Path::new("/card/rust/slots/b")),
+            Some(Path::new("/card/rust")),
+        );
+        assert_eq!(config.base_dir, dir);
+        let web = &config.services[0];
+        assert_eq!(web.command, Path::new("/card/rust/slots/b/bin/web"));
+        assert_eq!(
+            web.args,
+            [
+                "--www",
+                "/card/rust/slots/b/www",
+                "--users",
+                "etc/web-users",
+                "--logs",
+                "/card/rust/logs"
+            ]
+        );
+        assert_eq!(
+            config.services[1].working_dir.as_deref(),
+            Some(Path::new("/card/rust/slots/b/run"))
+        );
+        // Data paths (log_dir, a relative working_dir) are relative to the
+        // data directory, which is also the services' default cwd.
+        assert_eq!(
+            config.resolve_data(&config.supervisor.log_dir),
+            Path::new("/card/rust/logs")
+        );
+        assert_eq!(
+            config.resolve_data(config.services[2].working_dir.as_deref().unwrap()),
+            Path::new("/card/rust/var")
+        );
+    }
+
+    /// A relative `--slot-dir` is made absolute: the expanded value is used
+    /// by children whose cwd is the data directory.
+    #[test]
+    fn a_relative_slot_dir_is_made_absolute() {
+        let (config, _) = load_with_dirs(SLOTTED, Some(Path::new("slots/a")), None);
+        assert!(config.slot_dir.is_absolute());
+        assert!(config.services[0].command.is_absolute());
+        assert!(config.services[0].command.ends_with("slots/a/bin/web"));
+    }
+
+    /// The shipped config takes code from the slot and data from the data
+    /// root: every command is in `{slot}/bin`, the web UI in `{slot}/www`,
+    /// web's reboot script is `{slot}/init.sh`, and nothing else names the
+    /// slot.
+    #[test]
+    fn the_shipped_config_splits_code_and_data() {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools/supervisor.toml");
+        let slot = Path::new("/sd/anyka_rust/slots/b");
+        let data = Path::new("/sd/anyka_rust");
+        let config = Config::load_with_dirs(&path, Some(slot), Some(data)).unwrap();
+        for service in &config.services {
+            assert!(
+                service.command.starts_with(slot.join("bin")),
+                "{}: {}",
+                service.name,
+                service.command.display()
+            );
+            for arg in &service.args {
+                assert!(!arg.contains('{'), "{}: unexpanded {arg}", service.name);
+                if arg.contains("/sd/anyka_rust") {
+                    assert!(
+                        [
+                            "/sd/anyka_rust/slots/b/www",
+                            "/sd/anyka_rust/slots/b/init.sh"
+                        ]
+                        .contains(&arg.as_str()),
+                        "{}: {arg}",
+                        service.name
+                    );
+                }
+            }
+        }
+        let web = config.services.iter().find(|s| s.name == "web").unwrap();
+        let www = web.args.iter().position(|a| a == "--www").unwrap();
+        assert_eq!(web.args[www + 1], "/sd/anyka_rust/slots/b/www");
+        assert_eq!(
+            config.resolve_data(&config.supervisor.log_dir),
+            data.join("logs")
+        );
+    }
+
     /// The configuration shipped in `tools/` must keep loading as the
     /// schema grows.
     #[test]
@@ -688,16 +956,19 @@ mod tests {
         Config::load(&path).unwrap()
     }
 
-    const SHIPPED_SERVICES: [&str; 9] = [
+    const SHIPPED_SERVICES: [&str; 12] = [
         "wdt_feeder",
         "lights",
+        "audio",
         "wifi",
         "ntp",
         "sshd",
         "web",
+        "update",
         "onvif",
         "rtsp",
         "snapshot",
+        "follow",
     ];
 
     /// The AV100 runs every shipped service, in today's order (PKG-02).
@@ -717,8 +988,9 @@ mod tests {
         assert_eq!(enabled(&config), SHIPPED_SERVICES);
     }
 
-    /// On the generic fallback: no lights (unknown GPIOs) and no rtsp (the
-    /// test pattern has no encoder); the feeder and Wi-Fi always run.
+    /// On the generic fallback: no lights (unknown GPIOs), no rtsp (the test
+    /// pattern has no encoder) and no follow (no PTZ); the feeder and Wi-Fi
+    /// always run.
     #[test]
     fn the_shipped_config_on_the_generic_board() {
         let mut config = shipped();
@@ -727,7 +999,15 @@ mod tests {
             .iter()
             .map(|(s, c)| (s.as_str(), c.as_str()))
             .collect();
-        assert_eq!(skipped, [("lights", "lights"), ("rtsp", "video.encoder")]);
+        assert_eq!(
+            skipped,
+            [
+                ("lights", "lights"),
+                ("audio", "audio"),
+                ("rtsp", "video.encoder"),
+                ("follow", "ptz")
+            ]
+        );
         assert_eq!(
             enabled(&config),
             [
@@ -736,10 +1016,16 @@ mod tests {
                 "ntp",
                 "sshd",
                 "web",
+                "update",
                 "onvif",
                 "snapshot"
             ]
         );
+        // Every board can be updated (and the trial-boot health commit
+        // needs it): no `when`, restarted whatever it exits with.
+        let update = config.services.iter().find(|s| s.name == "update").unwrap();
+        assert!(update.when.is_none());
+        assert_eq!(update.restart, Restart::Always);
         // Wi-Fi is the only way in: it must never depend on the board.
         let wifi = config.services.iter().find(|s| s.name == "wifi").unwrap();
         assert!(wifi.when.is_none());

@@ -44,6 +44,9 @@ ptz-proto.workspace = true
 # day/night mode. Protocol only, no GPIO code linked.
 lights-proto.workspace = true
 serde_json.workspace = true
+# Client of the audio service's socket: the speaker volume is ONVIF's
+# AudioOutputConfiguration.OutputLevel (AUD-31). Protocol only.
+audio-proto.workspace = true
 # The producer's `/status` types and the RTSP naming/port (PRO-02/03).
 video-proto.workspace = true
 # Sensors, their configured streams and the model name, from the board
@@ -62,6 +65,8 @@ sdk = ["anyka-ptz/sdk"]
 # The tests act as an ONVIF client and compute PasswordDigest themselves.
 sha1 = "0.10"
 base64.workspace = true
+# Paused clock for the manual-activity tests.
+tokio = { version = "1", features = ["test-util"] }
 
 [[bin]]
 name = "onvif"

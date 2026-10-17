@@ -9,6 +9,7 @@ import {
 import { Link } from "react-router"
 import { toast } from "sonner"
 
+import { AudioCard } from "@/components/audio/audio-card"
 import { LightsCard } from "@/components/lights/lights-card"
 import { HardwareCard } from "@/components/system/hardware-card"
 import { ServiceStateBadge } from "@/components/services/service-state-badge"
@@ -25,6 +26,7 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
+import { UpdateAvailableNotice } from "@/components/updates/update-available-notice"
 import { CameraView } from "@/components/video/camera-view"
 import { usePolling } from "@/hooks/use-polling"
 import {
@@ -318,6 +320,7 @@ export default function DashboardPage() {
           </AlertDescription>
         </Alert>
       )}
+      <UpdateAvailableNotice />
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="lg:row-span-2">
           <CardHeader>
@@ -340,6 +343,7 @@ export default function DashboardPage() {
         </React.Suspense>
         <HardwareCard hw={hardware.data} error={hardware.error} />
         <LightsCard />
+        <AudioCard listed={!!byName("audio")} />
         {rtspRunning && (
           <RtspCard cameras={cameras.data} error={cameras.error} />
         )}

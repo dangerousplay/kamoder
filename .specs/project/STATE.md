@@ -8,11 +8,19 @@
 - 2026-10-13 — WIP committed as baseline `1ff076e` on `release/0.1.0`.
 - Naming (existing): generic crates unprefixed, `anyka-*` only for SDK/hardware crates; metrics `kamoder_*`.
 
+- 2026-10-17 — Audio feature (`.specs/features/audio`): own `audio` service owns ak_pcm; G.711 PCMA 8 kHz on RTSP `/vsN` trackID=1; ONVIF Media1 audio ops + backchannel; web HTTPS self-signed (`--tls-listen`) for browser mic; amp via `lights` (driver polarity wrong).
+
+- 2026-10-17 — OTA (`.specs/features/ota`): A/B on SD (slots/a|b + redundant selector records, kboot shim in boot/, trial guard 600 s, health commit after 180 s); minisign-signed manifest with monotonic seq; GitHub Releases + web upload; admin-click install by default; stable/beta. MTD-by-name + U-Boot env backends host-tested for future firmware.
+
 ## Blockers
+
+- Follow movement: MD grid ioctl (`0x8004_4970` on `/dev/isp-param-N`) and PTZ motion both unverified on hardware — spikes T0/T0b gate FOL-*.
 
 - None.
 
 ## Lessons
+
+- 2026-10-14 — Follow movement research: AV100 has an ISP 32×24 motion grid (3D-NR stats) reachable without SDK; no encoder MVs, no NPU runtime, soft-float CPU → integer grid detection, no pixel work.
 
 - AV100 encoder: open once at boot (kernel oops on re-create under fragmentation).
 - Unload Strata before heavy builds (RAM contention).
@@ -27,6 +35,6 @@
 
 ## Deferred Ideas
 
-- Audio pipeline, OTA.
+- Upstream msf-rtp: reorder buffer infinite loop on RTP sequence jumps ≥ 64 (worked around in rtsp `SequenceGuard`).
 
 ## Preferences

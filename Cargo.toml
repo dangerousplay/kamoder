@@ -33,6 +33,16 @@ members = [
     "crates/camerad",
     "crates/board",
     "crates/video-proto",
+    "crates/follow-proto",
+    "crates/follow",
+    "crates/audio-proto",
+    "crates/audio",
+    "crates/ota-manifest",
+    "crates/bootctl",
+    "crates/update-proto",
+    "crates/ota",
+    "crates/kboot",
+    "crates/fetch",
     "itest/support",
 ]
 # xtask builds for the host, not the camera, so it is kept out of the
@@ -57,6 +67,12 @@ auth = { path = "crates/auth" }
 anyka-ptz = { path = "crates/anyka-ptz" }
 ptz-proto = { path = "crates/ptz-proto" }
 lights-proto = { path = "crates/lights-proto" }
+follow-proto = { path = "crates/follow-proto" }
+audio-proto = { path = "crates/audio-proto" }
+ota-manifest = { path = "crates/ota-manifest" }
+bootctl = { path = "crates/bootctl" }
+update-proto = { path = "crates/update-proto" }
+fetch = { path = "crates/fetch" }
 onvif-schema = { path = "crates/onvif-schema" }
 supervisor = { path = "crates/supervisor" }
 wifi = { path = "crates/wifi" }
@@ -71,6 +87,9 @@ serde_json = "1"
 # `ring`, not aws-lc: aws-lc has no ARMv5TE support. See sshd.
 ring = "0.17"
 base64 = "0.22"
+# Constant-time hex for the salts and digests in the credential files and the
+# web stream tokens.
+base16ct = { version = "1", features = ["alloc"] }
 
 # Errors: `snafu` for typed, context-carrying library errors; `eyre` for the
 # top-level report in binaries.
@@ -125,3 +144,8 @@ panic = "unwind"
 # camera from a bare address into a file and line number.
 strip = false
 debug = "line-tables-only"
+
+# kboot runs before every boot from boot/bin, outside the slots; small beats
+# fast for a program that lives for milliseconds.
+[profile.release.package.kboot]
+opt-level = "s"

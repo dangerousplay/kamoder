@@ -1,19 +1,23 @@
-//! HS256 session tokens, hand-rolled on `ring::hmac`.
+//! HS256 session tokens: `jsonwebtoken` for the token format, `ring` for the
+//! HMAC.
 //!
-//! Why not a JWT crate: `jsonwebtoken` has no ring backend and `jwt-simple`
-//! pulls in BoringSSL, and aws-lc (the other usual backend) does not build
-//! for ARMv5TE. Only one shape of token is ever needed — issued and checked by
-//! the same process — so this accepts exactly that shape and nothing else:
+//! `jsonwebtoken` 10+ splits its crypto behind a `CryptoProvider`. Its two
+//! built-in backends are both unusable here: `aws_lc_rs` does not build for
+//! ARMv5TE, and `rust_crypto` pulls `rsa` (RUSTSEC-2023-0071, unfixed) plus
+//! the P-256/P-384/Ed25519 stacks, none of which a single-key HS256 session
+//! needs. So the crate is built with no backend and [`RING_PROVIDER`] supplies
+//! HS256 on `ring::hmac`, the same crypto stack as the rest of this crate.
 //!
-//! - the header must be byte-for-byte `{"alg":"HS256","typ":"JWT"}`, which
-//!   rules out `alg: none`, algorithm confusion and any header trickery by
-//!   construction;
+//! What this accepts:
+//!
+//! - only `alg: HS256` — the header is checked before anything else, which
+//!   rules out `alg: none` and algorithm confusion;
 //! - the signature is checked with `ring::hmac::verify` (constant time)
-//!   *before* the payload is parsed, so unauthenticated JSON never reaches
-//!   serde;
-//! - base64url must be canonical and unpadded;
+//!   *before* the claims are parsed, so unauthenticated claims JSON never
+//!   reaches serde (the small header object does, to read `alg`);
+//! - base64url must be unpadded;
 //! - `exp` is compared against a caller-supplied `now`, keeping the check
-//!   deterministic in tests.
+//!   deterministic in tests; `jsonwebtoken`'s own clock check is turned off.
 //!
 //! Checking a token costs one HMAC-SHA256 over ~200 bytes — negligible even
 //! on the 400 MHz ARM926EJ-S, unlike the PBKDF2 login it stands in for.
@@ -22,15 +26,14 @@
 //! use; deleting it invalidates every session.
 
 use crate::web_users::Role;
-use base64::engine::general_purpose::URL_SAFE_NO_PAD;
-use base64::Engine;
+use jsonwebtoken::crypto::{CryptoProvider, JwtSigner, JwtVerifier, KeyUtils};
+use jsonwebtoken::errors::ErrorKind;
+use jsonwebtoken::signature::{self, Signer, Verifier};
+use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use ring::hmac;
 use serde::{Deserialize, Serialize};
 use snafu::{ensure, ResultExt, Snafu};
 use std::path::{Path, PathBuf};
-
-/// The only header this module issues or accepts.
-const HEADER: &[u8] = br#"{"alg":"HS256","typ":"JWT"}"#;
 
 /// Signing key length: the HMAC-SHA256 output size, as RFC 7518 recommends.
 pub const KEY_LEN: usize = 32;
@@ -45,7 +48,7 @@ pub enum VerifyError {
     #[snafu(display("token signature does not match"))]
     BadSignature,
 
-    #[snafu(display("token header is not HS256/JWT"))]
+    #[snafu(display("token header is not HS256"))]
     UnsupportedHeader,
 
     #[snafu(display("token payload is not valid claims"))]
@@ -99,10 +102,68 @@ pub struct Claims {
     pub exp: u64,
 }
 
+/// HS256 on `ring::hmac`, the only algorithm this provider offers.
+///
+/// Installed process-wide by [`Jwt::new`]. Asking it for anything but HS256
+/// with an HMAC secret is an error, and the JWK helpers are left
+/// unimplemented: tokens here never carry or need a JWK.
+pub static RING_PROVIDER: CryptoProvider = CryptoProvider {
+    signer_factory: |algorithm, key| {
+        ensure_hs256(algorithm)?;
+        Ok(Box::new(RingHs256(hmac::Key::new(
+            hmac::HMAC_SHA256,
+            key.as_bytes(),
+        ))))
+    },
+    verifier_factory: |algorithm, key| {
+        ensure_hs256(algorithm)?;
+        Ok(Box::new(RingHs256(hmac::Key::new(
+            hmac::HMAC_SHA256,
+            key.try_get_as_bytes()?,
+        ))))
+    },
+    key_utils: KeyUtils::new_unimplemented(),
+};
+
+fn ensure_hs256(algorithm: &Algorithm) -> jsonwebtoken::errors::Result<()> {
+    match algorithm {
+        Algorithm::HS256 => Ok(()),
+        _ => Err(ErrorKind::UnsupportedAlgorithm.into()),
+    }
+}
+
+struct RingHs256(hmac::Key);
+
+impl Signer<Vec<u8>> for RingHs256 {
+    fn try_sign(&self, message: &[u8]) -> Result<Vec<u8>, signature::Error> {
+        Ok(hmac::sign(&self.0, message).as_ref().to_vec())
+    }
+}
+
+impl Verifier<Vec<u8>> for RingHs256 {
+    fn verify(&self, message: &[u8], tag: &Vec<u8>) -> Result<(), signature::Error> {
+        hmac::verify(&self.0, message, tag).map_err(|_| signature::Error::new())
+    }
+}
+
+impl JwtSigner for RingHs256 {
+    fn algorithm(&self) -> Algorithm {
+        Algorithm::HS256
+    }
+}
+
+impl JwtVerifier for RingHs256 {
+    fn algorithm(&self) -> Algorithm {
+        Algorithm::HS256
+    }
+}
+
 /// Signs and verifies tokens with one HMAC key.
 #[derive(Clone)]
 pub struct Jwt {
-    key: hmac::Key,
+    encoding: EncodingKey,
+    decoding: DecodingKey,
+    validation: Validation,
 }
 
 impl std::fmt::Debug for Jwt {
@@ -112,23 +173,31 @@ impl std::fmt::Debug for Jwt {
 }
 
 impl Jwt {
-    /// Uses `key` (normally the 32 bytes from [`load_or_create_key`]).
+    /// Uses `key` (normally the 32 bytes from [`load_or_create_key`]), and
+    /// installs [`RING_PROVIDER`] as `jsonwebtoken`'s backend if nothing is
+    /// installed yet.
     pub fn new(key: &[u8]) -> Self {
+        if let Err(installed) = RING_PROVIDER.install_default() {
+            assert!(
+                std::ptr::eq(installed, &RING_PROVIDER),
+                "another jsonwebtoken CryptoProvider is installed"
+            );
+        }
+        let mut validation = Validation::new(Algorithm::HS256);
+        // `verify` compares `exp` with the caller's clock instead.
+        validation.validate_exp = false;
+        validation.leeway = 0;
         Self {
-            key: hmac::Key::new(hmac::HMAC_SHA256, key),
+            encoding: EncodingKey::from_secret(key),
+            decoding: DecodingKey::from_secret(key),
+            validation,
         }
     }
 
     /// Issues a token for `claims`.
     pub fn sign(&self, claims: &Claims) -> String {
-        let payload = serde_json::to_vec(claims).expect("claims always serialize");
-        let mut token = URL_SAFE_NO_PAD.encode(HEADER);
-        token.push('.');
-        URL_SAFE_NO_PAD.encode_string(payload, &mut token);
-        let tag = hmac::sign(&self.key, token.as_bytes());
-        token.push('.');
-        URL_SAFE_NO_PAD.encode_string(tag.as_ref(), &mut token);
-        token
+        jsonwebtoken::encode(&Header::new(Algorithm::HS256), claims, &self.encoding)
+            .expect("HS256 signing with ring cannot fail")
     }
 
     /// Checks a token and returns its claims if it is authentic and
@@ -137,24 +206,25 @@ impl Jwt {
     /// Whether the user still exists with the same role and generation is the
     /// caller's check, against [`crate::web_users::WebUsers::lookup`].
     pub fn verify(&self, token: &str, now: u64) -> Result<Claims, VerifyError> {
-        let (signed, signature) = token.rsplit_once('.').ok_or(VerifyError::Malformed)?;
-        let (header, payload) = signed.split_once('.').ok_or(VerifyError::Malformed)?;
-        ensure!(!payload.contains('.'), MalformedSnafu);
-        let signature = URL_SAFE_NO_PAD
-            .decode(signature)
-            .map_err(|_| VerifyError::Malformed)?;
-        hmac::verify(&self.key, signed.as_bytes(), &signature)
-            .map_err(|_| VerifyError::BadSignature)?;
-
-        let header = URL_SAFE_NO_PAD
-            .decode(header)
-            .map_err(|_| VerifyError::Malformed)?;
-        ensure!(header == HEADER, UnsupportedHeaderSnafu);
-        let payload = URL_SAFE_NO_PAD
-            .decode(payload)
-            .map_err(|_| VerifyError::Malformed)?;
-        let claims: Claims =
-            serde_json::from_slice(&payload).map_err(|_| VerifyError::BadClaims)?;
+        // Read the header separately so a bad header and bad claims (both
+        // JSON errors inside `decode`) are told apart.
+        let header = jsonwebtoken::decode_header(token).map_err(|e| match e.kind() {
+            ErrorKind::Json(_) => VerifyError::UnsupportedHeader,
+            _ => VerifyError::Malformed,
+        })?;
+        ensure!(header.alg == Algorithm::HS256, UnsupportedHeaderSnafu);
+        let claims = jsonwebtoken::decode::<Claims>(token, &self.decoding, &self.validation)
+            .map_err(|e| match e.kind() {
+                ErrorKind::InvalidSignature => VerifyError::BadSignature,
+                ErrorKind::InvalidAlgorithm | ErrorKind::UnsupportedAlgorithm => {
+                    VerifyError::UnsupportedHeader
+                }
+                ErrorKind::Json(_)
+                | ErrorKind::MissingRequiredClaim(_)
+                | ErrorKind::InvalidClaimFormat(_) => VerifyError::BadClaims,
+                _ => VerifyError::Malformed,
+            })?
+            .claims;
         ensure!(now < claims.exp, ExpiredSnafu);
         Ok(claims)
     }
@@ -202,7 +272,13 @@ pub fn load_or_create_key(path: &Path) -> Result<[u8; KEY_LEN], KeyError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use base64::engine::general_purpose::URL_SAFE_NO_PAD;
+    use base64::Engine;
     use std::os::unix::fs::PermissionsExt;
+
+    /// The header the previous hand-rolled signer pinned; tokens it issued
+    /// must still verify after the switch to `jsonwebtoken`.
+    const LEGACY_HEADER: &[u8] = br#"{"alg":"HS256","typ":"JWT"}"#;
 
     const NOW: u64 = 1_800_000_000;
 
@@ -240,10 +316,18 @@ mod tests {
     }
 
     #[test]
-    fn header_is_the_pinned_one() {
+    fn header_is_hs256() {
         let token = jwt().sign(&claims());
-        let header = token.split('.').next().unwrap();
-        assert_eq!(URL_SAFE_NO_PAD.decode(header).unwrap(), HEADER);
+        let header = jsonwebtoken::decode_header(&token).unwrap();
+        assert_eq!(header.alg, Algorithm::HS256);
+        assert_eq!(header.typ.as_deref(), Some("JWT"));
+    }
+
+    #[test]
+    fn legacy_tokens_still_verify() {
+        let payload = serde_json::to_vec(&claims()).unwrap();
+        let token = forge(LEGACY_HEADER, &payload, &[7u8; KEY_LEN]);
+        assert_eq!(jwt().verify(&token, NOW), Ok(claims()));
     }
 
     #[test]
@@ -298,13 +382,17 @@ mod tests {
             b64(br#"{"alg":"none","typ":"JWT"}"#),
             b64(&payload)
         );
-        assert_eq!(jwt().verify(&unsigned, NOW), Err(VerifyError::BadSignature));
-        // Even correctly MACed, any header but the pinned one is refused.
+        assert_eq!(
+            jwt().verify(&unsigned, NOW),
+            Err(VerifyError::UnsupportedHeader)
+        );
+        // Even correctly MACed, any algorithm but HS256 is refused.
         for header in [
             &br#"{"alg":"none","typ":"JWT"}"#[..],
             br#"{"alg":"HS512","typ":"JWT"}"#,
-            br#"{"typ":"JWT","alg":"HS256"}"#,
-            br#"{"alg":"HS256","typ":"JWT","kid":"x"}"#,
+            br#"{"alg":"RS256","typ":"JWT"}"#,
+            br#"{"typ":"JWT"}"#,
+            b"not json",
         ] {
             let token = forge(header, &payload, &[7u8; KEY_LEN]);
             assert_eq!(
@@ -314,6 +402,14 @@ mod tests {
                 String::from_utf8_lossy(header)
             );
         }
+        // Only `alg` is pinned: other header fields are fine under a valid MAC,
+        // which only the key holder can produce.
+        let token = forge(
+            br#"{"typ":"JWT","alg":"HS256","kid":"x"}"#,
+            &payload,
+            &[7u8; KEY_LEN],
+        );
+        assert_eq!(jwt().verify(&token, NOW), Ok(claims()));
     }
 
     #[test]
@@ -331,7 +427,7 @@ mod tests {
             assert!(jwt().verify(bad, NOW).is_err(), "{bad:?}");
         }
         // Authentic but not our claims.
-        let token = forge(HEADER, br#"{"sub":"a"}"#, &[7u8; KEY_LEN]);
+        let token = forge(LEGACY_HEADER, br#"{"sub":"a"}"#, &[7u8; KEY_LEN]);
         assert_eq!(jwt().verify(&token, NOW), Err(VerifyError::BadClaims));
     }
 

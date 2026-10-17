@@ -12,6 +12,7 @@ use crate::backend::{
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
+use video_proto::motion::MotionGrid;
 
 /// What a [`FakeBackend`] has done so far, shared with the test.
 #[derive(Debug, Default)]
@@ -20,6 +21,17 @@ pub struct FakeBackendStats {
     pub starts: AtomicUsize,
     /// Pictures lent, all sensors.
     pub frames: AtomicUsize,
+    /// Calls to `motion_grid`, all sensors and sessions.
+    pub motion_calls: AtomicUsize,
+}
+
+/// One scripted answer of [`Session::motion_grid`].
+#[derive(Debug, Clone)]
+pub enum FakeMotion {
+    Grid(MotionGrid),
+    /// `Ok(None)`: no statistics on this backend.
+    Unsupported,
+    Error(String),
 }
 
 /// Sensors `indices` (board numbers, one slot each) of `width`×`height`
@@ -34,6 +46,10 @@ pub struct FakeBackend {
     pub fail_starts: usize,
     /// `with_frame` fails once, when this many pictures were lent in total.
     pub fail_frame: Option<usize>,
+    /// What `motion_grid` answers, call after call (all slots, counted per
+    /// session); the last entry repeats forever. Empty: the trait's default,
+    /// `Ok(None)`.
+    pub motion: Vec<FakeMotion>,
     pub stats: Arc<FakeBackendStats>,
 }
 
@@ -53,6 +69,7 @@ impl FakeBackend {
             interval: Duration::from_millis(2),
             fail_starts: 0,
             fail_frame: None,
+            motion: Vec::new(),
             stats: Arc::default(),
         }
     }
@@ -92,6 +109,7 @@ impl Backend for FakeBackend {
         Ok(FakeSession {
             sensors,
             data: vec![0; (self.width * self.height * 3 / 2) as usize],
+            motion_calls: 0,
             backend: self.clone(),
         })
     }
@@ -101,6 +119,8 @@ impl Backend for FakeBackend {
 pub struct FakeSession {
     sensors: Vec<SensorInfo>,
     data: Vec<u8>,
+    /// `motion_grid` calls in this session.
+    motion_calls: usize,
     backend: FakeBackend,
 }
 
@@ -131,6 +151,24 @@ impl Session for FakeSession {
             phys: None,
             timestamp_ms: n as u64 * self.backend.interval.as_millis() as u64,
         })
+    }
+
+    fn motion_grid(&mut self, slot: usize) -> Result<Option<MotionGrid>, BoxError> {
+        let script = &self.backend.motion;
+        let Some(last) = script.last() else {
+            return Ok(None);
+        };
+        self.backend
+            .stats
+            .motion_calls
+            .fetch_add(1, Ordering::Relaxed);
+        let answer = script.get(self.motion_calls).unwrap_or(last);
+        self.motion_calls += 1;
+        match answer {
+            FakeMotion::Grid(g) => Ok(Some(g.clone())),
+            FakeMotion::Unsupported => Ok(None),
+            FakeMotion::Error(e) => Err(format!("fake: sensor {slot}: {e}").into()),
+        }
     }
 }
 
@@ -274,5 +312,33 @@ mod tests {
             .unwrap();
         assert_eq!(len, 12);
         assert_eq!(b.stats.starts.load(Ordering::Relaxed), 2);
+        assert!(s.motion_grid(0).unwrap().is_none(), "default: no grid");
+    }
+
+    #[test]
+    fn motion_follows_the_script_then_repeats_the_last() {
+        let grid = MotionGrid::new(0, 0, 2, 1, 9, vec![9, 0]).unwrap();
+        let mut b = FakeBackend {
+            motion: vec![
+                FakeMotion::Error("busy".into()),
+                FakeMotion::Grid(grid.clone()),
+            ],
+            ..FakeBackend::new(1, 4, 2)
+        };
+        let mut s = b.start().unwrap();
+        assert_eq!(
+            s.motion_grid(0).unwrap_err().to_string(),
+            "fake: sensor 0: busy"
+        );
+        assert_eq!(s.motion_grid(0).unwrap(), Some(grid.clone()));
+        assert_eq!(s.motion_grid(0).unwrap(), Some(grid));
+        assert_eq!(b.stats.motion_calls.load(Ordering::Relaxed), 3);
+        let mut s = FakeBackend {
+            motion: vec![FakeMotion::Unsupported],
+            ..b
+        }
+        .start()
+        .unwrap();
+        assert_eq!(s.motion_grid(0).unwrap(), None);
     }
 }

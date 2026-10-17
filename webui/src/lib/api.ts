@@ -40,7 +40,7 @@ export class ApiError extends Error {
   get isRateLimited() {
     return this.status === 429
   }
-  /** 503: backend (video, PTZ, lights, supervisor) not available. */
+  /** 503: backend (video, PTZ, lights, follow, audio, supervisor) not available. */
   get isUnavailable() {
     return this.status === 503
   }
@@ -346,6 +346,68 @@ export type LightRole = "ir_cut" | "ir_leds" | "white" | "alarm" | "amp"
 /** `PUT /api/lights` (admin): any subset; answers the full state. */
 export type LightsUpdate = Partial<Omit<LightsState, "supported">>
 
+/** Direction of an audio device (`audio-proto` `DeviceKind`). */
+export type AudioDeviceKind = "input" | "output"
+
+/** `active`: capturing / playing; `error`: last open or ioctl failed. */
+export type AudioDeviceState = "active" | "idle" | "error"
+
+/** A microphone or speaker of the board (`audio-proto` `Device`). */
+export interface AudioDevice {
+  /** Stable id from the board profile (`mic`, `speaker`). */
+  id: string
+  kind: AudioDeviceKind
+  name: string
+  state: AudioDeviceState
+  /** Rate on the socket, Hz (8000). */
+  rate: number
+  /** Gain (input) or volume (output), driver units; null without control. */
+  gain: number | null
+  /** Accepted gain values, inclusive. */
+  gain_range: [number, number]
+  /** Why the device is in `error`. */
+  error: string | null
+}
+
+/** `GET /api/audio/devices`. */
+export interface AudioDevices {
+  devices: AudioDevice[]
+  talk: {
+    /** Port of the HTTPS server (push-to-talk needs it); null when down. */
+    https_port: number | null
+  }
+}
+
+/** What the follow-movement tracker is doing (`follow-proto` `State`). */
+export type FollowState =
+  | "idle"
+  | "tracking"
+  | "settling"
+  | "returning"
+  | "paused"
+  | "disabled"
+  | "unavailable"
+
+/** The subject being followed; frame coordinates scaled to 0..1000. */
+export interface FollowTarget {
+  /** 0 = left edge, 1000 = right edge. */
+  x_permille: number
+  /** 0 = top edge, 1000 = bottom edge. */
+  y_permille: number
+  /** Motion-grid cells the subject covers. */
+  cells: number
+}
+
+/** `GET /api/follow`: the follow service's status. */
+export interface FollowStatus {
+  /** The persisted on/off switch. */
+  enabled: boolean
+  state: FollowState
+  target: FollowTarget | null
+  /** PTZ moves commanded since the service started. */
+  moves: number
+}
+
 export interface User {
   name: string
   role: Role
@@ -392,6 +454,107 @@ export interface SshStatus {
 export interface OnvifCredentials {
   user: string
   password: string
+}
+
+// ---------------------------------------------------------------- update ----
+// `GET /api/update` passes the update service's `Status` through as-is.
+
+export type UpdateSlotName = "a" | "b"
+
+export type UpdatePhase =
+  | "idle"
+  | "checking"
+  | "downloading"
+  | "verifying"
+  | "installing"
+  | "awaiting_reboot"
+  | "trial"
+  | "error"
+
+export type UpdateChannel = "stable" | "beta"
+
+export interface UpdateSlot {
+  slot: UpdateSlotName
+  version: string | null
+  bootable: boolean
+  successful: boolean
+  tries_left: number
+  dir_present: boolean
+}
+
+export interface UpdateProgress {
+  bytes_done: number
+  bytes_total: number | null
+  /** What the bytes are (e.g. "download", "verify", "install"). */
+  what: string
+}
+
+export interface UpdateAvailable {
+  version: string
+  channel: UpdateChannel
+  seq: number
+  notes_url: string | null
+  size: number | null
+  downloaded: boolean
+  downgrade: boolean
+}
+
+export interface UpdateError {
+  code: string
+  message: string
+  /** Unix seconds. */
+  at: number | null
+}
+
+/** Maintenance window for auto-install, local hours 0–23. */
+export interface UpdateWindow {
+  start_hour: number
+  end_hour: number
+}
+
+export interface UpdateSettings {
+  channel: UpdateChannel
+  auto_check: boolean
+  auto_install: boolean
+  window: UpdateWindow | null
+  repo: string
+}
+
+/** Trial boot health (OTA-11): commit after `ok_for_s` reaches 180 s. */
+export interface UpdateHealth {
+  ok_for_s: number
+  waiting_on: string[]
+  /** Seconds left before the guard reboots into the previous slot. */
+  deadline_s: number
+}
+
+export interface UpdateStatus {
+  version: string
+  slot: UpdateSlotName
+  trial: boolean
+  committed: boolean
+  slots: UpdateSlot[]
+  phase: UpdatePhase
+  progress: UpdateProgress | null
+  available: UpdateAvailable | null
+  /** Unix seconds. */
+  last_check: number | null
+  last_error: UpdateError | null
+  settings: UpdateSettings
+  /** False when the firmware has no built-in signing key. */
+  trusted_key: boolean
+  health: UpdateHealth | null
+}
+
+export interface UpdateInstallOptions {
+  /** Reinstall even if the version is not newer. */
+  force: boolean
+  /** Reboot into the new slot right away. */
+  reboot: boolean
+}
+
+export interface Ok {
+  ok: boolean
 }
 
 // ---------------------------------------------------------------- client ----
@@ -460,6 +623,55 @@ async function request<T>(
 }
 
 const enc = encodeURIComponent
+
+/**
+ * POSTs a raw file body with upload progress (fetch has none). Same auth and
+ * error handling as `send`.
+ */
+function uploadRaw<T>(
+  path: string,
+  file: Blob,
+  onProgress?: (done: number, total: number) => void,
+  signal?: AbortSignal
+): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    xhr.open("POST", API_BASE + path)
+    xhr.setRequestHeader("Accept", "application/json")
+    xhr.setRequestHeader("Content-Type", "application/octet-stream")
+    const token = getToken()
+    if (token) xhr.setRequestHeader("Authorization", `Bearer ${token}`)
+    xhr.upload.onprogress = (e) =>
+      onProgress?.(e.loaded, e.lengthComputable ? e.total : file.size)
+    xhr.onerror = () => reject(new ApiError(0, "Camera unreachable", "network"))
+    xhr.onabort = () => reject(new DOMException("Aborted", "AbortError"))
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          resolve(
+            (xhr.responseText ? JSON.parse(xhr.responseText) : undefined) as T
+          )
+        } catch {
+          resolve(undefined as T)
+        }
+        return
+      }
+      if (xhr.status === 401) handleUnauthorized()
+      let message = xhr.statusText || `HTTP ${xhr.status}`
+      let code = "http_" + xhr.status
+      try {
+        const body = JSON.parse(xhr.responseText) as Partial<ApiErrorBody>
+        if (body.error) message = body.error
+        if (body.code) code = body.code
+      } catch {
+        // Non-JSON error body: keep the status text.
+      }
+      reject(new ApiError(xhr.status, message, code))
+    }
+    signal?.addEventListener("abort", () => xhr.abort(), { once: true })
+    xhr.send(file)
+  })
+}
 
 // ------------------------------------------------------------- endpoints ----
 
@@ -536,6 +748,22 @@ export const api = {
   updateLights: (body: LightsUpdate) =>
     request<LightsState>("PUT", "/lights", { body }),
 
+  // audio
+  audioDevices: (signal?: AbortSignal) =>
+    request<AudioDevices>("GET", "/audio/devices", { signal }),
+  /** Sets mic gain / speaker volume (admin); answers the device after it. */
+  updateAudioDevice: (id: string, gain: number) =>
+    request<AudioDevice>("PUT", `/audio/devices/${enc(id)}`, {
+      body: { gain },
+    }),
+
+  // follow movement
+  follow: (signal?: AbortSignal) =>
+    request<FollowStatus>("GET", "/follow", { signal }),
+  /** Switches following on or off (admin); answers the fresh status. */
+  updateFollow: (enabled: boolean) =>
+    request<FollowStatus>("PUT", "/follow", { body: { enabled } }),
+
   // users
   users: (signal?: AbortSignal) => request<User[]>("GET", "/users", { signal }),
   createUser: (body: CreateUser) => request<User>("POST", "/users", { body }),
@@ -567,6 +795,34 @@ export const api = {
     request<SshStatus>("POST", "/ssh/keys", { body: { key } }),
   removeSshKey: (fingerprint: string) =>
     request<SshStatus>("DELETE", `/ssh/keys?fingerprint=${enc(fingerprint)}`),
+
+  // firmware updates (503 `update_unavailable` when the service is down)
+  updateStatus: (signal?: AbortSignal) =>
+    request<UpdateStatus>("GET", "/update", { signal }),
+  /** Asks the repo for a newer release; answers after the check (~30 s). */
+  updateCheck: () => request<UpdateStatus>("POST", "/update/check"),
+  updateDownload: () => request<Ok>("POST", "/update/download"),
+  /** Installs the downloaded package into the inactive slot. */
+  updateInstall: (body: UpdateInstallOptions) =>
+    request<Ok>("POST", "/update/install", { body }),
+  /** Streams a `.kup` (raw body, 64 MiB cap) and installs it. */
+  updateUpload: (
+    file: File,
+    opts: UpdateInstallOptions,
+    onProgress?: (done: number, total: number) => void,
+    signal?: AbortSignal
+  ) =>
+    uploadRaw<Ok>(
+      `/update/upload?force=${opts.force}&reboot=${opts.reboot}`,
+      file,
+      onProgress,
+      signal
+    ),
+  updateRollback: (body: { reboot: boolean }) =>
+    request<Ok>("POST", "/update/rollback", { body }),
+  updateReboot: () => request<Ok>("POST", "/update/reboot"),
+  updateSettings: (body: UpdateSettings) =>
+    request<UpdateStatus>("PUT", "/update/settings", { body }),
 }
 
 // ------------------------------------------------------------ URL helpers ----
@@ -584,6 +840,18 @@ export function snapshotUrl(streamToken: string, bust = Date.now()): string {
 export function liveMjpegUrl(streamToken: string, camera?: number): string {
   const cam = camera == null ? "" : `&camera=${camera}`
   return `${API_BASE}/live.mjpeg?token=${enc(streamToken)}${cam}`
+}
+
+/**
+ * WebSocket URL of `/api/audio/talk` or `/api/audio/listen` on the host this
+ * page came from (`wss:` when the page is HTTPS).
+ */
+export function audioSocketUrl(
+  kind: "talk" | "listen",
+  streamToken: string
+): string {
+  const proto = window.location.protocol === "https:" ? "wss:" : "ws:"
+  return `${proto}//${window.location.host}${API_BASE}/audio/${kind}?token=${enc(streamToken)}`
 }
 
 /**

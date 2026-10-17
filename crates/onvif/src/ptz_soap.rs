@@ -20,7 +20,7 @@
 //! is not registered either: the library routes by action name only, and the
 //! Device and Media services share that name.
 
-use crate::ptz::Ptz;
+use crate::ptz::{Ptz, Source};
 use crate::soap::{request, response};
 use onvif_device_rs::server::{OnvifActionHandler, OnvifServer};
 use onvif_device_rs::types::{OnvifError, RequestInfo};
@@ -195,7 +195,7 @@ fn respond(
             } else {
                 timeout.clamp(MIN_TIMEOUT, MAX_TIMEOUT)
             };
-            ptz.continuous_move(x, y, Some(timeout))
+            ptz.continuous_move(x, y, Some(timeout), Source::Manual)
                 .map_err(backend_fault)?;
             response(
                 &tptz::ContinuousMoveResponse {},
@@ -207,7 +207,7 @@ fn respond(
             check_profile(&req.profile_token, profiles)?;
             // `PanTilt=false` asks to stop only zoom, which does not exist.
             if req.pan_tilt.unwrap_or(true) {
-                ptz.stop().map_err(backend_fault)?;
+                ptz.stop(Source::Manual).map_err(backend_fault)?;
             }
             response(&tptz::StopResponse {}, "tptz:StopResponse")
         }
@@ -223,7 +223,7 @@ fn respond(
             )?;
             let (x, y) = (in_range(x, "x")?, in_range(y, "y")?);
             let (pan, tilt) = to_degrees(&ptz.limits(), x, y);
-            ptz.goto(pan, tilt).map_err(backend_fault)?;
+            ptz.goto(pan, tilt, Source::Manual).map_err(backend_fault)?;
             response(&tptz::AbsoluteMoveResponse {}, "tptz:AbsoluteMoveResponse")
         }
         A::RelativeMove => {
@@ -240,7 +240,7 @@ fn respond(
             let here = ptz.position();
             let pan = here.pan_deg + dx * (limits.pan_max_deg - limits.pan_min_deg) / 2.0;
             let tilt = here.tilt_deg + dy * (limits.tilt_max_deg - limits.tilt_min_deg) / 2.0;
-            ptz.goto(pan, tilt).map_err(backend_fault)?;
+            ptz.goto(pan, tilt, Source::Manual).map_err(backend_fault)?;
             response(&tptz::RelativeMoveResponse {}, "tptz:RelativeMoveResponse")
         }
         A::GetPresets => {
@@ -282,7 +282,8 @@ fn respond(
             let req: tptz::GotoPreset = request(body)?;
             check_profile(&req.profile_token, profiles)?;
             let token = required(&req.preset_token, "PresetToken")?;
-            ptz.goto_preset(token).map_err(backend_fault)?;
+            ptz.goto_preset(token, Source::Manual)
+                .map_err(backend_fault)?;
             response(&tptz::GotoPresetResponse {}, "tptz:GotoPresetResponse")
         }
         A::RemovePreset => {
@@ -295,7 +296,7 @@ fn respond(
         A::GotoHomePosition => {
             let req: tptz::GotoHomePosition = request(body)?;
             check_profile(&req.profile_token, profiles)?;
-            ptz.home().map_err(backend_fault)?;
+            ptz.home(Source::Manual).map_err(backend_fault)?;
             response(
                 &tptz::GotoHomePositionResponse {},
                 "tptz:GotoHomePositionResponse",

@@ -5,8 +5,9 @@
 //! service only reads what it publishes. This crate holds the wire formats,
 //! the defaults and the naming rules both sides must agree on, and no
 //! capture or encoder code, so a consumer never links a hardware backend
-//! (the same split as `ptz-proto` and `lights-proto`). It depends on `serde`
-//! only. This is the PRO-01 contract of the board-agnostic design.
+//! (the same split as `ptz-proto` and `lights-proto`). It depends on `serde`,
+//! `serde_json` and `snafu` only (the last two for the motion socket's JSON
+//! lines). This is the PRO-01 contract of the board-agnostic design.
 //!
 //! # Video socket
 //!
@@ -75,7 +76,16 @@
 //! The `rtsp` service mounts sensor N at [`stream_path`]`(N)` = `vsN` on
 //! [`DEFAULT_RTSP_PORT`], so `rtsp://<host>/vs0`. `onvif` and the web UI
 //! build their URLs from these instead of repeating the literals.
+//!
+//! # Motion socket
+//!
+//! A second Unix socket, [`DEFAULT_MOTION_SOCKET`], with the same subscribe
+//! line, carries the ISP's motion grid of a sensor as JSON lines; see
+//! [`motion`].
 
+pub mod motion;
+
+pub use motion::DEFAULT_MOTION_SOCKET;
 use serde::{Deserialize, Serialize};
 
 /// Path of the producer's video socket.

@@ -7,6 +7,7 @@
 //! GET /snapshot.jpg[?camera=N]   image/jpeg, 503 while that sensor has no picture
 //! GET /status                    JSON: per sensor, state, fps, stream, last error
 //! unix /tmp/kamoder-video.sock   "N\n" → H.264 access units of sensor N
+//! unix /tmp/kamoder-motion.sock  "N\n" → motion grids of sensor N, JSON lines
 //! ```
 //!
 //! `N` is the board's sensor number ([`Camera::index`], `Status.index`), not
@@ -18,6 +19,14 @@
 //! pipeline to converge), but a frame is only copied out of the driver's
 //! buffer while someone has asked for one recently, and only encoded output
 //! that a client is subscribed to leaves the capture thread.
+//!
+//! The same thread samples each sensor's motion statistics between pictures
+//! ([`Session::motion_grid`], [`CaptureOptions::motion_hz`]), because the
+//! session it needs is not shareable; the latest grid per camera goes into a
+//! `watch`, so a slow motion client never holds up capture and only ever
+//! sees the newest sample (FOL-02). A backend without statistics, or one
+//! whose read fails, costs nothing beyond a counter: video keeps flowing
+//! (FOL-03).
 
 use crate::backend::{Backend, BoxError, Encoder, Frame, FrameRef, Session};
 use crate::jpeg;
@@ -30,6 +39,7 @@ use serde::Deserialize;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
+use video_proto::motion::{self, MotionGrid};
 pub use video_proto::{Status, StreamInfo};
 
 /// A picture older than this is not served.
@@ -53,6 +63,18 @@ pub struct VideoPacket {
 /// Access units queued per subscriber before it is considered behind.
 pub const VIDEO_BUFFER: usize = 16;
 
+/// Motion grids sampled per second and sensor, by default: walking subjects
+/// need no more, and each sample is a syscall (design §2).
+pub const DEFAULT_MOTION_HZ: u32 = 10;
+/// Highest sampling rate accepted (FOL-02).
+pub const MAX_MOTION_HZ: u32 = 25;
+/// Motion socket connections served at once; `follow` is the expected client.
+pub const MOTION_CLIENTS: usize = 8;
+/// How long a motion client may take to send its subscribe line.
+const SUBSCRIBE_TIMEOUT: Duration = Duration::from_secs(5);
+/// Longest subscribe line read, bytes.
+const SUBSCRIBE_MAX: u64 = 32;
+
 #[derive(Default)]
 struct Slot {
     status: Status,
@@ -71,6 +93,8 @@ pub struct Camera {
     video: tokio::sync::broadcast::Sender<Arc<VideoPacket>>,
     /// A new subscriber asked for an IDR.
     idr: Arc<AtomicBool>,
+    /// Latest motion grid; `None` until the first sample.
+    motion: tokio::sync::watch::Sender<Option<Arc<MotionGrid>>>,
 }
 
 impl Default for Camera {
@@ -96,6 +120,7 @@ impl Camera {
             slot: Arc::new(Mutex::new(slot)),
             video: tokio::sync::broadcast::channel(VIDEO_BUFFER).0,
             idr: Arc::default(),
+            motion: tokio::sync::watch::Sender::new(None),
         }
     }
 
@@ -116,6 +141,18 @@ impl Camera {
 
     pub fn status(&self) -> Status {
         self.lock().status.clone()
+    }
+
+    /// Motion grids from now on: `changed()` fires on the next sample (the
+    /// current one counts as seen, so a new client never acts on a stale
+    /// grid).
+    pub fn motion(&self) -> tokio::sync::watch::Receiver<Option<Arc<MotionGrid>>> {
+        self.motion.subscribe()
+    }
+
+    /// Makes `grid` the latest motion sample, whether or not anyone listens.
+    pub fn publish_motion(&self, grid: MotionGrid) {
+        self.motion.send_replace(Some(Arc::new(grid)));
     }
 
     fn wanted(&self) -> bool {
@@ -219,6 +256,9 @@ pub struct CaptureOptions {
     /// `retry_max`, reset by any picture.
     pub retry_min: Duration,
     pub retry_max: Duration,
+    /// Motion grids sampled per second and sensor; 0 never samples. Values
+    /// above [`MAX_MOTION_HZ`] are treated as that.
+    pub motion_hz: u32,
 }
 
 impl Default for CaptureOptions {
@@ -228,6 +268,84 @@ impl Default for CaptureOptions {
             frame_timeout: Duration::from_secs(2),
             retry_min: Duration::from_secs(2),
             retry_max: Duration::from_secs(60),
+            motion_hz: DEFAULT_MOTION_HZ,
+        }
+    }
+}
+
+impl CaptureOptions {
+    /// Time between motion samples; `None` when sampling is off.
+    fn motion_period(&self) -> Option<Duration> {
+        (self.motion_hz > 0).then(|| Duration::from_secs(1) / self.motion_hz.min(MAX_MOTION_HZ))
+    }
+}
+
+/// Motion sampling of one sensor. Kept across bring-ups so `seq` keeps
+/// growing and a failing read is warned about once, not once per retry.
+#[derive(Debug, Default)]
+struct MotionSampler {
+    /// When the next sample is due; `None`: not sampling (off, or the
+    /// backend has no statistics for this sensor in this session).
+    next: Option<Instant>,
+    seq: u64,
+    warned: bool,
+}
+
+impl MotionSampler {
+    /// Samples sensor `slot` if one is due; `ts_ms` is the capture time of
+    /// the picture just read. Never fails: errors are counted and logged.
+    fn sample<S: Session>(
+        &mut self,
+        session: &mut S,
+        slot: usize,
+        camera: &Camera,
+        period: Duration,
+        ts_ms: u64,
+    ) {
+        let Some(due) = self.next else {
+            return;
+        };
+        let now = Instant::now();
+        if now < due {
+            return;
+        }
+        // From the due time, so pictures slower than the period still give
+        // the configured rate on average; from now once a whole period late,
+        // so a stall is not followed by a burst.
+        let next = due + period;
+        self.next = Some(if next <= now { now + period } else { next });
+        // Nobody subscribed (follow is off or absent): skip the ISP read
+        // rather than publish grids no one decodes.
+        if camera.motion.receiver_count() == 0 {
+            return;
+        }
+        match session.motion_grid(slot) {
+            Ok(Some(mut grid)) => {
+                self.seq += 1;
+                grid.seq = self.seq;
+                grid.ts_ms = ts_ms;
+                camera.publish_motion(grid);
+            }
+            Ok(None) => {
+                tracing::info!(
+                    camera = camera.index,
+                    "backend has no motion statistics; not sampling"
+                );
+                self.next = None;
+            }
+            Err(e) => {
+                metrics::counter!("kamoder_motion_grid_errors_total", "camera" => camera.index.to_string())
+                    .increment(1);
+                if std::mem::replace(&mut self.warned, true) {
+                    tracing::debug!(camera = camera.index, error = %e, "motion grid read failed");
+                } else {
+                    tracing::warn!(
+                        camera = camera.index,
+                        error = %e,
+                        "motion grid read failed; streaming on (further failures logged at debug)"
+                    );
+                }
+            }
         }
     }
 }
@@ -276,6 +394,8 @@ pub fn capture<B: Backend>(
 ) {
     let expected = backend.sensors();
     encoders.resize_with(expected.len(), || None);
+    let mut motion: Vec<MotionSampler> =
+        expected.iter().map(|_| MotionSampler::default()).collect();
     let mut pause = opts.retry_min;
     for (info, camera) in expected.iter().zip(&cameras) {
         if camera.index != info.index {
@@ -297,6 +417,7 @@ pub fn capture<B: Backend>(
             &mut backend,
             &cameras,
             &mut encoders,
+            &mut motion,
             &stop,
             &opts,
             &mut pause,
@@ -328,12 +449,19 @@ fn run<B: Backend>(
     backend: &mut B,
     cameras: &[Camera],
     encoders: &mut [Option<Box<dyn Encoder>>],
+    motion: &mut [MotionSampler],
     stop: &AtomicBool,
     opts: &CaptureOptions,
     pause: &mut Duration,
 ) -> Result<(), BoxError> {
     let mut session = backend.start()?;
     let sensors = session.sensors();
+    let period = opts.motion_period();
+    // A new session may have statistics an earlier one lacked.
+    let start = Instant::now();
+    for m in motion.iter_mut() {
+        m.next = period.map(|_| start);
+    }
     for ((info, camera), enc) in sensors.iter().zip(cameras).zip(encoders.iter()) {
         camera.update(|s| {
             s.state = "running".into();
@@ -359,7 +487,9 @@ fn run<B: Backend>(
         {
             let wanted = camera.wanted();
             let index = info.index;
+            let mut timestamp_ms = 0;
             let encoded = session.with_frame(slot, opts.frame_timeout, &mut |f| {
+                timestamp_ms = f.timestamp_ms;
                 if wanted {
                     camera.publish(snapshot_of(f, opts.snapshot_max_width));
                 }
@@ -387,6 +517,9 @@ fn run<B: Backend>(
             camera.count_frame(encoded);
             metrics::counter!("kamoder_camera_frames_total", "camera" => index.to_string())
                 .increment(1);
+            if let (Some(period), Some(m)) = (period, motion.get_mut(slot)) {
+                m.sample(&mut session, slot, camera, period, timestamp_ms);
+            }
         }
     }
     Ok(())
@@ -448,6 +581,80 @@ async fn video_client(conn: tokio::net::UnixStream, cameras: &[Camera]) -> std::
         };
         write.write_all(&head.encode()).await?;
         write.write_all(&packet.data).await?;
+    }
+}
+
+/// Serves the motion socket (`video_proto::motion`): each client names a
+/// sensor (its board index) on one line and then receives every new motion
+/// grid of it as a JSON line. At most [`MOTION_CLIENTS`] at once; more are
+/// closed at once. An unknown sensor is closed without an answer.
+pub async fn serve_motion(listener: tokio::net::UnixListener, cameras: Arc<Vec<Camera>>) {
+    let slots = Arc::new(tokio::sync::Semaphore::new(MOTION_CLIENTS));
+    loop {
+        let conn = match listener.accept().await {
+            Ok((conn, _)) => conn,
+            Err(e) => {
+                tracing::warn!(error = %e, "motion socket accept failed");
+                tokio::time::sleep(Duration::from_millis(100)).await;
+                continue;
+            }
+        };
+        let Ok(permit) = Arc::clone(&slots).try_acquire_owned() else {
+            tracing::warn!("too many motion socket connections, refusing one");
+            metrics::counter!("kamoder_camera_motion_refused_total").increment(1);
+            continue;
+        };
+        let cameras = Arc::clone(&cameras);
+        tokio::spawn(async move {
+            if let Err(e) = motion_client(conn, &cameras).await {
+                tracing::debug!(error = %e, "motion client gone");
+            }
+            drop(permit);
+        });
+    }
+}
+
+async fn motion_client(conn: tokio::net::UnixStream, cameras: &[Camera]) -> std::io::Result<()> {
+    use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
+    let (read, mut write) = conn.into_split();
+    let mut read = BufReader::new(read);
+    let mut line = String::new();
+    let mut limited = (&mut read).take(SUBSCRIBE_MAX);
+    tokio::time::timeout(SUBSCRIBE_TIMEOUT, limited.read_line(&mut line))
+        .await
+        .map_err(|_| std::io::Error::other("no subscribe line"))??;
+    let Some(camera) = video_proto::parse_subscribe(&line).and_then(|i| find(cameras, i)) else {
+        return Err(std::io::Error::other(format!(
+            "no camera {:?}",
+            line.trim()
+        )));
+    };
+    tracing::info!(camera = camera.index, "motion client subscribed");
+    let mut rx = camera.motion();
+    // One buffer per connection, reused for every line.
+    let mut out = Vec::with_capacity(motion::MAX_LINE);
+    let mut ignored = [0u8; 16];
+    loop {
+        tokio::select! {
+            changed = rx.changed() => {
+                if changed.is_err() {
+                    return Ok(());
+                }
+                let Some(grid) = rx.borrow_and_update().clone() else {
+                    continue;
+                };
+                motion::encode_line(&grid, &mut out).map_err(std::io::Error::other)?;
+                write.write_all(&out).await?;
+            }
+            // Watching the read side notices a client that left even while
+            // no grid comes (a backend without statistics); what it sends
+            // after the subscribe line is ignored.
+            n = read.read(&mut ignored) => {
+                if n? == 0 {
+                    return Ok(());
+                }
+            }
+        }
     }
 }
 
@@ -688,7 +895,9 @@ mod half_tests {
 #[cfg(test)]
 mod capture_tests {
     use super::*;
-    use crate::fake::{FakeBackend, FakeEncoder, FakeEncoderStats, FAKE_PARAMETER_SETS};
+    use crate::fake::{
+        FakeBackend, FakeEncoder, FakeEncoderStats, FakeMotion, FAKE_PARAMETER_SETS,
+    };
     use std::sync::atomic::AtomicUsize;
 
     /// Short pauses so failure tests take milliseconds, not seconds.
@@ -937,6 +1146,257 @@ mod capture_tests {
         wait_for("failed", || r.cameras[0].status().state == "failed");
         let e = r.cameras[0].status().error.unwrap();
         assert!(e.starts_with("sensor 0: fake encoder: frame is"), "{e}");
+    }
+
+    fn grid() -> MotionGrid {
+        MotionGrid::new(0, 0, 4, 2, 9, vec![0, 1, 2, 3, 4, 5, 6, 9]).unwrap()
+    }
+
+    fn latest_seq(rx: &tokio::sync::watch::Receiver<Option<Arc<MotionGrid>>>) -> u64 {
+        rx.borrow().as_ref().map_or(0, |g| g.seq)
+    }
+
+    /// FOL-02: grids are published per camera with the service's sequence
+    /// number and a picture's timestamp, at about the configured rate.
+    #[test]
+    fn motion_grids_are_sampled_into_the_watch() {
+        let backend = FakeBackend {
+            motion: vec![FakeMotion::Grid(grid())],
+            ..FakeBackend::new(2, 32, 16)
+        };
+        let stats = Arc::clone(&backend.stats);
+        let r = run(
+            backend,
+            Vec::new(),
+            CaptureOptions {
+                motion_hz: MAX_MOTION_HZ,
+                ..quick()
+            },
+        );
+        let rx = [r.cameras[0].motion(), r.cameras[1].motion()];
+        assert_eq!(latest_seq(&rx[0]), 0, "nothing before the first sample");
+        let start = Instant::now();
+        wait_for("5 grids", || {
+            latest_seq(&rx[0]) >= 5 && latest_seq(&rx[1]) >= 5
+        });
+        let elapsed = start.elapsed();
+        let g = rx[0].borrow().clone().unwrap();
+        assert_eq!((g.cols, g.rows, g.max, &g.cells), (4, 2, 9, &grid().cells));
+        // The fake stamps pictures n * 2 ms: the grid carries one of them.
+        assert_eq!(g.ts_ms % 2, 0);
+        // 25 Hz: 5 samples take about 160 ms after the first, not 5 pictures.
+        assert!(elapsed >= Duration::from_millis(120), "{elapsed:?}");
+        let calls = stats.motion_calls.load(Ordering::Relaxed);
+        assert!(calls < stats.frames.load(Ordering::Relaxed) / 2, "{calls}");
+    }
+
+    #[test]
+    fn seq_grows_by_one_per_sample() {
+        let backend = FakeBackend {
+            motion: vec![FakeMotion::Grid(grid())],
+            ..FakeBackend::new(1, 32, 16)
+        };
+        let r = run(
+            backend,
+            Vec::new(),
+            CaptureOptions {
+                motion_hz: MAX_MOTION_HZ,
+                ..quick()
+            },
+        );
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_time()
+            .build()
+            .unwrap();
+        let mut rx = r.cameras[0].motion();
+        let seqs = rt.block_on(async {
+            let mut seqs = Vec::new();
+            while seqs.len() < 4 {
+                tokio::time::timeout(Duration::from_secs(5), rx.changed())
+                    .await
+                    .unwrap()
+                    .unwrap();
+                seqs.push(rx.borrow_and_update().as_ref().unwrap().seq);
+            }
+            seqs
+        });
+        assert!(seqs.windows(2).all(|w| w[1] == w[0] + 1), "{seqs:?}");
+    }
+
+    /// FOL-03: a failing read is counted and retried, and video goes on.
+    #[test]
+    fn motion_errors_keep_capture_running() {
+        let (enc, estats) = encoder(32, 16, 30);
+        let backend = FakeBackend {
+            motion: vec![FakeMotion::Error("EINVAL".into())],
+            ..FakeBackend::new(1, 32, 16)
+        };
+        let stats = Arc::clone(&backend.stats);
+        let r = run(
+            backend,
+            vec![enc],
+            CaptureOptions {
+                motion_hz: MAX_MOTION_HZ,
+                ..quick()
+            },
+        );
+        let _listener = r.cameras[0].motion();
+        wait_for("retries", || {
+            stats.motion_calls.load(Ordering::Relaxed) >= 3
+        });
+        let st = r.cameras[0].status();
+        assert_eq!((st.state.as_str(), st.error), ("running", None));
+        assert_eq!(stats.starts.load(Ordering::Relaxed), 1, "no restart");
+        assert!(estats.encoded.load(Ordering::Relaxed) > 3);
+        assert_eq!(latest_seq(&r.cameras[0].motion()), 0);
+    }
+
+    #[test]
+    fn unsupported_or_disabled_stops_sampling() {
+        let backend = FakeBackend {
+            motion: vec![FakeMotion::Unsupported],
+            ..FakeBackend::new(1, 32, 16)
+        };
+        let stats = Arc::clone(&backend.stats);
+        let r = run(
+            backend,
+            Vec::new(),
+            CaptureOptions {
+                motion_hz: MAX_MOTION_HZ,
+                ..quick()
+            },
+        );
+        let _listener = r.cameras[0].motion();
+        wait_for("frames", || frames(&r.cameras[0]) >= 60);
+        assert_eq!(stats.motion_calls.load(Ordering::Relaxed), 1, "asked once");
+        drop(r);
+
+        let backend = FakeBackend {
+            motion: vec![FakeMotion::Grid(grid())],
+            ..FakeBackend::new(1, 32, 16)
+        };
+        let stats = Arc::clone(&backend.stats);
+        let r = run(
+            backend,
+            Vec::new(),
+            CaptureOptions {
+                motion_hz: 0,
+                ..quick()
+            },
+        );
+        wait_for("frames", || frames(&r.cameras[0]) >= 20);
+        assert_eq!(stats.motion_calls.load(Ordering::Relaxed), 0, "off");
+    }
+
+    /// No motion subscriber (follow off or absent): the ISP is not read.
+    #[test]
+    fn no_subscriber_no_motion_reads() {
+        let backend = FakeBackend {
+            motion: vec![FakeMotion::Grid(grid())],
+            ..FakeBackend::new(1, 32, 16)
+        };
+        let stats = Arc::clone(&backend.stats);
+        let r = run(
+            backend,
+            Vec::new(),
+            CaptureOptions {
+                motion_hz: MAX_MOTION_HZ,
+                ..quick()
+            },
+        );
+        wait_for("frames", || frames(&r.cameras[0]) >= 30);
+        assert_eq!(stats.motion_calls.load(Ordering::Relaxed), 0);
+        let rx = r.cameras[0].motion();
+        wait_for("a grid once subscribed", || latest_seq(&rx) >= 1);
+    }
+
+    #[test]
+    fn motion_period_from_hz() {
+        let at = |motion_hz| {
+            CaptureOptions {
+                motion_hz,
+                ..CaptureOptions::default()
+            }
+            .motion_period()
+        };
+        assert_eq!(CaptureOptions::default().motion_hz, 10);
+        assert_eq!(at(10), Some(Duration::from_millis(100)));
+        assert_eq!(at(0), None);
+        assert_eq!(at(1000), Some(Duration::from_millis(40)), "capped at 25 Hz");
+    }
+
+    /// The motion socket: unknown sensors are closed, a subscriber gets
+    /// each new grid as a JSON line, and connections are capped.
+    #[tokio::test(flavor = "current_thread")]
+    async fn motion_socket_serves_grids_and_caps_clients() {
+        use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
+        use video_proto::subscribe_line;
+
+        let cameras = Arc::new(vec![Camera::new(1)]);
+        let dir = TempDir::new();
+        let path = dir.0.join("motion.sock");
+        let listener = tokio::net::UnixListener::bind(&path).unwrap();
+        tokio::spawn(serve_motion(listener, Arc::clone(&cameras)));
+
+        let test = async {
+            let mut bad = tokio::net::UnixStream::connect(&path).await.unwrap();
+            bad.write_all(subscribe_line(0).as_bytes()).await.unwrap();
+            let mut rest = Vec::new();
+            bad.read_to_end(&mut rest).await.unwrap();
+            assert!(rest.is_empty(), "unknown sensor closed");
+
+            let mut conn = tokio::net::UnixStream::connect(&path).await.unwrap();
+            conn.write_all(subscribe_line(1).as_bytes()).await.unwrap();
+            let mut conn = BufReader::new(conn);
+            // Published until the subscription is in place, then read back.
+            let mut line = String::new();
+            let mut seq = 0;
+            while line.is_empty() {
+                seq += 1;
+                cameras[0].publish_motion(MotionGrid { seq, ..grid() });
+                let _ = tokio::time::timeout(Duration::from_millis(20), conn.read_line(&mut line))
+                    .await;
+            }
+            let got = motion::decode_line(line.as_bytes()).unwrap();
+            assert_eq!(
+                got,
+                MotionGrid {
+                    seq: got.seq,
+                    ..grid()
+                }
+            );
+            assert!(got.seq <= seq);
+
+            // Seven more fill the cap; the ninth is closed at once.
+            let mut held = Vec::new();
+            for _ in 0..MOTION_CLIENTS - 1 {
+                held.push(tokio::net::UnixStream::connect(&path).await.unwrap());
+            }
+            let mut extra = tokio::net::UnixStream::connect(&path).await.unwrap();
+            let mut rest = Vec::new();
+            extra.read_to_end(&mut rest).await.unwrap();
+            assert!(rest.is_empty());
+            // A client leaving frees its place.
+            drop(conn);
+            let mut ok = false;
+            for _ in 0..100 {
+                let mut c = tokio::net::UnixStream::connect(&path).await.unwrap();
+                c.write_all(subscribe_line(1).as_bytes()).await.unwrap();
+                let mut b = [0u8; 1];
+                // Refused: EOF at once. Accepted: nothing to read yet.
+                if tokio::time::timeout(Duration::from_millis(20), c.read(&mut b))
+                    .await
+                    .is_err()
+                {
+                    ok = true;
+                    break;
+                }
+            }
+            assert!(ok, "a place was freed");
+        };
+        tokio::time::timeout(Duration::from_secs(10), test)
+            .await
+            .expect("motion socket test timed out");
     }
 
     /// A fresh directory under the system temp dir, removed on drop.

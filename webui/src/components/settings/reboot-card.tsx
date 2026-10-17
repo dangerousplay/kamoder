@@ -23,7 +23,7 @@ const SLOW_MS = 180000
  * Full-screen "rebooting" state: waits for /api/health to fail (camera went
  * down), then to answer again, then reloads the SPA.
  */
-function RebootingScreen() {
+export function RebootingScreen() {
   const [elapsed, setElapsed] = React.useState(0)
 
   React.useEffect(() => {

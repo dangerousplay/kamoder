@@ -14,6 +14,7 @@ const ServicesPage = React.lazy(() => import("@/pages/services"))
 const LogsPage = React.lazy(() => import("@/pages/logs"))
 const PtzPage = React.lazy(() => import("@/pages/ptz"))
 const SettingsPage = React.lazy(() => import("@/pages/settings"))
+const UpdatesPage = React.lazy(() => import("@/pages/updates"))
 const UsersPage = React.lazy(() => import("@/pages/users"))
 const SetupPage = React.lazy(() => import("@/pages/setup"))
 const NotFoundPage = React.lazy(() => import("@/pages/not-found"))
@@ -32,6 +33,7 @@ const router = createBrowserRouter([
       { path: "services", element: <ServicesPage /> },
       { path: "logs", element: <LogsPage /> },
       { path: "ptz", element: <PtzPage /> },
+      { path: "updates", element: <UpdatesPage /> },
       {
         path: "settings",
         element: (

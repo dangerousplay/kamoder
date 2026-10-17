@@ -60,6 +60,7 @@
 extern crate os;
 
 mod announce;
+mod audio;
 mod device;
 mod imaging;
 mod media;
@@ -144,6 +145,12 @@ struct Cli {
     /// Imaging is advertised only while the owner answers.
     #[arg(long, default_value = lights_proto::DEFAULT_SOCKET)]
     lights_socket: String,
+    /// Socket of the audio service, through which the Media service reads
+    /// and sets the speaker volume (`AudioOutputConfiguration.OutputLevel`);
+    /// empty: report the board profile's default volume, refuse to set it.
+    /// The audio configurations themselves come from the board's `[audio]`.
+    #[arg(long, default_value = audio_proto::DEFAULT_SOCKET)]
+    audio_socket: String,
     /// Advertise the address of this interface (default: the first
     /// non-loopback IPv4 address of any interface).
     #[arg(long, conflicts_with = "address")]
@@ -240,6 +247,10 @@ fn serve(cli: Cli) -> Result<()> {
         ptz: motor.clone(),
         lights: (!cli.lights_socket.is_empty())
             .then(|| lights_proto::Client::new(&cli.lights_socket)),
+        audio: audio::Audio::new(
+            board.profile.audio.as_ref(),
+            (!cli.audio_socket.is_empty()).then(|| audio_proto::Client::new(&cli.audio_socket)),
+        ),
     };
     let advert = Advert {
         onvif_port: cli.port,
@@ -388,6 +399,7 @@ mod cli_tests {
         assert_eq!(cli.ptz_presets, "etc/ptz-presets.json");
         assert_eq!(cli.ptz_socket, "/tmp/anyka-ptz.sock");
         assert_eq!(cli.lights_socket, "/tmp/kamoder-lights.sock");
+        assert_eq!(cli.audio_socket, "/tmp/kamoder-audio.sock");
         assert!(!cli.no_auth);
         assert!(cli.address.is_none() && cli.interface.is_none());
     }
@@ -424,9 +436,12 @@ mod cli_tests {
             "",
             "--lights-socket",
             "",
+            "--audio-socket",
+            "",
         ]);
         assert!(cli.ptz_socket.is_empty());
         assert!(cli.lights_socket.is_empty());
+        assert!(cli.audio_socket.is_empty());
         assert!(cli.ptz_presets.is_empty());
         assert_eq!(cli.ptz, Some(PtzMode::Sim));
         assert!(cli.no_auth);

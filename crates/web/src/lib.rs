@@ -14,6 +14,12 @@
 //! - [`users`] — web users; [`onvif`] — the ONVIF account.
 //! - [`video`] — snapshot proxy and MJPEG; [`ptz`] — pan/tilt via the PTZ socket.
 //! - [`lights`] — day/night, white, red/blue and mute via the lights socket.
+//! - [`follow`] — follow-movement status and on/off via the follow socket.
+//! - [`audio`] — microphone/speaker list and gain, talk and listen
+//!   WebSockets via the audio socket.
+//! - [`update`] — firmware update status, check/install/upload, rollback
+//!   and settings via the update socket.
+//! - [`tls`] — the self-signed certificate and the HTTPS listener.
 //! - [`rate_limit`], [`stream_token`], [`spa`].
 
 // Linked for its side effect: `os` supplies the `pthread_setname_np`
@@ -25,10 +31,12 @@ extern crate os;
 #[cfg(test)]
 mod api_tests;
 pub mod app;
+pub mod audio;
 pub mod auth;
 pub mod cameras;
 pub mod config;
 pub mod error;
+pub mod follow;
 pub mod hardware;
 pub mod lights;
 pub mod logs;
@@ -46,5 +54,7 @@ pub mod stream_token;
 pub mod system;
 #[cfg(test)]
 mod tests;
+pub mod tls;
+pub mod update;
 pub mod users;
 pub mod video;

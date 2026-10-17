@@ -1,0 +1,19 @@
+[package]
+name = "audio-proto"
+description = "Wire protocol, G.711 codec and async client for the audio service socket"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+# Like ptz-proto and lights-proto: only the protocol, so rtsp, web and onvif
+# can be clients without linking the codec driver.
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+snafu.workspace = true
+video-proto.workspace = true
+tokio = { version = "1", features = ["net", "io-util", "time"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["rt", "macros"] }

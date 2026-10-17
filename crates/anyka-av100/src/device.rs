@@ -422,6 +422,61 @@ impl Sensor {
     pub fn index(&self) -> u32 {
         self.index
     }
+
+    /// Reads the ISP's 3D-NR motion statistics ([`conf::GET_3D_NR_STAT`],
+    /// FOL-01): one ioctl into a stack buffer, nothing allocated. The ISP
+    /// updates them as it processes pictures, so this only means something
+    /// while the sensor streams. UNVERIFIED on hardware.
+    pub fn motion_grid(&self) -> Result<MotionStat> {
+        let mut words = [0u32; conf::NR3D_STAT_LEN / 4];
+        v4l2::private_query(self.isp.as_fd(), conf::GET_3D_NR_STAT, &mut words)
+            .map_err(self.fail("3D-NR statistics"))?;
+        let mut bytes = [0u8; conf::NR3D_STAT_LEN];
+        // The kernel wrote its struct in memory order; keep it byte for byte.
+        for (b, w) in bytes.as_chunks_mut::<4>().0.iter_mut().zip(&words) {
+            *b = w.to_ne_bytes();
+        }
+        Ok(MotionStat::parse(&bytes))
+    }
+}
+
+/// `AK_ISP_3D_NR_STAT_INFO`: the ISP's motion energy per cell of a
+/// [`conf::NR3D_STAT_COLS`]×[`conf::NR3D_STAT_ROWS`] grid over the picture.
+///
+/// All 24 rows are kept, although the stock `ipc` only reads 16 of them;
+/// at 1280×720 cells may be 40×45 pixels, so 16 rows would cover the frame.
+/// Which rows hold data is to be checked on hardware.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MotionStat {
+    /// `MD_stat_max`.
+    pub max: u16,
+    /// `MD_stat`, row-major (`cells[row * 32 + col]`).
+    pub cells: [u16; conf::NR3D_STAT_COLS * conf::NR3D_STAT_ROWS],
+    /// `MD_level`.
+    pub level: u32,
+}
+
+impl MotionStat {
+    /// Byte offset of `MD_stat` in the struct.
+    const CELLS_AT: usize = 2;
+    /// Byte offset of `MD_level`: after the cells, aligned to 4.
+    const LEVEL_AT: usize =
+        (Self::CELLS_AT + 2 * conf::NR3D_STAT_COLS * conf::NR3D_STAT_ROWS).next_multiple_of(4);
+
+    /// Decodes the struct as the (little-endian) kernel lays it out.
+    pub fn parse(raw: &[u8; conf::NR3D_STAT_LEN]) -> MotionStat {
+        let mut cells = [0u16; conf::NR3D_STAT_COLS * conf::NR3D_STAT_ROWS];
+        let grid = &raw[Self::CELLS_AT..Self::CELLS_AT + 2 * cells.len()];
+        for (c, b) in cells.iter_mut().zip(grid.as_chunks::<2>().0) {
+            *c = u16::from_le_bytes(*b);
+        }
+        let level = &raw[Self::LEVEL_AT..Self::LEVEL_AT + 4];
+        MotionStat {
+            max: u16::from_le_bytes([raw[0], raw[1]]),
+            cells,
+            level: u32::from_le_bytes([level[0], level[1], level[2], level[3]]),
+        }
+    }
 }
 
 impl Drop for Sensor {
@@ -455,4 +510,33 @@ pub fn sensors(sysfs: &Path) -> Vec<u32> {
         .unwrap_or_default();
     v.sort_unstable();
     v
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A synthetic `AK_ISP_3D_NR_STAT_INFO`: max 0x1234, cell (col, row) =
+    /// row * 256 + col, level 0xdead_beef.
+    #[test]
+    fn motion_stat_parses_the_kernel_layout() {
+        let mut raw = [0u8; conf::NR3D_STAT_LEN];
+        raw[0..2].copy_from_slice(&0x1234u16.to_le_bytes());
+        for row in 0..24 {
+            for col in 0..32 {
+                let at = 2 + 2 * (row * 32 + col);
+                raw[at..at + 2].copy_from_slice(&((row * 256 + col) as u16).to_le_bytes());
+            }
+        }
+        raw[0x604..0x608].copy_from_slice(&0xdead_beefu32.to_le_bytes());
+        let s = MotionStat::parse(&raw);
+        assert_eq!(s.max, 0x1234);
+        assert_eq!(s.cells[0], 0);
+        assert_eq!(s.cells[1], 1, "col 1 of row 0");
+        assert_eq!(s.cells[32], 256, "row 1 starts after 32 cells");
+        assert_eq!(s.cells[23 * 32 + 31], 23 * 256 + 31);
+        assert_eq!(s.level, 0xdead_beef);
+        assert_eq!(MotionStat::LEVEL_AT, 0x604);
+        assert_eq!(MotionStat::LEVEL_AT + 4, conf::NR3D_STAT_LEN);
+    }
 }

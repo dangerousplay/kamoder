@@ -12,18 +12,20 @@ and both sides use them instead of repeating literals. This note restates it
 for people who are not reading Rust. If the two ever disagree, the crate wins
 and this note is the bug.
 
-`video-proto` depends on `serde` only, so a consumer never links capture or
-encoder code (the same split as `ptz-proto` and `lights-proto`).
+`video-proto` depends on `serde`, `serde_json` and `snafu` only (the last
+two for the motion socket's JSON lines), so a consumer never links capture
+or encoder code (the same split as `ptz-proto` and `lights-proto`).
 
 ## Endpoints
 
 | What | Where | Constant |
 | --- | --- | --- |
 | Video socket (H.264) | Unix stream socket `/tmp/kamoder-video.sock` | `DEFAULT_SOCKET` |
+| Motion socket (motion grids) | Unix stream socket `/tmp/kamoder-motion.sock`, mode 0600 | `DEFAULT_MOTION_SOCKET` |
 | HTTP (`/status`, `/snapshot.jpg`) | `127.0.0.1:3000`, loopback only | `DEFAULT_PRODUCER` |
 | RTSP (served by `rtsp`, not the producer) | TCP `554` | `DEFAULT_RTSP_PORT` |
 
-The producer's `--listen` and `--video-socket` flags, and the consumers'
+The producer's `--listen`, `--video-socket` and `--motion-socket` flags, and the consumers'
 matching flags (`rtsp --video-socket`, `onvif --producer`, `web
 --snapshot-url`), move these; the defaults above are what `tools/supervisor.toml`
 uses.
@@ -93,6 +95,52 @@ The supervisor restarts the producer after a crash, so the socket going away
 is normal. Consumers reconnect and resubscribe instead of exiting: `rtsp`
 retries every second, its RTSP clients see a stall rather than a closed
 session, and the RTP clock keeps its zero across the reconnect.
+
+## Motion socket
+
+The ISP's motion statistics of one sensor, for the `follow` service
+(follow-movement spec FOL-01..03). Defined in `video_proto::motion`.
+
+The client writes the same subscribe line as on the video socket
+(`subscribe_line(N)`); the producer then writes one `MotionGrid` per sample
+as a JSON line until either side closes:
+
+```text
+-> "0\n"
+<- {"seq":41,"ts_ms":1234567,"cols":32,"rows":24,"max":812,"cells":[0,3,...]}\n
+<- {"seq":42,"ts_ms":1234667,"cols":32,"rows":24,"max":790,"cells":[0,0,...]}\n
+<- ...
+```
+
+| Field | Meaning |
+| --- | --- |
+| `seq` | Sample number of this sensor, +1 per sample while the producer runs; a gap means samples were skipped. |
+| `ts_ms` | Capture time of the latest picture when sampled, in the clock of the video socket's timestamps. |
+| `cols`, `rows` | Grid size: `cols` 1..=32 (`MAX_COLS`), `rows` 1..=24 (`MAX_ROWS`). The AV100 sends 32×24. |
+| `max` | The ISP's maximum cell energy for this sample. |
+| `cells` | `cols * rows` energies, row-major (`cells[row * cols + col]`), row 0 at the top. Raw ISP units, comparable with each other and with `max`. |
+
+- **Lines** are at most `MAX_LINE` (8 KiB) without the `\n`;
+  `encode_line`/`decode_line` write and read them, and decoding checks the
+  dimensions (`MotionGrid::new`).
+- **Only new samples.** A client gets the samples taken after it subscribed,
+  never a stale one. A slow client only ever gets the newest sample: the
+  producer keeps one per sensor, nothing is queued.
+- **Rate.** `camera serve --motion-hz` (default 10, at most 25, 0 = off)
+  samples each sensor between pictures on the capture thread.
+- **No statistics.** A backend without them (test pattern, V4L2 boards)
+  accepts the subscription and never writes. A failing read is counted in
+  `kamoder_motion_grid_errors_total{camera}` and logged once at warn; video
+  is unaffected.
+- **Unknown index**: the connection is closed without an answer, as on the
+  video socket.
+- **Connections**: at most 8 at once (`MOTION_CLIENTS`); more are closed on
+  accept and counted in `kamoder_camera_motion_refused_total`.
+- **AV100 source.** ISP command `0x8004_4970` (`AK_ISP_GET_3D_NR_STAT_INFO`)
+  on `/dev/isp-param-N`, read back into the 0x608-byte
+  `AK_ISP_3D_NR_STAT_INFO` (`anyka_av100::device::MotionStat`). Recovered
+  from the vendor library's disassembly and **not yet verified on hardware**,
+  including which of the 24 rows hold data (the stock `ipc` reads 16).
 
 ## HTTP
 

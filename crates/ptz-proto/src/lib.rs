@@ -59,6 +59,27 @@
 //!
 //! Angles (`goto`, presets, `status`) are degrees in the backend's frame;
 //! velocities are normalised to `[-1, 1]`.
+//!
+//! # Who moved the head: `source`
+//!
+//! The follow tracker (`follow`) drives the head over this same socket, and
+//! must back off while a person is steering. Every motion request (`move`,
+//! `stop`, `goto`, `goto_preset`, `home`) therefore takes an optional
+//! `source`: `"manual"` or `"follow"`. Absent means `"manual"`, so clients
+//! that predate the field (web, tools) count as manual without change; ONVIF
+//! moves are always manual. The owner remembers when the last manual motion
+//! command arrived, and `status` reports it as `last_manual_ms_ago`
+//! (milliseconds; absent if there has been none since the owner started):
+//!
+//! ```text
+//! -> {"op":"move","pan":0.2,"tilt":0.0,"timeout_ms":500,"source":"follow"}
+//! <- {"result":"ok"}
+//! -> {"op":"status"}
+//! <- {"result":"status","backend":"sim","limits":{...},"position":{...},"last_manual_ms_ago":4210}
+//! ```
+//!
+//! A [`Client`] built [`with_source`](Client::with_source) tags all of its
+//! motion requests.
 
 use serde::{Deserialize, Serialize};
 use snafu::{ensure, ResultExt, Snafu};
@@ -120,6 +141,17 @@ pub struct Preset {
     pub tilt_deg: f32,
 }
 
+/// Who issued a motion request (see the module docs). A request without
+/// one counts as [`Source::Manual`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Source {
+    /// A person: web UI, ONVIF client, tools.
+    Manual,
+    /// The follow tracker; does not count as manual activity.
+    Follow,
+}
+
 /// One request, as sent by a client.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
@@ -135,11 +167,24 @@ pub enum Request {
         /// Deadman in milliseconds; `None` = [`DEFAULT_MOVE_TIMEOUT_MS`].
         #[serde(default, skip_serializing_if = "Option::is_none")]
         timeout_ms: Option<u32>,
+        /// Who sent it; `None` = [`Source::Manual`].
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        source: Option<Source>,
     },
     /// Stop whatever is running.
-    Stop,
+    Stop {
+        /// Who sent it; `None` = [`Source::Manual`].
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        source: Option<Source>,
+    },
     /// Absolute move, degrees, clamped to the limits.
-    Goto { pan: f32, tilt: f32 },
+    Goto {
+        pan: f32,
+        tilt: f32,
+        /// Who sent it; `None` = [`Source::Manual`].
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        source: Option<Source>,
+    },
     /// Every preset.
     Presets,
     /// Save the current position as a preset: a new one, or overwrite
@@ -150,12 +195,21 @@ pub enum Request {
         token: Option<String>,
     },
     /// Move to a saved preset.
-    GotoPreset { token: String },
+    GotoPreset {
+        token: String,
+        /// Who sent it; `None` = [`Source::Manual`].
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        source: Option<Source>,
+    },
     /// Delete a preset.
     RemovePreset { token: String },
     /// Move to the home position (the backend's own homing if it has one,
     /// otherwise the centre of the limits).
-    Home,
+    Home {
+        /// Who sent it; `None` = [`Source::Manual`].
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        source: Option<Source>,
+    },
 }
 
 impl Request {
@@ -164,13 +218,29 @@ impl Request {
         match self {
             Request::Status => "status",
             Request::Move { .. } => "move",
-            Request::Stop => "stop",
+            Request::Stop { .. } => "stop",
             Request::Goto { .. } => "goto",
             Request::Presets => "presets",
             Request::SetPreset { .. } => "set_preset",
             Request::GotoPreset { .. } => "goto_preset",
             Request::RemovePreset { .. } => "remove_preset",
-            Request::Home => "home",
+            Request::Home { .. } => "home",
+        }
+    }
+
+    /// Who sent a motion request (absent = [`Source::Manual`]); `None` for
+    /// requests that do not move the head.
+    pub fn motion_source(&self) -> Option<Source> {
+        match self {
+            Request::Move { source, .. }
+            | Request::Stop { source }
+            | Request::Goto { source, .. }
+            | Request::GotoPreset { source, .. }
+            | Request::Home { source } => Some(source.unwrap_or(Source::Manual)),
+            Request::Status
+            | Request::Presets
+            | Request::SetPreset { .. }
+            | Request::RemovePreset { .. } => None,
         }
     }
 }
@@ -185,6 +255,11 @@ pub enum Response {
         backend: String,
         limits: Limits,
         position: Position,
+        /// Milliseconds since the last manual motion command (any motion
+        /// request whose source is not [`Source::Follow`], and every ONVIF
+        /// move); `None` if there has been none since the owner started.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        last_manual_ms_ago: Option<u64>,
     },
     /// Answer to [`Request::Presets`].
     Presets { presets: Vec<Preset> },
@@ -270,6 +345,7 @@ pub enum ClientError {
 pub struct Client {
     path: PathBuf,
     timeout: Duration,
+    source: Option<Source>,
 }
 
 impl Default for Client {
@@ -284,6 +360,7 @@ impl Client {
         Self {
             path: path.into(),
             timeout: DEFAULT_TIMEOUT,
+            source: None,
         }
     }
 
@@ -291,6 +368,21 @@ impl Client {
     pub fn with_timeout(mut self, timeout: Duration) -> Self {
         self.timeout = timeout;
         self
+    }
+
+    /// Tags every motion request sent through the helper methods
+    /// ([`move_`](Self::move_), [`stop`](Self::stop), [`goto`](Self::goto),
+    /// [`goto_preset`](Self::goto_preset), [`home`](Self::home)) with
+    /// `source`. Without it they carry none, which the owner treats as
+    /// manual. [`request`](Self::request) sends its argument unchanged.
+    pub fn with_source(mut self, source: Source) -> Self {
+        self.source = Some(source);
+        self
+    }
+
+    /// The source this client tags motion requests with, if any.
+    pub fn source(&self) -> Option<Source> {
+        self.source
     }
 
     /// The socket this client talks to.
@@ -323,13 +415,17 @@ impl Client {
             pan,
             tilt,
             timeout_ms,
+            source: self.source,
         })
         .await
     }
 
     /// [`Request::Stop`].
     pub async fn stop(&self) -> Result<Response, ClientError> {
-        self.request(&Request::Stop).await
+        self.request(&Request::Stop {
+            source: self.source,
+        })
+        .await
     }
 
     /// [`Request::Goto`].
@@ -337,6 +433,7 @@ impl Client {
         self.request(&Request::Goto {
             pan: pan_deg,
             tilt: tilt_deg,
+            source: self.source,
         })
         .await
     }
@@ -363,6 +460,7 @@ impl Client {
     pub async fn goto_preset(&self, token: &str) -> Result<Response, ClientError> {
         self.request(&Request::GotoPreset {
             token: token.to_owned(),
+            source: self.source,
         })
         .await
     }
@@ -377,7 +475,10 @@ impl Client {
 
     /// [`Request::Home`].
     pub async fn home(&self) -> Result<Response, ClientError> {
-        self.request(&Request::Home).await
+        self.request(&Request::Home {
+            source: self.source,
+        })
+        .await
     }
 }
 
@@ -419,6 +520,7 @@ mod tests {
                     pan: 0.5,
                     tilt: -1.0,
                     timeout_ms: None,
+                    source: None,
                 },
                 json!({"op": "move", "pan": 0.5, "tilt": -1.0}),
             ),
@@ -427,14 +529,16 @@ mod tests {
                     pan: 0.0,
                     tilt: 0.25,
                     timeout_ms: Some(1500),
+                    source: None,
                 },
                 json!({"op": "move", "pan": 0.0, "tilt": 0.25, "timeout_ms": 1500}),
             ),
-            (Request::Stop, json!({"op": "stop"})),
+            (Request::Stop { source: None }, json!({"op": "stop"})),
             (
                 Request::Goto {
                     pan: 90.0,
                     tilt: 30.0,
+                    source: None,
                 },
                 json!({"op": "goto", "pan": 90.0, "tilt": 30.0}),
             ),
@@ -454,14 +558,17 @@ mod tests {
                 json!({"op": "set_preset", "name": "", "token": "2"}),
             ),
             (
-                Request::GotoPreset { token: "1".into() },
+                Request::GotoPreset {
+                    token: "1".into(),
+                    source: None,
+                },
                 json!({"op": "goto_preset", "token": "1"}),
             ),
             (
                 Request::RemovePreset { token: "1".into() },
                 json!({"op": "remove_preset", "token": "1"}),
             ),
-            (Request::Home, json!({"op": "home"})),
+            (Request::Home { source: None }, json!({"op": "home"})),
         ];
         for (request, wire) in cases {
             assert_eq!(serde_json::to_value(&request).unwrap(), wire);
@@ -471,14 +578,147 @@ mod tests {
     }
 
     #[test]
+    fn motion_requests_carry_an_optional_source() {
+        let cases = [
+            (
+                Request::Move {
+                    pan: 0.25,
+                    tilt: 0.0,
+                    timeout_ms: Some(500),
+                    source: Some(Source::Follow),
+                },
+                json!({"op": "move", "pan": 0.25, "tilt": 0.0, "timeout_ms": 500,
+                       "source": "follow"}),
+            ),
+            (
+                Request::Stop {
+                    source: Some(Source::Manual),
+                },
+                json!({"op": "stop", "source": "manual"}),
+            ),
+            (
+                Request::Goto {
+                    pan: 1.0,
+                    tilt: 2.0,
+                    source: Some(Source::Follow),
+                },
+                json!({"op": "goto", "pan": 1.0, "tilt": 2.0, "source": "follow"}),
+            ),
+            (
+                Request::GotoPreset {
+                    token: "1".into(),
+                    source: Some(Source::Follow),
+                },
+                json!({"op": "goto_preset", "token": "1", "source": "follow"}),
+            ),
+            (
+                Request::Home {
+                    source: Some(Source::Follow),
+                },
+                json!({"op": "home", "source": "follow"}),
+            ),
+        ];
+        for (request, wire) in cases {
+            assert_eq!(serde_json::to_value(&request).unwrap(), wire);
+            let back: Request = serde_json::from_value(wire).unwrap();
+            assert_eq!(back, request);
+        }
+        assert!(serde_json::from_str::<Request>(r#"{"op":"stop","source":"robot"}"#).is_err());
+    }
+
+    /// Lines from clients that predate `source` still parse, as manual.
+    #[test]
+    fn requests_without_a_source_are_manual() {
+        for old in [
+            r#"{"op":"move","pan":0.5,"tilt":0,"timeout_ms":1000}"#,
+            r#"{"op":"stop"}"#,
+            r#"{"op":"goto","pan":90,"tilt":30}"#,
+            r#"{"op":"goto_preset","token":"1"}"#,
+            r#"{"op":"home"}"#,
+        ] {
+            let request: Request = serde_json::from_str(old).unwrap();
+            assert_eq!(request.motion_source(), Some(Source::Manual), "{old}");
+        }
+        for still in [
+            Request::Status,
+            Request::Presets,
+            Request::RemovePreset { token: "1".into() },
+        ] {
+            assert_eq!(still.motion_source(), None);
+        }
+        let follow: Request = serde_json::from_str(r#"{"op":"home","source":"follow"}"#).unwrap();
+        assert_eq!(follow.motion_source(), Some(Source::Follow));
+    }
+
+    #[test]
+    fn status_reports_the_last_manual_command() {
+        let wire = json!({
+            "result": "status", "backend": "sim",
+            "limits": {"pan_min_deg": 0.0, "pan_max_deg": 350.0,
+                       "tilt_min_deg": 0.0, "tilt_max_deg": 120.0},
+            "position": {"pan_deg": 175.0, "tilt_deg": 60.0, "moving": false},
+            "last_manual_ms_ago": 4210
+        });
+        let status: Response = serde_json::from_value(wire.clone()).unwrap();
+        let Response::Status {
+            last_manual_ms_ago, ..
+        } = &status
+        else {
+            panic!("{status:?}")
+        };
+        assert_eq!(*last_manual_ms_ago, Some(4210));
+        assert_eq!(serde_json::to_value(&status).unwrap(), wire);
+    }
+
+    #[test]
+    fn a_client_with_a_source_remembers_it() {
+        let client = Client::new("/nonexistent");
+        assert_eq!(client.source(), None);
+        let client = client.with_source(Source::Follow);
+        assert_eq!(client.source(), Some(Source::Follow));
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn a_client_with_a_source_tags_every_motion_request() {
+        let path = std::env::temp_dir().join(format!("ptz-proto-src-{}.sock", std::process::id()));
+        let _ = std::fs::remove_file(&path);
+        let listener = tokio::net::UnixListener::bind(&path).unwrap();
+        let server = tokio::spawn(async move {
+            let mut seen = Vec::new();
+            for _ in 0..6 {
+                let (stream, _) = listener.accept().await.unwrap();
+                let (read, mut write) = stream.into_split();
+                let mut line = String::new();
+                BufReader::new(read).read_line(&mut line).await.unwrap();
+                seen.push(serde_json::from_str::<Request>(&line).unwrap());
+                write.write_all(b"{\"result\":\"ok\"}\n").await.unwrap();
+            }
+            seen
+        });
+        let client = Client::new(&path).with_source(Source::Follow);
+        client.move_(0.1, 0.0, Some(300)).await.unwrap();
+        client.stop().await.unwrap();
+        client.goto(1.0, 2.0).await.unwrap();
+        client.goto_preset("1").await.unwrap();
+        client.home().await.unwrap();
+        client.presets().await.unwrap();
+        let seen = server.await.unwrap();
+        let _ = std::fs::remove_file(&path);
+        let sources: Vec<_> = seen.iter().map(Request::motion_source).collect();
+        let follow = Some(Source::Follow);
+        assert_eq!(sources, [follow, follow, follow, follow, follow, None]);
+    }
+
+    #[test]
     fn malformed_requests_are_rejected() {
         for bad in [
             r#"{"op":"reboot"}"#,
             r#"{"op":"move","pan":1}"#,
             r#"{"op":"goto_preset"}"#,
             // Unknown fields are refused on ops that have fields (serde
-            // cannot enforce it on the field-less ones).
+            // cannot enforce it on the field-less ones such as `status`).
             r#"{"op":"goto","pan":1,"tilt":2,"speed":3}"#,
+            r#"{"op":"stop","speed":3}"#,
             r#"{"op":"move","pan":"left","tilt":0}"#,
             "not json",
         ] {
@@ -509,6 +749,7 @@ mod tests {
                         tilt_deg: 60.0,
                         moving: true,
                     },
+                    last_manual_ms_ago: None,
                 },
                 json!({
                     "result": "status", "backend": "sim",

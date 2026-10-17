@@ -83,6 +83,19 @@ pub fn private(fd: BorrowedFd<'_>, cmd: u32, payload: &[u32]) -> io::Result<()> 
     ioctl_words(fd, VIDIOC_S_PARM, &mut p)
 }
 
+/// A private command whose argument is a pointer to `buf`, for the ISP's
+/// "get" commands: `S_PARM {type = 1, cmd, &buf}`, and the kernel copies its
+/// struct into `buf`. [`private`] can only pass words by value.
+///
+/// `buf` must be at least as large as the struct `cmd` names: the driver
+/// copies its own size, not `buf.len()`. Words keep it 4-byte aligned, as
+/// the driver's `u32` fields need.
+pub fn private_query(fd: BorrowedFd<'_>, cmd: u32, buf: &mut [u32]) -> io::Result<()> {
+    // The ABI field is 32 bits; on the 32-bit target a pointer fits exactly.
+    let ptr = buf.as_mut_ptr() as usize as u32;
+    private(fd, cmd, &[ptr])
+}
+
 /// `struct v4l2_buffer` word offsets.
 pub mod buf {
     pub const WORDS: usize = 17;

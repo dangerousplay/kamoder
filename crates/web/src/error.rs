@@ -17,7 +17,9 @@ use std::time::Duration;
 #[derive(Debug, Clone)]
 pub struct ApiError {
     pub status: StatusCode,
-    pub code: &'static str,
+    /// Usually a literal; refusals passed through from a backend keep its
+    /// code.
+    pub code: Cow<'static, str>,
     pub message: Cow<'static, str>,
     /// Sent as `Retry-After` (429/503).
     pub retry_after: Option<Duration>,
@@ -27,12 +29,12 @@ impl ApiError {
     /// Any status, code and message.
     pub fn new(
         status: StatusCode,
-        code: &'static str,
+        code: impl Into<Cow<'static, str>>,
         message: impl Into<Cow<'static, str>>,
     ) -> Self {
         Self {
             status,
-            code,
+            code: code.into(),
             message: message.into(),
             retry_after: None,
         }

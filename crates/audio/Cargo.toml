@@ -1,0 +1,44 @@
+[package]
+name = "audio"
+description = "Owns the board's audio codec: microphone capture fan-out and speaker playback"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[features]
+# The Anyka `ak_pcm.ko` backend; on by default like camerad's AV100 video
+# backend. Without it the binary only knows the `fake` backend.
+default = ["ak-pcm"]
+ak-pcm = ["dep:anyka-av100"]
+
+[dependencies]
+audio-proto.workspace = true
+# Frame headers on the socket (audio-proto reuses the video record format).
+video-proto.workspace = true
+# `--amp lights`: the amp GPIO through the lights service (D-A6 option b).
+lights-proto.workspace = true
+board.workspace = true
+# The codec ioctl ABI (`pcm`), for the ak-pcm backend.
+anyka-av100 = { workspace = true, optional = true }
+# clock_gettime(CLOCK_MONOTONIC): the clock video timestamps use.
+libc.workspace = true
+# Pulls in the `pthread_setname_np` shim the crosstool's uClibc lacks.
+os.workspace = true
+telemetry.workspace = true
+clap.workspace = true
+eyre.workspace = true
+snafu.workspace = true
+tracing.workspace = true
+metrics.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+# A current-thread runtime, as everywhere on this 32 MB board.
+tokio = { version = "1", features = ["rt", "net", "io-util", "macros", "time", "signal", "sync"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["test-util"] }
+
+[[bin]]
+name = "audio"
+path = "src/main.rs"

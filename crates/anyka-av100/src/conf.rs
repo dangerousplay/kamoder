@@ -67,6 +67,22 @@ pub const SET_SENSOR_FPS: u32 = 0x4004_497a;
 pub const SET_EXPOSURE: u32 = 0x8004_498a;
 /// `AK_ISP_SET_3D_NR_REF`: `{u32 width, u32 height}` of the 3D-NR reference.
 pub const SET_3D_NR_REF: u32 = 0x4004_4967;
+/// `AK_ISP_GET_3D_NR_STAT_INFO`: the 3D-NR motion statistics, read back
+/// into a [`NR3D_STAT_LEN`]-byte buffer (FOL-01). UNVERIFIED on hardware.
+///
+/// From the disassembly of the V8 `libplat_vpss.so`: `ak_vpss_md_get_stat`
+/// calls `isp_get_statinfo(dev, 32, buf[0x608])` → `AK_ISP_get_3d_nr_stat_info`
+/// → `isp_sdk_ioctl` with this command, wrapped like every ISP command in
+/// `VIDIOC_S_PARM {type = 1, cmd, ptr}` on `/dev/isp-param-N`. The struct is
+/// `AK_ISP_3D_NR_STAT_INFO { u16 MD_stat_max; u16 MD_stat[24][32]; u32
+/// MD_level }` (`ak_isp_drv.h:221` of the AV300 kernel headers): 2 + 1536
+/// bytes, padding to 4, the `u32`: 0x608.
+pub const GET_3D_NR_STAT: u32 = 0x8004_4970;
+/// Size of `AK_ISP_3D_NR_STAT_INFO`, bytes.
+pub const NR3D_STAT_LEN: usize = 0x608;
+/// Cells across and down the 3D-NR motion grid.
+pub const NR3D_STAT_COLS: usize = 32;
+pub const NR3D_STAT_ROWS: usize = 24;
 
 #[derive(Debug, Snafu, PartialEq, Eq)]
 pub enum Error {

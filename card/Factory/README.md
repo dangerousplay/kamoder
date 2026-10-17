@@ -14,3 +14,11 @@
 sets `run_rust=0`. If `anyka_rust/` is missing, it hands over to a legacy
 `anyka_happy/` tree when there is one. Every call is logged to
 `/tmp/anyka_config_sh.log`.
+
+With A/B updates, `anyka_rust/` is the data root and the code may live in
+`anyka_rust/slots/a` or `slots/b`. `config.sh` asks `anyka_rust/boot/bin/kboot
+select` which slot to boot (and starts `kboot guard` on a trial boot); if
+kboot is missing or fails it uses the slot named in `anyka_rust/boot/last`,
+then the legacy tree `anyka_rust/` itself. Slot a is `anyka_rust/` until
+`slots/a` exists. The telnetd rescue shell starts before any of this, and
+each decision is logged to `anyka_rust/logs/boot.log`.

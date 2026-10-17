@@ -7,9 +7,10 @@
 //! GetVideoSourceConfigurations, GetVideoSourceConfiguration,
 //! GetVideoEncoderConfigurations, GetVideoEncoderConfiguration,
 //! GetVideoEncoderConfigurationOptions,
-//! GetCompatibleVideoEncoderConfigurations and GetAudioSources (empty: no
-//! audio). Nothing can be changed: the stream parameters are the encoder's,
-//! not the client's.
+//! GetCompatibleVideoEncoderConfigurations. Nothing about the video can be
+//! changed: the stream parameters are the encoder's, not the client's. The
+//! audio half (sources, encoder, outputs, decoder; on every profile when the
+//! board has `[audio]`) is `audio.rs`.
 //!
 //! Sensor N is, in every answer:
 //!
@@ -30,6 +31,7 @@
 //! sensor: a profile list that changes under an NVR makes it re-add the
 //! camera.
 
+use crate::audio::{self, Audio, ProfileAudio};
 use crate::producer::Producer;
 use crate::ptz_soap;
 use crate::soap::{request, response};
@@ -51,7 +53,7 @@ const QUALITY: f32 = 5.0;
 /// `tt:QualityRange` in the encoder options.
 const QUALITY_RANGE: (i32, i32) = (1, 10);
 /// `tt:SessionTimeout`: how long the RTSP session stays up unrefreshed.
-const SESSION_TIMEOUT: &str = "PT60S";
+pub(crate) const SESSION_TIMEOUT: &str = "PT60S";
 
 /// Media profile token of sensor `index`: `Profile_vsN`.
 pub fn profile_token(index: u32) -> String {
@@ -165,6 +167,8 @@ pub struct Media {
     pub device_ip: String,
     /// Every profile carries the PTZ configuration (see `ptz_soap`).
     pub ptz: bool,
+    /// The board's microphones and speakers; empty without `[audio]`.
+    pub audio: Audio,
     /// The last answer came from the board, not the producer (logged on
     /// change only).
     pub on_fallback: AtomicBool,
@@ -184,7 +188,6 @@ enum Action {
     GetVideoEncoderConfiguration,
     GetVideoEncoderConfigurationOptions,
     GetCompatibleVideoEncoderConfigurations,
-    GetAudioSources,
 }
 
 const ACTIONS: &[(&str, Action)] = &[
@@ -216,12 +219,12 @@ const ACTIONS: &[(&str, Action)] = &[
         "GetCompatibleVideoEncoderConfigurations",
         Action::GetCompatibleVideoEncoderConfigurations,
     ),
-    ("GetAudioSources", Action::GetAudioSources),
 ];
 
-/// Registers every served Media action on `server`.
+/// Registers every served Media action on `server`, audio included.
 pub fn register(server: &mut OnvifServer, media: Media) {
     let media = Arc::new(media);
+    audio::register(server, &media);
     for (name, action) in ACTIONS {
         server.register_handler(
             name,
@@ -242,7 +245,12 @@ struct MediaAction {
 impl OnvifActionHandler for MediaAction {
     async fn handle(&self, body: &str, info: &RequestInfo) -> Result<String, OnvifError> {
         let streams = self.media.streams().await;
-        respond(&self.media, &streams, self.action, body, info)
+        // Only GetProfiles carries audio; it costs a volume read.
+        let audio = match self.action {
+            Action::GetProfiles => self.media.audio.for_profiles(streams.len()).await,
+            _ => ProfileAudio::default(),
+        };
+        respond(&self.media, &streams, &audio, self.action, body, info)
     }
 }
 
@@ -250,6 +258,7 @@ impl OnvifActionHandler for MediaAction {
 fn respond(
     media: &Media,
     streams: &[VideoStream],
+    audio: &ProfileAudio,
     action: Action,
     body: &str,
     info: &RequestInfo,
@@ -261,7 +270,7 @@ fn respond(
         A::GetProfiles => {
             request::<trt::GetProfiles>(body)?;
             let profiles = trt::GetProfilesResponse {
-                profiles: streams.iter().map(|s| media.profile(s)).collect(),
+                profiles: streams.iter().map(|s| media.profile(s, audio)).collect(),
             };
             response(&profiles, "trt:GetProfilesResponse")
         }
@@ -377,13 +386,6 @@ fn respond(
                 "trt:GetCompatibleVideoEncoderConfigurationsResponse",
             )
         }
-        A::GetAudioSources => {
-            request::<trt::GetAudioSources>(body)?;
-            let sources = trt::GetAudioSourcesResponse {
-                audio_sources: vec![],
-            };
-            response(&sources, "trt:GetAudioSourcesResponse")
-        }
     }
 }
 
@@ -423,7 +425,7 @@ fn int_range(min: i32, max: i32) -> tt::IntRangeType {
 
 impl Media {
     /// The streams right now: the producer's (cached), else the board's.
-    async fn streams(&self) -> Vec<VideoStream> {
+    pub(crate) async fn streams(&self) -> Vec<VideoStream> {
         let statuses = match &self.producer {
             Some(producer) => producer.statuses().await,
             None => None,
@@ -442,8 +444,8 @@ impl Media {
         select(statuses.as_deref(), &self.fallback)
     }
 
-    /// Sensor `stream`'s profile.
-    fn profile(&self, stream: &VideoStream) -> tt::ProfileType {
+    /// Sensor `stream`'s profile, with `audio`'s configurations.
+    fn profile(&self, stream: &VideoStream, audio: &ProfileAudio) -> tt::ProfileType {
         let token = profile_token(stream.index);
         tt::ProfileType {
             token: token.clone(),
@@ -451,13 +453,13 @@ impl Media {
             any_attribute: AnyAttributes::default(),
             name: token,
             video_source_configuration: Some(video_source_configuration(stream)),
-            audio_source_configuration: None,
+            audio_source_configuration: self.audio.profile_source(audio),
             video_encoder_configuration: Some(video_encoder_configuration(stream)),
-            audio_encoder_configuration: None,
+            audio_encoder_configuration: self.audio.profile_encoder(audio),
             video_analytics_configuration: None,
             ptz_configuration: self.ptz.then(ptz_soap::configuration),
             metadata_configuration: None,
-            extension: None,
+            extension: self.audio.profile_extension(audio),
         }
     }
 }
@@ -504,20 +506,25 @@ fn video_encoder_configuration(stream: &VideoStream) -> tt::VideoEncoderConfigur
             gov_length: stream.gop as i32,
             h264_profile: stream.h264_profile(),
         }),
-        // Required by the schema; no multicast is served.
-        multicast: tt::MulticastConfigurationType {
-            any_attribute: AnyAttributes::default(),
-            address: tt::IpAddressType {
-                type_: tt::IpType::IPv4,
-                i_pv_4_address: Some("0.0.0.0".into()),
-                i_pv_6_address: None,
-            },
-            port: 0,
-            ttl: 0,
-            auto_start: false,
-            any: vec![],
-        },
+        multicast: unicast_only(),
         session_timeout: SESSION_TIMEOUT.into(),
+        any: vec![],
+    }
+}
+
+/// The multicast configuration the schema requires on encoder
+/// configurations; no multicast is served.
+pub(crate) fn unicast_only() -> tt::MulticastConfigurationType {
+    tt::MulticastConfigurationType {
+        any_attribute: AnyAttributes::default(),
+        address: tt::IpAddressType {
+            type_: tt::IpType::IPv4,
+            i_pv_4_address: Some("0.0.0.0".into()),
+            i_pv_6_address: None,
+        },
+        port: 0,
+        ttl: 0,
+        auto_start: false,
         any: vec![],
     }
 }

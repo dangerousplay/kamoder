@@ -1,0 +1,45 @@
+[package]
+name = "fetch"
+description = "Small HTTPS downloader: redirects, Range resume, rate cap and streaming SHA-256"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+# HTTP/1 client only. No HTTP/2: GitHub and its asset CDN speak HTTP/1.1 fine,
+# and h2 is a lot of code and per-connection RAM on a 32 MB board.
+hyper = { version = "1", default-features = false, features = ["client", "http1"] }
+# The pooled `legacy` client: connector plumbing, Host header, idle pool.
+hyper-util = { version = "0.1", default-features = false, features = ["client-legacy", "http1", "tokio"] }
+http-body-util = "0.1"
+bytes = "1"
+# Every TLS crate is pinned to the `ring` backend with default features off:
+# their defaults pull in aws-lc, which has no ARMv5TE support (see the
+# workspace `ring` comment and deny.toml). TLS 1.2 is kept for older mirrors.
+hyper-rustls = { version = "0.27", default-features = false, features = ["ring", "webpki-roots", "http1", "tls12"] }
+rustls = { version = "0.23", default-features = false, features = ["std", "ring", "tls12"] }
+# Mozilla's root set compiled in: the camera's firmware has no CA bundle.
+webpki-roots = "1"
+# Current-thread runtime is built by the caller; this crate only needs timers
+# and the file system.
+tokio = { version = "1", default-features = false, features = ["rt", "time", "fs", "io-util"] }
+# Streaming SHA-256 (already linked through rustls/auth).
+ring.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+snafu.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+tokio = { version = "1", features = ["rt", "macros", "net", "time", "fs", "io-util"] }
+hyper = { version = "1", default-features = false, features = ["server", "http1"] }
+hyper-util = { version = "0.1", default-features = false, features = ["server", "http1", "tokio"] }
+tokio-rustls = { version = "0.26", default-features = false, features = ["ring", "tls12"] }
+# Self-signed test certificate, same feature set as crates/web.
+rcgen = { version = "0.14", default-features = false, features = ["crypto", "pem", "ring"] }
+futures-util = { version = "0.3", default-features = false }
+# The `pthread_setname_np` shim the crosstool's uClibc lacks, for the example
+# binary (the library itself stays free of it; the binary that uses it links
+# `os` anyway).
+os.workspace = true

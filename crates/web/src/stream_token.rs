@@ -12,9 +12,9 @@
 //! In memory only, and bounded: a handful of browser tabs never needs more
 //! than [`MAX_TOKENS`].
 
-use ::auth::hex;
 use ring::rand::{SecureRandom, SystemRandom};
 use std::time::Duration;
+use subtle::ConstantTimeEq;
 
 /// How long a stream token is accepted.
 pub const TTL: Duration = Duration::from_secs(60);
@@ -41,7 +41,7 @@ impl StreamTokens {
     pub fn issue(&mut self, user: &str, gen: u32, now: u64) -> Option<(String, u64)> {
         let mut bytes = [0u8; 16];
         SystemRandom::new().fill(&mut bytes).ok()?;
-        let token = hex::encode(&bytes);
+        let token = base16ct::lower::encode_string(&bytes);
         let exp = now + TTL.as_secs();
         self.entries.retain(|entry| entry.exp > now);
         if self.entries.len() >= MAX_TOKENS {
@@ -62,16 +62,12 @@ impl StreamTokens {
         // matching prefix.
         let mut found = None;
         for entry in &self.entries {
-            if constant_time_eq(entry.token.as_bytes(), token.as_bytes()) && entry.exp > now {
+            if bool::from(entry.token.as_bytes().ct_eq(token.as_bytes())) && entry.exp > now {
                 found = Some((entry.user.clone(), entry.gen, entry.exp));
             }
         }
         found
     }
-}
-
-fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
-    a.len() == b.len() && a.iter().zip(b).fold(0u8, |acc, (x, y)| acc | (x ^ y)) == 0
 }
 
 #[cfg(test)]

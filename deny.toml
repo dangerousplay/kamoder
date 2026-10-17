@@ -36,6 +36,10 @@ exceptions = [
     # free licence (FSF) that GPL-3.0 code can use; it asks for credit in
     # the documentation of a binary distribution.
     { crate = "jpeg-encoder", allow = ["IJG"] },
+    # fetch's embedded Mozilla CA roots (the camera has no CA bundle). The
+    # data is under the Community Data License Agreement Permissive 2.0, a
+    # permissive data licence with no copyleft or attribution-in-binary terms.
+    { crate = "webpki-roots", allow = ["CDLA-Permissive-2.0"] },
 ]
 
 [bans]
@@ -49,7 +53,7 @@ deny = [
     # which the CPU has no instructions for. See telemetry's docs.
     { crate = "opentelemetry_sdk", reason = "requires 64-bit atomics that ARMv5TE lacks" },
     # aws-lc-rs has no ARMv5TE support; `ring` is the backend that works.
-    { crate = "aws-lc-rs", reason = "no ARMv5TE support; russh is configured to use ring" },
+    { crate = "aws-lc-rs", reason = "no ARMv5TE support; russh, rustls and rcgen (web) are configured to use ring" },
     # A second async runtime on a 32 MB device is a bug, not a dependency.
     { crate = "async-std", reason = "tokio is the only runtime in this workspace" },
 ]

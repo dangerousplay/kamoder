@@ -1590,3 +1590,4229 @@ impl<'ser> Serializer<'ser> for GetAudioSourcesResponseElementTypeSerializer<'se
         }
     }
 }
+#[derive(Debug)]
+pub struct GetAudioSourceConfigurationsElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::GetAudioSourceConfigurationsElementType,
+    pub(super) state:
+        ::std::boxed::Box<GetAudioSourceConfigurationsElementTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum GetAudioSourceConfigurationsElementTypeSerializerState<'ser> {
+    Init__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> GetAudioSourceConfigurationsElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                GetAudioSourceConfigurationsElementTypeSerializerState::Init__ => {
+                    *self.state = GetAudioSourceConfigurationsElementTypeSerializerState::Done__;
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TRT),
+                            &super::super::NS_TRT,
+                        );
+                    }
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::Empty(bytes)));
+                }
+                GetAudioSourceConfigurationsElementTypeSerializerState::Done__ => return Ok(None),
+                GetAudioSourceConfigurationsElementTypeSerializerState::Phantom__(_) => {
+                    unreachable!()
+                }
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for GetAudioSourceConfigurationsElementTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state = GetAudioSourceConfigurationsElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct GetAudioSourceConfigurationsResponseElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::GetAudioSourceConfigurationsResponseElementType,
+    pub(super) state:
+        ::std::boxed::Box<GetAudioSourceConfigurationsResponseElementTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum GetAudioSourceConfigurationsResponseElementTypeSerializerState<'ser> {
+    Init__,
+    Configurations(
+        IterSerializer<
+            'ser,
+            &'ser [super::super::tt::AudioSourceConfigurationType],
+            super::super::tt::AudioSourceConfigurationType,
+        >,
+    ),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> GetAudioSourceConfigurationsResponseElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                GetAudioSourceConfigurationsResponseElementTypeSerializerState::Init__ => {
+                    * self . state = GetAudioSourceConfigurationsResponseElementTypeSerializerState :: Configurations (IterSerializer :: new (& self . value . configurations [..] , Some ("trt:Configurations") , false)) ;
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TT),
+                            &super::super::NS_TT,
+                        );
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TRT),
+                            &super::super::NS_TRT,
+                        );
+                    }
+                    return Ok(Some(Event::Start(bytes)));
+                }
+                GetAudioSourceConfigurationsResponseElementTypeSerializerState::Configurations(
+                    x,
+                ) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => *self.state =
+                            GetAudioSourceConfigurationsResponseElementTypeSerializerState::End__,
+                    }
+                }
+                GetAudioSourceConfigurationsResponseElementTypeSerializerState::End__ => {
+                    *self.state =
+                        GetAudioSourceConfigurationsResponseElementTypeSerializerState::Done__;
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::End(BytesEnd::new(self.name))));
+                }
+                GetAudioSourceConfigurationsResponseElementTypeSerializerState::Done__ => {
+                    return Ok(None)
+                }
+                GetAudioSourceConfigurationsResponseElementTypeSerializerState::Phantom__(_) => {
+                    unreachable!()
+                }
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for GetAudioSourceConfigurationsResponseElementTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state =
+                    GetAudioSourceConfigurationsResponseElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct GetAudioSourceConfigurationElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::GetAudioSourceConfigurationElementType,
+    pub(super) state:
+        ::std::boxed::Box<GetAudioSourceConfigurationElementTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum GetAudioSourceConfigurationElementTypeSerializerState<'ser> {
+    Init__,
+    ConfigurationToken(<::std::string::String as WithSerializer>::Serializer<'ser>),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> GetAudioSourceConfigurationElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                GetAudioSourceConfigurationElementTypeSerializerState::Init__ => {
+                    *self.state =
+                        GetAudioSourceConfigurationElementTypeSerializerState::ConfigurationToken(
+                            WithSerializer::serializer(
+                                &self.value.configuration_token,
+                                Some("trt:ConfigurationToken"),
+                                false,
+                            )?,
+                        );
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TRT),
+                            &super::super::NS_TRT,
+                        );
+                    }
+                    return Ok(Some(Event::Start(bytes)));
+                }
+                GetAudioSourceConfigurationElementTypeSerializerState::ConfigurationToken(x) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => {
+                            *self.state =
+                                GetAudioSourceConfigurationElementTypeSerializerState::End__
+                        }
+                    }
+                }
+                GetAudioSourceConfigurationElementTypeSerializerState::End__ => {
+                    *self.state = GetAudioSourceConfigurationElementTypeSerializerState::Done__;
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::End(BytesEnd::new(self.name))));
+                }
+                GetAudioSourceConfigurationElementTypeSerializerState::Done__ => return Ok(None),
+                GetAudioSourceConfigurationElementTypeSerializerState::Phantom__(_) => {
+                    unreachable!()
+                }
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for GetAudioSourceConfigurationElementTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state = GetAudioSourceConfigurationElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct GetAudioSourceConfigurationResponseElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::GetAudioSourceConfigurationResponseElementType,
+    pub(super) state:
+        ::std::boxed::Box<GetAudioSourceConfigurationResponseElementTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum GetAudioSourceConfigurationResponseElementTypeSerializerState<'ser> {
+    Init__,
+    Configuration(
+        <super::super::tt::AudioSourceConfigurationType as WithSerializer>::Serializer<'ser>,
+    ),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> GetAudioSourceConfigurationResponseElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                GetAudioSourceConfigurationResponseElementTypeSerializerState::Init__ => {
+                    * self . state = GetAudioSourceConfigurationResponseElementTypeSerializerState :: Configuration (WithSerializer :: serializer (& self . value . configuration , Some ("trt:Configuration") , false) ?) ;
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TT),
+                            &super::super::NS_TT,
+                        );
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TRT),
+                            &super::super::NS_TRT,
+                        );
+                    }
+                    return Ok(Some(Event::Start(bytes)));
+                }
+                GetAudioSourceConfigurationResponseElementTypeSerializerState::Configuration(x) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => {
+                            *self.state =
+                                GetAudioSourceConfigurationResponseElementTypeSerializerState::End__
+                        }
+                    }
+                }
+                GetAudioSourceConfigurationResponseElementTypeSerializerState::End__ => {
+                    *self.state =
+                        GetAudioSourceConfigurationResponseElementTypeSerializerState::Done__;
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::End(BytesEnd::new(self.name))));
+                }
+                GetAudioSourceConfigurationResponseElementTypeSerializerState::Done__ => {
+                    return Ok(None)
+                }
+                GetAudioSourceConfigurationResponseElementTypeSerializerState::Phantom__(_) => {
+                    unreachable!()
+                }
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for GetAudioSourceConfigurationResponseElementTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state = GetAudioSourceConfigurationResponseElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct GetCompatibleAudioSourceConfigurationsElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::GetCompatibleAudioSourceConfigurationsElementType,
+    pub(super) state:
+        ::std::boxed::Box<GetCompatibleAudioSourceConfigurationsElementTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum GetCompatibleAudioSourceConfigurationsElementTypeSerializerState<'ser> {
+    Init__,
+    ProfileToken(<::std::string::String as WithSerializer>::Serializer<'ser>),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> GetCompatibleAudioSourceConfigurationsElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                GetCompatibleAudioSourceConfigurationsElementTypeSerializerState::Init__ => {
+                    * self . state = GetCompatibleAudioSourceConfigurationsElementTypeSerializerState :: ProfileToken (WithSerializer :: serializer (& self . value . profile_token , Some ("trt:ProfileToken") , false) ?) ;
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TRT),
+                            &super::super::NS_TRT,
+                        );
+                    }
+                    return Ok(Some(Event::Start(bytes)));
+                }
+                GetCompatibleAudioSourceConfigurationsElementTypeSerializerState::ProfileToken(
+                    x,
+                ) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => *self.state =
+                            GetCompatibleAudioSourceConfigurationsElementTypeSerializerState::End__,
+                    }
+                }
+                GetCompatibleAudioSourceConfigurationsElementTypeSerializerState::End__ => {
+                    *self.state =
+                        GetCompatibleAudioSourceConfigurationsElementTypeSerializerState::Done__;
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::End(BytesEnd::new(self.name))));
+                }
+                GetCompatibleAudioSourceConfigurationsElementTypeSerializerState::Done__ => {
+                    return Ok(None)
+                }
+                GetCompatibleAudioSourceConfigurationsElementTypeSerializerState::Phantom__(_) => {
+                    unreachable!()
+                }
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for GetCompatibleAudioSourceConfigurationsElementTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state =
+                    GetCompatibleAudioSourceConfigurationsElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct GetCompatibleAudioSourceConfigurationsResponseElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::GetCompatibleAudioSourceConfigurationsResponseElementType,
+    pub(super) state: ::std::boxed::Box<
+        GetCompatibleAudioSourceConfigurationsResponseElementTypeSerializerState<'ser>,
+    >,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum GetCompatibleAudioSourceConfigurationsResponseElementTypeSerializerState<'ser> {
+    Init__,
+    Configurations(
+        IterSerializer<
+            'ser,
+            &'ser [super::super::tt::AudioSourceConfigurationType],
+            super::super::tt::AudioSourceConfigurationType,
+        >,
+    ),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> GetCompatibleAudioSourceConfigurationsResponseElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match & mut * self . state { GetCompatibleAudioSourceConfigurationsResponseElementTypeSerializerState :: Init__ => { * self . state = GetCompatibleAudioSourceConfigurationsResponseElementTypeSerializerState :: Configurations (IterSerializer :: new (& self . value . configurations [..] , Some ("trt:Configurations") , false)) ; let mut bytes = BytesStart :: new (self . name) ; helper . begin_ns_scope () ; if self . is_root { helper . write_xmlns (& mut bytes , Some (& super :: super :: PREFIX_TT) , & super :: super :: NS_TT) ; helper . write_xmlns (& mut bytes , Some (& super :: super :: PREFIX_TRT) , & super :: super :: NS_TRT) ; } return Ok (Some (Event :: Start (bytes))) } GetCompatibleAudioSourceConfigurationsResponseElementTypeSerializerState :: Configurations (x) => match x . next (helper) . transpose () ? { Some (event) => return Ok (Some (event)) , None => * self . state = GetCompatibleAudioSourceConfigurationsResponseElementTypeSerializerState :: End__ , } GetCompatibleAudioSourceConfigurationsResponseElementTypeSerializerState :: End__ => { * self . state = GetCompatibleAudioSourceConfigurationsResponseElementTypeSerializerState :: Done__ ; helper . end_ns_scope () ; return Ok (Some (Event :: End (BytesEnd :: new (self . name)))) ; } GetCompatibleAudioSourceConfigurationsResponseElementTypeSerializerState :: Done__ => return Ok (None) , GetCompatibleAudioSourceConfigurationsResponseElementTypeSerializerState :: Phantom__ (_) => unreachable ! () , }
+        }
+    }
+}
+impl<'ser> Serializer<'ser>
+    for GetCompatibleAudioSourceConfigurationsResponseElementTypeSerializer<'ser>
+{
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                * self . state = GetCompatibleAudioSourceConfigurationsResponseElementTypeSerializerState :: Done__ ;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct GetAudioSourceConfigurationOptionsElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::GetAudioSourceConfigurationOptionsElementType,
+    pub(super) state:
+        ::std::boxed::Box<GetAudioSourceConfigurationOptionsElementTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum GetAudioSourceConfigurationOptionsElementTypeSerializerState<'ser> {
+    Init__,
+    ConfigurationToken(
+        IterSerializer<
+            'ser,
+            ::core::option::Option<&'ser ::std::string::String>,
+            ::std::string::String,
+        >,
+    ),
+    ProfileToken(
+        IterSerializer<
+            'ser,
+            ::core::option::Option<&'ser ::std::string::String>,
+            ::std::string::String,
+        >,
+    ),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> GetAudioSourceConfigurationOptionsElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match & mut * self . state { GetAudioSourceConfigurationOptionsElementTypeSerializerState :: Init__ => { * self . state = GetAudioSourceConfigurationOptionsElementTypeSerializerState :: ConfigurationToken (IterSerializer :: new (self . value . configuration_token . as_ref () , Some ("trt:ConfigurationToken") , false)) ; let mut bytes = BytesStart :: new (self . name) ; helper . begin_ns_scope () ; if self . is_root { helper . write_xmlns (& mut bytes , Some (& super :: super :: PREFIX_TRT) , & super :: super :: NS_TRT) ; } return Ok (Some (Event :: Start (bytes))) } GetAudioSourceConfigurationOptionsElementTypeSerializerState :: ConfigurationToken (x) => match x . next (helper) . transpose () ? { Some (event) => return Ok (Some (event)) , None => * self . state = GetAudioSourceConfigurationOptionsElementTypeSerializerState :: ProfileToken (IterSerializer :: new (self . value . profile_token . as_ref () , Some ("trt:ProfileToken") , false)) , } GetAudioSourceConfigurationOptionsElementTypeSerializerState :: ProfileToken (x) => match x . next (helper) . transpose () ? { Some (event) => return Ok (Some (event)) , None => * self . state = GetAudioSourceConfigurationOptionsElementTypeSerializerState :: End__ , } GetAudioSourceConfigurationOptionsElementTypeSerializerState :: End__ => { * self . state = GetAudioSourceConfigurationOptionsElementTypeSerializerState :: Done__ ; helper . end_ns_scope () ; return Ok (Some (Event :: End (BytesEnd :: new (self . name)))) ; } GetAudioSourceConfigurationOptionsElementTypeSerializerState :: Done__ => return Ok (None) , GetAudioSourceConfigurationOptionsElementTypeSerializerState :: Phantom__ (_) => unreachable ! () , }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for GetAudioSourceConfigurationOptionsElementTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state = GetAudioSourceConfigurationOptionsElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct GetAudioSourceConfigurationOptionsResponseElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::GetAudioSourceConfigurationOptionsResponseElementType,
+    pub(super) state: ::std::boxed::Box<
+        GetAudioSourceConfigurationOptionsResponseElementTypeSerializerState<'ser>,
+    >,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum GetAudioSourceConfigurationOptionsResponseElementTypeSerializerState<'ser> {
+    Init__,
+    Options(
+        <super::super::tt::AudioSourceConfigurationOptionsType as WithSerializer>::Serializer<'ser>,
+    ),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> GetAudioSourceConfigurationOptionsResponseElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                GetAudioSourceConfigurationOptionsResponseElementTypeSerializerState::Init__ => {
+                    * self . state = GetAudioSourceConfigurationOptionsResponseElementTypeSerializerState :: Options (WithSerializer :: serializer (& self . value . options , Some ("trt:Options") , false) ?) ;
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TT),
+                            &super::super::NS_TT,
+                        );
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TRT),
+                            &super::super::NS_TRT,
+                        );
+                    }
+                    return Ok(Some(Event::Start(bytes)));
+                }
+                GetAudioSourceConfigurationOptionsResponseElementTypeSerializerState::Options(
+                    x,
+                ) => match x.next(helper).transpose()? {
+                    Some(event) => return Ok(Some(event)),
+                    None => *self.state =
+                        GetAudioSourceConfigurationOptionsResponseElementTypeSerializerState::End__,
+                },
+                GetAudioSourceConfigurationOptionsResponseElementTypeSerializerState::End__ => {
+                    * self . state = GetAudioSourceConfigurationOptionsResponseElementTypeSerializerState :: Done__ ;
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::End(BytesEnd::new(self.name))));
+                }
+                GetAudioSourceConfigurationOptionsResponseElementTypeSerializerState::Done__ => {
+                    return Ok(None)
+                }
+                GetAudioSourceConfigurationOptionsResponseElementTypeSerializerState::Phantom__(
+                    _,
+                ) => unreachable!(),
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser>
+    for GetAudioSourceConfigurationOptionsResponseElementTypeSerializer<'ser>
+{
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state =
+                    GetAudioSourceConfigurationOptionsResponseElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct SetAudioSourceConfigurationElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::SetAudioSourceConfigurationElementType,
+    pub(super) state:
+        ::std::boxed::Box<SetAudioSourceConfigurationElementTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum SetAudioSourceConfigurationElementTypeSerializerState<'ser> {
+    Init__,
+    Configuration(
+        <super::super::tt::AudioSourceConfigurationType as WithSerializer>::Serializer<'ser>,
+    ),
+    ForcePersistence(<::core::primitive::bool as WithSerializer>::Serializer<'ser>),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> SetAudioSourceConfigurationElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                SetAudioSourceConfigurationElementTypeSerializerState::Init__ => {
+                    *self.state =
+                        SetAudioSourceConfigurationElementTypeSerializerState::Configuration(
+                            WithSerializer::serializer(
+                                &self.value.configuration,
+                                Some("trt:Configuration"),
+                                false,
+                            )?,
+                        );
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TT),
+                            &super::super::NS_TT,
+                        );
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TRT),
+                            &super::super::NS_TRT,
+                        );
+                    }
+                    return Ok(Some(Event::Start(bytes)));
+                }
+                SetAudioSourceConfigurationElementTypeSerializerState::Configuration(x) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => *self.state =
+                            SetAudioSourceConfigurationElementTypeSerializerState::ForcePersistence(
+                                WithSerializer::serializer(
+                                    &self.value.force_persistence,
+                                    Some("trt:ForcePersistence"),
+                                    false,
+                                )?,
+                            ),
+                    }
+                }
+                SetAudioSourceConfigurationElementTypeSerializerState::ForcePersistence(x) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => {
+                            *self.state =
+                                SetAudioSourceConfigurationElementTypeSerializerState::End__
+                        }
+                    }
+                }
+                SetAudioSourceConfigurationElementTypeSerializerState::End__ => {
+                    *self.state = SetAudioSourceConfigurationElementTypeSerializerState::Done__;
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::End(BytesEnd::new(self.name))));
+                }
+                SetAudioSourceConfigurationElementTypeSerializerState::Done__ => return Ok(None),
+                SetAudioSourceConfigurationElementTypeSerializerState::Phantom__(_) => {
+                    unreachable!()
+                }
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for SetAudioSourceConfigurationElementTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state = SetAudioSourceConfigurationElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct SetAudioSourceConfigurationResponseElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::SetAudioSourceConfigurationResponseElementType,
+    pub(super) state:
+        ::std::boxed::Box<SetAudioSourceConfigurationResponseElementTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum SetAudioSourceConfigurationResponseElementTypeSerializerState<'ser> {
+    Init__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> SetAudioSourceConfigurationResponseElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                SetAudioSourceConfigurationResponseElementTypeSerializerState::Init__ => {
+                    *self.state =
+                        SetAudioSourceConfigurationResponseElementTypeSerializerState::Done__;
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TRT),
+                            &super::super::NS_TRT,
+                        );
+                    }
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::Empty(bytes)));
+                }
+                SetAudioSourceConfigurationResponseElementTypeSerializerState::Done__ => {
+                    return Ok(None)
+                }
+                SetAudioSourceConfigurationResponseElementTypeSerializerState::Phantom__(_) => {
+                    unreachable!()
+                }
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for SetAudioSourceConfigurationResponseElementTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state = SetAudioSourceConfigurationResponseElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct AddAudioSourceConfigurationElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::AddAudioSourceConfigurationElementType,
+    pub(super) state:
+        ::std::boxed::Box<AddAudioSourceConfigurationElementTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum AddAudioSourceConfigurationElementTypeSerializerState<'ser> {
+    Init__,
+    ProfileToken(<::std::string::String as WithSerializer>::Serializer<'ser>),
+    ConfigurationToken(<::std::string::String as WithSerializer>::Serializer<'ser>),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> AddAudioSourceConfigurationElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                AddAudioSourceConfigurationElementTypeSerializerState::Init__ => {
+                    *self.state =
+                        AddAudioSourceConfigurationElementTypeSerializerState::ProfileToken(
+                            WithSerializer::serializer(
+                                &self.value.profile_token,
+                                Some("trt:ProfileToken"),
+                                false,
+                            )?,
+                        );
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TRT),
+                            &super::super::NS_TRT,
+                        );
+                    }
+                    return Ok(Some(Event::Start(bytes)));
+                }
+                AddAudioSourceConfigurationElementTypeSerializerState::ProfileToken(x) => match x
+                    .next(helper)
+                    .transpose()?
+                {
+                    Some(event) => return Ok(Some(event)),
+                    None => *self.state =
+                        AddAudioSourceConfigurationElementTypeSerializerState::ConfigurationToken(
+                            WithSerializer::serializer(
+                                &self.value.configuration_token,
+                                Some("trt:ConfigurationToken"),
+                                false,
+                            )?,
+                        ),
+                },
+                AddAudioSourceConfigurationElementTypeSerializerState::ConfigurationToken(x) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => {
+                            *self.state =
+                                AddAudioSourceConfigurationElementTypeSerializerState::End__
+                        }
+                    }
+                }
+                AddAudioSourceConfigurationElementTypeSerializerState::End__ => {
+                    *self.state = AddAudioSourceConfigurationElementTypeSerializerState::Done__;
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::End(BytesEnd::new(self.name))));
+                }
+                AddAudioSourceConfigurationElementTypeSerializerState::Done__ => return Ok(None),
+                AddAudioSourceConfigurationElementTypeSerializerState::Phantom__(_) => {
+                    unreachable!()
+                }
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for AddAudioSourceConfigurationElementTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state = AddAudioSourceConfigurationElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct AddAudioSourceConfigurationResponseElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::AddAudioSourceConfigurationResponseElementType,
+    pub(super) state:
+        ::std::boxed::Box<AddAudioSourceConfigurationResponseElementTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum AddAudioSourceConfigurationResponseElementTypeSerializerState<'ser> {
+    Init__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> AddAudioSourceConfigurationResponseElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                AddAudioSourceConfigurationResponseElementTypeSerializerState::Init__ => {
+                    *self.state =
+                        AddAudioSourceConfigurationResponseElementTypeSerializerState::Done__;
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TRT),
+                            &super::super::NS_TRT,
+                        );
+                    }
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::Empty(bytes)));
+                }
+                AddAudioSourceConfigurationResponseElementTypeSerializerState::Done__ => {
+                    return Ok(None)
+                }
+                AddAudioSourceConfigurationResponseElementTypeSerializerState::Phantom__(_) => {
+                    unreachable!()
+                }
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for AddAudioSourceConfigurationResponseElementTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state = AddAudioSourceConfigurationResponseElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct RemoveAudioSourceConfigurationElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::RemoveAudioSourceConfigurationElementType,
+    pub(super) state:
+        ::std::boxed::Box<RemoveAudioSourceConfigurationElementTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum RemoveAudioSourceConfigurationElementTypeSerializerState<'ser> {
+    Init__,
+    ProfileToken(<::std::string::String as WithSerializer>::Serializer<'ser>),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> RemoveAudioSourceConfigurationElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                RemoveAudioSourceConfigurationElementTypeSerializerState::Init__ => {
+                    *self.state =
+                        RemoveAudioSourceConfigurationElementTypeSerializerState::ProfileToken(
+                            WithSerializer::serializer(
+                                &self.value.profile_token,
+                                Some("trt:ProfileToken"),
+                                false,
+                            )?,
+                        );
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TRT),
+                            &super::super::NS_TRT,
+                        );
+                    }
+                    return Ok(Some(Event::Start(bytes)));
+                }
+                RemoveAudioSourceConfigurationElementTypeSerializerState::ProfileToken(x) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => {
+                            *self.state =
+                                RemoveAudioSourceConfigurationElementTypeSerializerState::End__
+                        }
+                    }
+                }
+                RemoveAudioSourceConfigurationElementTypeSerializerState::End__ => {
+                    *self.state = RemoveAudioSourceConfigurationElementTypeSerializerState::Done__;
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::End(BytesEnd::new(self.name))));
+                }
+                RemoveAudioSourceConfigurationElementTypeSerializerState::Done__ => {
+                    return Ok(None)
+                }
+                RemoveAudioSourceConfigurationElementTypeSerializerState::Phantom__(_) => {
+                    unreachable!()
+                }
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for RemoveAudioSourceConfigurationElementTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state = RemoveAudioSourceConfigurationElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct RemoveAudioSourceConfigurationResponseElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::RemoveAudioSourceConfigurationResponseElementType,
+    pub(super) state:
+        ::std::boxed::Box<RemoveAudioSourceConfigurationResponseElementTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum RemoveAudioSourceConfigurationResponseElementTypeSerializerState<'ser> {
+    Init__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> RemoveAudioSourceConfigurationResponseElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                RemoveAudioSourceConfigurationResponseElementTypeSerializerState::Init__ => {
+                    *self.state =
+                        RemoveAudioSourceConfigurationResponseElementTypeSerializerState::Done__;
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TRT),
+                            &super::super::NS_TRT,
+                        );
+                    }
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::Empty(bytes)));
+                }
+                RemoveAudioSourceConfigurationResponseElementTypeSerializerState::Done__ => {
+                    return Ok(None)
+                }
+                RemoveAudioSourceConfigurationResponseElementTypeSerializerState::Phantom__(_) => {
+                    unreachable!()
+                }
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for RemoveAudioSourceConfigurationResponseElementTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state =
+                    RemoveAudioSourceConfigurationResponseElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct GetAudioEncoderConfigurationsElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::GetAudioEncoderConfigurationsElementType,
+    pub(super) state:
+        ::std::boxed::Box<GetAudioEncoderConfigurationsElementTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum GetAudioEncoderConfigurationsElementTypeSerializerState<'ser> {
+    Init__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> GetAudioEncoderConfigurationsElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                GetAudioEncoderConfigurationsElementTypeSerializerState::Init__ => {
+                    *self.state = GetAudioEncoderConfigurationsElementTypeSerializerState::Done__;
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TRT),
+                            &super::super::NS_TRT,
+                        );
+                    }
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::Empty(bytes)));
+                }
+                GetAudioEncoderConfigurationsElementTypeSerializerState::Done__ => return Ok(None),
+                GetAudioEncoderConfigurationsElementTypeSerializerState::Phantom__(_) => {
+                    unreachable!()
+                }
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for GetAudioEncoderConfigurationsElementTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state = GetAudioEncoderConfigurationsElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct GetAudioEncoderConfigurationsResponseElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::GetAudioEncoderConfigurationsResponseElementType,
+    pub(super) state:
+        ::std::boxed::Box<GetAudioEncoderConfigurationsResponseElementTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum GetAudioEncoderConfigurationsResponseElementTypeSerializerState<'ser> {
+    Init__,
+    Configurations(
+        IterSerializer<
+            'ser,
+            &'ser [super::super::tt::AudioEncoderConfigurationType],
+            super::super::tt::AudioEncoderConfigurationType,
+        >,
+    ),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> GetAudioEncoderConfigurationsResponseElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                GetAudioEncoderConfigurationsResponseElementTypeSerializerState::Init__ => {
+                    * self . state = GetAudioEncoderConfigurationsResponseElementTypeSerializerState :: Configurations (IterSerializer :: new (& self . value . configurations [..] , Some ("trt:Configurations") , false)) ;
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TT),
+                            &super::super::NS_TT,
+                        );
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TRT),
+                            &super::super::NS_TRT,
+                        );
+                    }
+                    return Ok(Some(Event::Start(bytes)));
+                }
+                GetAudioEncoderConfigurationsResponseElementTypeSerializerState::Configurations(
+                    x,
+                ) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => *self.state =
+                            GetAudioEncoderConfigurationsResponseElementTypeSerializerState::End__,
+                    }
+                }
+                GetAudioEncoderConfigurationsResponseElementTypeSerializerState::End__ => {
+                    *self.state =
+                        GetAudioEncoderConfigurationsResponseElementTypeSerializerState::Done__;
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::End(BytesEnd::new(self.name))));
+                }
+                GetAudioEncoderConfigurationsResponseElementTypeSerializerState::Done__ => {
+                    return Ok(None)
+                }
+                GetAudioEncoderConfigurationsResponseElementTypeSerializerState::Phantom__(_) => {
+                    unreachable!()
+                }
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for GetAudioEncoderConfigurationsResponseElementTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state =
+                    GetAudioEncoderConfigurationsResponseElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct GetAudioEncoderConfigurationElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::GetAudioEncoderConfigurationElementType,
+    pub(super) state:
+        ::std::boxed::Box<GetAudioEncoderConfigurationElementTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum GetAudioEncoderConfigurationElementTypeSerializerState<'ser> {
+    Init__,
+    ConfigurationToken(<::std::string::String as WithSerializer>::Serializer<'ser>),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> GetAudioEncoderConfigurationElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                GetAudioEncoderConfigurationElementTypeSerializerState::Init__ => {
+                    *self.state =
+                        GetAudioEncoderConfigurationElementTypeSerializerState::ConfigurationToken(
+                            WithSerializer::serializer(
+                                &self.value.configuration_token,
+                                Some("trt:ConfigurationToken"),
+                                false,
+                            )?,
+                        );
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TRT),
+                            &super::super::NS_TRT,
+                        );
+                    }
+                    return Ok(Some(Event::Start(bytes)));
+                }
+                GetAudioEncoderConfigurationElementTypeSerializerState::ConfigurationToken(x) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => {
+                            *self.state =
+                                GetAudioEncoderConfigurationElementTypeSerializerState::End__
+                        }
+                    }
+                }
+                GetAudioEncoderConfigurationElementTypeSerializerState::End__ => {
+                    *self.state = GetAudioEncoderConfigurationElementTypeSerializerState::Done__;
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::End(BytesEnd::new(self.name))));
+                }
+                GetAudioEncoderConfigurationElementTypeSerializerState::Done__ => return Ok(None),
+                GetAudioEncoderConfigurationElementTypeSerializerState::Phantom__(_) => {
+                    unreachable!()
+                }
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for GetAudioEncoderConfigurationElementTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state = GetAudioEncoderConfigurationElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct GetAudioEncoderConfigurationResponseElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::GetAudioEncoderConfigurationResponseElementType,
+    pub(super) state:
+        ::std::boxed::Box<GetAudioEncoderConfigurationResponseElementTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum GetAudioEncoderConfigurationResponseElementTypeSerializerState<'ser> {
+    Init__,
+    Configuration(
+        <super::super::tt::AudioEncoderConfigurationType as WithSerializer>::Serializer<'ser>,
+    ),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> GetAudioEncoderConfigurationResponseElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                GetAudioEncoderConfigurationResponseElementTypeSerializerState::Init__ => {
+                    * self . state = GetAudioEncoderConfigurationResponseElementTypeSerializerState :: Configuration (WithSerializer :: serializer (& self . value . configuration , Some ("trt:Configuration") , false) ?) ;
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TT),
+                            &super::super::NS_TT,
+                        );
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TRT),
+                            &super::super::NS_TRT,
+                        );
+                    }
+                    return Ok(Some(Event::Start(bytes)));
+                }
+                GetAudioEncoderConfigurationResponseElementTypeSerializerState::Configuration(
+                    x,
+                ) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => *self.state =
+                            GetAudioEncoderConfigurationResponseElementTypeSerializerState::End__,
+                    }
+                }
+                GetAudioEncoderConfigurationResponseElementTypeSerializerState::End__ => {
+                    *self.state =
+                        GetAudioEncoderConfigurationResponseElementTypeSerializerState::Done__;
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::End(BytesEnd::new(self.name))));
+                }
+                GetAudioEncoderConfigurationResponseElementTypeSerializerState::Done__ => {
+                    return Ok(None)
+                }
+                GetAudioEncoderConfigurationResponseElementTypeSerializerState::Phantom__(_) => {
+                    unreachable!()
+                }
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for GetAudioEncoderConfigurationResponseElementTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state =
+                    GetAudioEncoderConfigurationResponseElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct GetCompatibleAudioEncoderConfigurationsElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::GetCompatibleAudioEncoderConfigurationsElementType,
+    pub(super) state:
+        ::std::boxed::Box<GetCompatibleAudioEncoderConfigurationsElementTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum GetCompatibleAudioEncoderConfigurationsElementTypeSerializerState<'ser> {
+    Init__,
+    ProfileToken(<::std::string::String as WithSerializer>::Serializer<'ser>),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> GetCompatibleAudioEncoderConfigurationsElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                GetCompatibleAudioEncoderConfigurationsElementTypeSerializerState::Init__ => {
+                    * self . state = GetCompatibleAudioEncoderConfigurationsElementTypeSerializerState :: ProfileToken (WithSerializer :: serializer (& self . value . profile_token , Some ("trt:ProfileToken") , false) ?) ;
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TRT),
+                            &super::super::NS_TRT,
+                        );
+                    }
+                    return Ok(Some(Event::Start(bytes)));
+                }
+                GetCompatibleAudioEncoderConfigurationsElementTypeSerializerState::ProfileToken(
+                    x,
+                ) => match x.next(helper).transpose()? {
+                    Some(event) => return Ok(Some(event)),
+                    None => {
+                        *self.state =
+                            GetCompatibleAudioEncoderConfigurationsElementTypeSerializerState::End__
+                    }
+                },
+                GetCompatibleAudioEncoderConfigurationsElementTypeSerializerState::End__ => {
+                    *self.state =
+                        GetCompatibleAudioEncoderConfigurationsElementTypeSerializerState::Done__;
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::End(BytesEnd::new(self.name))));
+                }
+                GetCompatibleAudioEncoderConfigurationsElementTypeSerializerState::Done__ => {
+                    return Ok(None)
+                }
+                GetCompatibleAudioEncoderConfigurationsElementTypeSerializerState::Phantom__(_) => {
+                    unreachable!()
+                }
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for GetCompatibleAudioEncoderConfigurationsElementTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state =
+                    GetCompatibleAudioEncoderConfigurationsElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct GetCompatibleAudioEncoderConfigurationsResponseElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::GetCompatibleAudioEncoderConfigurationsResponseElementType,
+    pub(super) state: ::std::boxed::Box<
+        GetCompatibleAudioEncoderConfigurationsResponseElementTypeSerializerState<'ser>,
+    >,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum GetCompatibleAudioEncoderConfigurationsResponseElementTypeSerializerState<'ser> {
+    Init__,
+    Configurations(
+        IterSerializer<
+            'ser,
+            &'ser [super::super::tt::AudioEncoderConfigurationType],
+            super::super::tt::AudioEncoderConfigurationType,
+        >,
+    ),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> GetCompatibleAudioEncoderConfigurationsResponseElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match & mut * self . state { GetCompatibleAudioEncoderConfigurationsResponseElementTypeSerializerState :: Init__ => { * self . state = GetCompatibleAudioEncoderConfigurationsResponseElementTypeSerializerState :: Configurations (IterSerializer :: new (& self . value . configurations [..] , Some ("trt:Configurations") , false)) ; let mut bytes = BytesStart :: new (self . name) ; helper . begin_ns_scope () ; if self . is_root { helper . write_xmlns (& mut bytes , Some (& super :: super :: PREFIX_TT) , & super :: super :: NS_TT) ; helper . write_xmlns (& mut bytes , Some (& super :: super :: PREFIX_TRT) , & super :: super :: NS_TRT) ; } return Ok (Some (Event :: Start (bytes))) } GetCompatibleAudioEncoderConfigurationsResponseElementTypeSerializerState :: Configurations (x) => match x . next (helper) . transpose () ? { Some (event) => return Ok (Some (event)) , None => * self . state = GetCompatibleAudioEncoderConfigurationsResponseElementTypeSerializerState :: End__ , } GetCompatibleAudioEncoderConfigurationsResponseElementTypeSerializerState :: End__ => { * self . state = GetCompatibleAudioEncoderConfigurationsResponseElementTypeSerializerState :: Done__ ; helper . end_ns_scope () ; return Ok (Some (Event :: End (BytesEnd :: new (self . name)))) ; } GetCompatibleAudioEncoderConfigurationsResponseElementTypeSerializerState :: Done__ => return Ok (None) , GetCompatibleAudioEncoderConfigurationsResponseElementTypeSerializerState :: Phantom__ (_) => unreachable ! () , }
+        }
+    }
+}
+impl<'ser> Serializer<'ser>
+    for GetCompatibleAudioEncoderConfigurationsResponseElementTypeSerializer<'ser>
+{
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                * self . state = GetCompatibleAudioEncoderConfigurationsResponseElementTypeSerializerState :: Done__ ;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct GetAudioEncoderConfigurationOptionsElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::GetAudioEncoderConfigurationOptionsElementType,
+    pub(super) state:
+        ::std::boxed::Box<GetAudioEncoderConfigurationOptionsElementTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum GetAudioEncoderConfigurationOptionsElementTypeSerializerState<'ser> {
+    Init__,
+    ConfigurationToken(
+        IterSerializer<
+            'ser,
+            ::core::option::Option<&'ser ::std::string::String>,
+            ::std::string::String,
+        >,
+    ),
+    ProfileToken(
+        IterSerializer<
+            'ser,
+            ::core::option::Option<&'ser ::std::string::String>,
+            ::std::string::String,
+        >,
+    ),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> GetAudioEncoderConfigurationOptionsElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match & mut * self . state { GetAudioEncoderConfigurationOptionsElementTypeSerializerState :: Init__ => { * self . state = GetAudioEncoderConfigurationOptionsElementTypeSerializerState :: ConfigurationToken (IterSerializer :: new (self . value . configuration_token . as_ref () , Some ("trt:ConfigurationToken") , false)) ; let mut bytes = BytesStart :: new (self . name) ; helper . begin_ns_scope () ; if self . is_root { helper . write_xmlns (& mut bytes , Some (& super :: super :: PREFIX_TRT) , & super :: super :: NS_TRT) ; } return Ok (Some (Event :: Start (bytes))) } GetAudioEncoderConfigurationOptionsElementTypeSerializerState :: ConfigurationToken (x) => match x . next (helper) . transpose () ? { Some (event) => return Ok (Some (event)) , None => * self . state = GetAudioEncoderConfigurationOptionsElementTypeSerializerState :: ProfileToken (IterSerializer :: new (self . value . profile_token . as_ref () , Some ("trt:ProfileToken") , false)) , } GetAudioEncoderConfigurationOptionsElementTypeSerializerState :: ProfileToken (x) => match x . next (helper) . transpose () ? { Some (event) => return Ok (Some (event)) , None => * self . state = GetAudioEncoderConfigurationOptionsElementTypeSerializerState :: End__ , } GetAudioEncoderConfigurationOptionsElementTypeSerializerState :: End__ => { * self . state = GetAudioEncoderConfigurationOptionsElementTypeSerializerState :: Done__ ; helper . end_ns_scope () ; return Ok (Some (Event :: End (BytesEnd :: new (self . name)))) ; } GetAudioEncoderConfigurationOptionsElementTypeSerializerState :: Done__ => return Ok (None) , GetAudioEncoderConfigurationOptionsElementTypeSerializerState :: Phantom__ (_) => unreachable ! () , }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for GetAudioEncoderConfigurationOptionsElementTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state = GetAudioEncoderConfigurationOptionsElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct GetAudioEncoderConfigurationOptionsResponseElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::GetAudioEncoderConfigurationOptionsResponseElementType,
+    pub(super) state: ::std::boxed::Box<
+        GetAudioEncoderConfigurationOptionsResponseElementTypeSerializerState<'ser>,
+    >,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum GetAudioEncoderConfigurationOptionsResponseElementTypeSerializerState<'ser> {
+    Init__,
+    Options(
+        <super::super::tt::AudioEncoderConfigurationOptionsType as WithSerializer>::Serializer<
+            'ser,
+        >,
+    ),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> GetAudioEncoderConfigurationOptionsResponseElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match & mut * self . state { GetAudioEncoderConfigurationOptionsResponseElementTypeSerializerState :: Init__ => { * self . state = GetAudioEncoderConfigurationOptionsResponseElementTypeSerializerState :: Options (WithSerializer :: serializer (& self . value . options , Some ("trt:Options") , false) ?) ; let mut bytes = BytesStart :: new (self . name) ; helper . begin_ns_scope () ; if self . is_root { helper . write_xmlns (& mut bytes , Some (& super :: super :: PREFIX_TT) , & super :: super :: NS_TT) ; helper . write_xmlns (& mut bytes , Some (& super :: super :: PREFIX_TRT) , & super :: super :: NS_TRT) ; } return Ok (Some (Event :: Start (bytes))) } GetAudioEncoderConfigurationOptionsResponseElementTypeSerializerState :: Options (x) => match x . next (helper) . transpose () ? { Some (event) => return Ok (Some (event)) , None => * self . state = GetAudioEncoderConfigurationOptionsResponseElementTypeSerializerState :: End__ , } GetAudioEncoderConfigurationOptionsResponseElementTypeSerializerState :: End__ => { * self . state = GetAudioEncoderConfigurationOptionsResponseElementTypeSerializerState :: Done__ ; helper . end_ns_scope () ; return Ok (Some (Event :: End (BytesEnd :: new (self . name)))) ; } GetAudioEncoderConfigurationOptionsResponseElementTypeSerializerState :: Done__ => return Ok (None) , GetAudioEncoderConfigurationOptionsResponseElementTypeSerializerState :: Phantom__ (_) => unreachable ! () , }
+        }
+    }
+}
+impl<'ser> Serializer<'ser>
+    for GetAudioEncoderConfigurationOptionsResponseElementTypeSerializer<'ser>
+{
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state =
+                    GetAudioEncoderConfigurationOptionsResponseElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct SetAudioEncoderConfigurationElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::SetAudioEncoderConfigurationElementType,
+    pub(super) state:
+        ::std::boxed::Box<SetAudioEncoderConfigurationElementTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum SetAudioEncoderConfigurationElementTypeSerializerState<'ser> {
+    Init__,
+    Configuration(
+        <super::super::tt::AudioEncoderConfigurationType as WithSerializer>::Serializer<'ser>,
+    ),
+    ForcePersistence(<::core::primitive::bool as WithSerializer>::Serializer<'ser>),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> SetAudioEncoderConfigurationElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                SetAudioEncoderConfigurationElementTypeSerializerState::Init__ => {
+                    *self.state =
+                        SetAudioEncoderConfigurationElementTypeSerializerState::Configuration(
+                            WithSerializer::serializer(
+                                &self.value.configuration,
+                                Some("trt:Configuration"),
+                                false,
+                            )?,
+                        );
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TT),
+                            &super::super::NS_TT,
+                        );
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TRT),
+                            &super::super::NS_TRT,
+                        );
+                    }
+                    return Ok(Some(Event::Start(bytes)));
+                }
+                SetAudioEncoderConfigurationElementTypeSerializerState::Configuration(x) => match x
+                    .next(helper)
+                    .transpose()?
+                {
+                    Some(event) => return Ok(Some(event)),
+                    None => {
+                        *self.state =
+                            SetAudioEncoderConfigurationElementTypeSerializerState::ForcePersistence(
+                                WithSerializer::serializer(
+                                    &self.value.force_persistence,
+                                    Some("trt:ForcePersistence"),
+                                    false,
+                                )?,
+                            )
+                    }
+                },
+                SetAudioEncoderConfigurationElementTypeSerializerState::ForcePersistence(x) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => {
+                            *self.state =
+                                SetAudioEncoderConfigurationElementTypeSerializerState::End__
+                        }
+                    }
+                }
+                SetAudioEncoderConfigurationElementTypeSerializerState::End__ => {
+                    *self.state = SetAudioEncoderConfigurationElementTypeSerializerState::Done__;
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::End(BytesEnd::new(self.name))));
+                }
+                SetAudioEncoderConfigurationElementTypeSerializerState::Done__ => return Ok(None),
+                SetAudioEncoderConfigurationElementTypeSerializerState::Phantom__(_) => {
+                    unreachable!()
+                }
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for SetAudioEncoderConfigurationElementTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state = SetAudioEncoderConfigurationElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct SetAudioEncoderConfigurationResponseElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::SetAudioEncoderConfigurationResponseElementType,
+    pub(super) state:
+        ::std::boxed::Box<SetAudioEncoderConfigurationResponseElementTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum SetAudioEncoderConfigurationResponseElementTypeSerializerState<'ser> {
+    Init__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> SetAudioEncoderConfigurationResponseElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                SetAudioEncoderConfigurationResponseElementTypeSerializerState::Init__ => {
+                    *self.state =
+                        SetAudioEncoderConfigurationResponseElementTypeSerializerState::Done__;
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TRT),
+                            &super::super::NS_TRT,
+                        );
+                    }
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::Empty(bytes)));
+                }
+                SetAudioEncoderConfigurationResponseElementTypeSerializerState::Done__ => {
+                    return Ok(None)
+                }
+                SetAudioEncoderConfigurationResponseElementTypeSerializerState::Phantom__(_) => {
+                    unreachable!()
+                }
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for SetAudioEncoderConfigurationResponseElementTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state =
+                    SetAudioEncoderConfigurationResponseElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct AddAudioEncoderConfigurationElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::AddAudioEncoderConfigurationElementType,
+    pub(super) state:
+        ::std::boxed::Box<AddAudioEncoderConfigurationElementTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum AddAudioEncoderConfigurationElementTypeSerializerState<'ser> {
+    Init__,
+    ProfileToken(<::std::string::String as WithSerializer>::Serializer<'ser>),
+    ConfigurationToken(<::std::string::String as WithSerializer>::Serializer<'ser>),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> AddAudioEncoderConfigurationElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                AddAudioEncoderConfigurationElementTypeSerializerState::Init__ => {
+                    *self.state =
+                        AddAudioEncoderConfigurationElementTypeSerializerState::ProfileToken(
+                            WithSerializer::serializer(
+                                &self.value.profile_token,
+                                Some("trt:ProfileToken"),
+                                false,
+                            )?,
+                        );
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TRT),
+                            &super::super::NS_TRT,
+                        );
+                    }
+                    return Ok(Some(Event::Start(bytes)));
+                }
+                AddAudioEncoderConfigurationElementTypeSerializerState::ProfileToken(x) => match x
+                    .next(helper)
+                    .transpose()?
+                {
+                    Some(event) => return Ok(Some(event)),
+                    None => *self.state =
+                        AddAudioEncoderConfigurationElementTypeSerializerState::ConfigurationToken(
+                            WithSerializer::serializer(
+                                &self.value.configuration_token,
+                                Some("trt:ConfigurationToken"),
+                                false,
+                            )?,
+                        ),
+                },
+                AddAudioEncoderConfigurationElementTypeSerializerState::ConfigurationToken(x) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => {
+                            *self.state =
+                                AddAudioEncoderConfigurationElementTypeSerializerState::End__
+                        }
+                    }
+                }
+                AddAudioEncoderConfigurationElementTypeSerializerState::End__ => {
+                    *self.state = AddAudioEncoderConfigurationElementTypeSerializerState::Done__;
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::End(BytesEnd::new(self.name))));
+                }
+                AddAudioEncoderConfigurationElementTypeSerializerState::Done__ => return Ok(None),
+                AddAudioEncoderConfigurationElementTypeSerializerState::Phantom__(_) => {
+                    unreachable!()
+                }
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for AddAudioEncoderConfigurationElementTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state = AddAudioEncoderConfigurationElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct AddAudioEncoderConfigurationResponseElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::AddAudioEncoderConfigurationResponseElementType,
+    pub(super) state:
+        ::std::boxed::Box<AddAudioEncoderConfigurationResponseElementTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum AddAudioEncoderConfigurationResponseElementTypeSerializerState<'ser> {
+    Init__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> AddAudioEncoderConfigurationResponseElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                AddAudioEncoderConfigurationResponseElementTypeSerializerState::Init__ => {
+                    *self.state =
+                        AddAudioEncoderConfigurationResponseElementTypeSerializerState::Done__;
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TRT),
+                            &super::super::NS_TRT,
+                        );
+                    }
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::Empty(bytes)));
+                }
+                AddAudioEncoderConfigurationResponseElementTypeSerializerState::Done__ => {
+                    return Ok(None)
+                }
+                AddAudioEncoderConfigurationResponseElementTypeSerializerState::Phantom__(_) => {
+                    unreachable!()
+                }
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for AddAudioEncoderConfigurationResponseElementTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state =
+                    AddAudioEncoderConfigurationResponseElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct RemoveAudioEncoderConfigurationElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::RemoveAudioEncoderConfigurationElementType,
+    pub(super) state:
+        ::std::boxed::Box<RemoveAudioEncoderConfigurationElementTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum RemoveAudioEncoderConfigurationElementTypeSerializerState<'ser> {
+    Init__,
+    ProfileToken(<::std::string::String as WithSerializer>::Serializer<'ser>),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> RemoveAudioEncoderConfigurationElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                RemoveAudioEncoderConfigurationElementTypeSerializerState::Init__ => {
+                    *self.state =
+                        RemoveAudioEncoderConfigurationElementTypeSerializerState::ProfileToken(
+                            WithSerializer::serializer(
+                                &self.value.profile_token,
+                                Some("trt:ProfileToken"),
+                                false,
+                            )?,
+                        );
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TRT),
+                            &super::super::NS_TRT,
+                        );
+                    }
+                    return Ok(Some(Event::Start(bytes)));
+                }
+                RemoveAudioEncoderConfigurationElementTypeSerializerState::ProfileToken(x) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => {
+                            *self.state =
+                                RemoveAudioEncoderConfigurationElementTypeSerializerState::End__
+                        }
+                    }
+                }
+                RemoveAudioEncoderConfigurationElementTypeSerializerState::End__ => {
+                    *self.state = RemoveAudioEncoderConfigurationElementTypeSerializerState::Done__;
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::End(BytesEnd::new(self.name))));
+                }
+                RemoveAudioEncoderConfigurationElementTypeSerializerState::Done__ => {
+                    return Ok(None)
+                }
+                RemoveAudioEncoderConfigurationElementTypeSerializerState::Phantom__(_) => {
+                    unreachable!()
+                }
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for RemoveAudioEncoderConfigurationElementTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state = RemoveAudioEncoderConfigurationElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct RemoveAudioEncoderConfigurationResponseElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::RemoveAudioEncoderConfigurationResponseElementType,
+    pub(super) state:
+        ::std::boxed::Box<RemoveAudioEncoderConfigurationResponseElementTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum RemoveAudioEncoderConfigurationResponseElementTypeSerializerState<'ser> {
+    Init__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> RemoveAudioEncoderConfigurationResponseElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                RemoveAudioEncoderConfigurationResponseElementTypeSerializerState::Init__ => {
+                    *self.state =
+                        RemoveAudioEncoderConfigurationResponseElementTypeSerializerState::Done__;
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TRT),
+                            &super::super::NS_TRT,
+                        );
+                    }
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::Empty(bytes)));
+                }
+                RemoveAudioEncoderConfigurationResponseElementTypeSerializerState::Done__ => {
+                    return Ok(None)
+                }
+                RemoveAudioEncoderConfigurationResponseElementTypeSerializerState::Phantom__(_) => {
+                    unreachable!()
+                }
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for RemoveAudioEncoderConfigurationResponseElementTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state =
+                    RemoveAudioEncoderConfigurationResponseElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct GetAudioOutputsElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::GetAudioOutputsElementType,
+    pub(super) state: ::std::boxed::Box<GetAudioOutputsElementTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum GetAudioOutputsElementTypeSerializerState<'ser> {
+    Init__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> GetAudioOutputsElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                GetAudioOutputsElementTypeSerializerState::Init__ => {
+                    *self.state = GetAudioOutputsElementTypeSerializerState::Done__;
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TRT),
+                            &super::super::NS_TRT,
+                        );
+                    }
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::Empty(bytes)));
+                }
+                GetAudioOutputsElementTypeSerializerState::Done__ => return Ok(None),
+                GetAudioOutputsElementTypeSerializerState::Phantom__(_) => unreachable!(),
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for GetAudioOutputsElementTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state = GetAudioOutputsElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct GetAudioOutputsResponseElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::GetAudioOutputsResponseElementType,
+    pub(super) state: ::std::boxed::Box<GetAudioOutputsResponseElementTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum GetAudioOutputsResponseElementTypeSerializerState<'ser> {
+    Init__,
+    AudioOutputs(
+        IterSerializer<
+            'ser,
+            &'ser [super::super::tt::AudioOutputType],
+            super::super::tt::AudioOutputType,
+        >,
+    ),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> GetAudioOutputsResponseElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                GetAudioOutputsResponseElementTypeSerializerState::Init__ => {
+                    *self.state = GetAudioOutputsResponseElementTypeSerializerState::AudioOutputs(
+                        IterSerializer::new(
+                            &self.value.audio_outputs[..],
+                            Some("trt:AudioOutputs"),
+                            false,
+                        ),
+                    );
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TT),
+                            &super::super::NS_TT,
+                        );
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TRT),
+                            &super::super::NS_TRT,
+                        );
+                    }
+                    return Ok(Some(Event::Start(bytes)));
+                }
+                GetAudioOutputsResponseElementTypeSerializerState::AudioOutputs(x) => match x
+                    .next(helper)
+                    .transpose()?
+                {
+                    Some(event) => return Ok(Some(event)),
+                    None => *self.state = GetAudioOutputsResponseElementTypeSerializerState::End__,
+                },
+                GetAudioOutputsResponseElementTypeSerializerState::End__ => {
+                    *self.state = GetAudioOutputsResponseElementTypeSerializerState::Done__;
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::End(BytesEnd::new(self.name))));
+                }
+                GetAudioOutputsResponseElementTypeSerializerState::Done__ => return Ok(None),
+                GetAudioOutputsResponseElementTypeSerializerState::Phantom__(_) => unreachable!(),
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for GetAudioOutputsResponseElementTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state = GetAudioOutputsResponseElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct GetAudioOutputConfigurationsElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::GetAudioOutputConfigurationsElementType,
+    pub(super) state:
+        ::std::boxed::Box<GetAudioOutputConfigurationsElementTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum GetAudioOutputConfigurationsElementTypeSerializerState<'ser> {
+    Init__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> GetAudioOutputConfigurationsElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                GetAudioOutputConfigurationsElementTypeSerializerState::Init__ => {
+                    *self.state = GetAudioOutputConfigurationsElementTypeSerializerState::Done__;
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TRT),
+                            &super::super::NS_TRT,
+                        );
+                    }
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::Empty(bytes)));
+                }
+                GetAudioOutputConfigurationsElementTypeSerializerState::Done__ => return Ok(None),
+                GetAudioOutputConfigurationsElementTypeSerializerState::Phantom__(_) => {
+                    unreachable!()
+                }
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for GetAudioOutputConfigurationsElementTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state = GetAudioOutputConfigurationsElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct GetAudioOutputConfigurationsResponseElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::GetAudioOutputConfigurationsResponseElementType,
+    pub(super) state:
+        ::std::boxed::Box<GetAudioOutputConfigurationsResponseElementTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum GetAudioOutputConfigurationsResponseElementTypeSerializerState<'ser> {
+    Init__,
+    Configurations(
+        IterSerializer<
+            'ser,
+            &'ser [super::super::tt::AudioOutputConfigurationType],
+            super::super::tt::AudioOutputConfigurationType,
+        >,
+    ),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> GetAudioOutputConfigurationsResponseElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                GetAudioOutputConfigurationsResponseElementTypeSerializerState::Init__ => {
+                    * self . state = GetAudioOutputConfigurationsResponseElementTypeSerializerState :: Configurations (IterSerializer :: new (& self . value . configurations [..] , Some ("trt:Configurations") , false)) ;
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TT),
+                            &super::super::NS_TT,
+                        );
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TRT),
+                            &super::super::NS_TRT,
+                        );
+                    }
+                    return Ok(Some(Event::Start(bytes)));
+                }
+                GetAudioOutputConfigurationsResponseElementTypeSerializerState::Configurations(
+                    x,
+                ) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => *self.state =
+                            GetAudioOutputConfigurationsResponseElementTypeSerializerState::End__,
+                    }
+                }
+                GetAudioOutputConfigurationsResponseElementTypeSerializerState::End__ => {
+                    *self.state =
+                        GetAudioOutputConfigurationsResponseElementTypeSerializerState::Done__;
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::End(BytesEnd::new(self.name))));
+                }
+                GetAudioOutputConfigurationsResponseElementTypeSerializerState::Done__ => {
+                    return Ok(None)
+                }
+                GetAudioOutputConfigurationsResponseElementTypeSerializerState::Phantom__(_) => {
+                    unreachable!()
+                }
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for GetAudioOutputConfigurationsResponseElementTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state =
+                    GetAudioOutputConfigurationsResponseElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct GetAudioOutputConfigurationElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::GetAudioOutputConfigurationElementType,
+    pub(super) state:
+        ::std::boxed::Box<GetAudioOutputConfigurationElementTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum GetAudioOutputConfigurationElementTypeSerializerState<'ser> {
+    Init__,
+    ConfigurationToken(<::std::string::String as WithSerializer>::Serializer<'ser>),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> GetAudioOutputConfigurationElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                GetAudioOutputConfigurationElementTypeSerializerState::Init__ => {
+                    *self.state =
+                        GetAudioOutputConfigurationElementTypeSerializerState::ConfigurationToken(
+                            WithSerializer::serializer(
+                                &self.value.configuration_token,
+                                Some("trt:ConfigurationToken"),
+                                false,
+                            )?,
+                        );
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TRT),
+                            &super::super::NS_TRT,
+                        );
+                    }
+                    return Ok(Some(Event::Start(bytes)));
+                }
+                GetAudioOutputConfigurationElementTypeSerializerState::ConfigurationToken(x) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => {
+                            *self.state =
+                                GetAudioOutputConfigurationElementTypeSerializerState::End__
+                        }
+                    }
+                }
+                GetAudioOutputConfigurationElementTypeSerializerState::End__ => {
+                    *self.state = GetAudioOutputConfigurationElementTypeSerializerState::Done__;
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::End(BytesEnd::new(self.name))));
+                }
+                GetAudioOutputConfigurationElementTypeSerializerState::Done__ => return Ok(None),
+                GetAudioOutputConfigurationElementTypeSerializerState::Phantom__(_) => {
+                    unreachable!()
+                }
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for GetAudioOutputConfigurationElementTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state = GetAudioOutputConfigurationElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct GetAudioOutputConfigurationResponseElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::GetAudioOutputConfigurationResponseElementType,
+    pub(super) state:
+        ::std::boxed::Box<GetAudioOutputConfigurationResponseElementTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum GetAudioOutputConfigurationResponseElementTypeSerializerState<'ser> {
+    Init__,
+    Configuration(
+        <super::super::tt::AudioOutputConfigurationType as WithSerializer>::Serializer<'ser>,
+    ),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> GetAudioOutputConfigurationResponseElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                GetAudioOutputConfigurationResponseElementTypeSerializerState::Init__ => {
+                    * self . state = GetAudioOutputConfigurationResponseElementTypeSerializerState :: Configuration (WithSerializer :: serializer (& self . value . configuration , Some ("trt:Configuration") , false) ?) ;
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TT),
+                            &super::super::NS_TT,
+                        );
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TRT),
+                            &super::super::NS_TRT,
+                        );
+                    }
+                    return Ok(Some(Event::Start(bytes)));
+                }
+                GetAudioOutputConfigurationResponseElementTypeSerializerState::Configuration(x) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => {
+                            *self.state =
+                                GetAudioOutputConfigurationResponseElementTypeSerializerState::End__
+                        }
+                    }
+                }
+                GetAudioOutputConfigurationResponseElementTypeSerializerState::End__ => {
+                    *self.state =
+                        GetAudioOutputConfigurationResponseElementTypeSerializerState::Done__;
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::End(BytesEnd::new(self.name))));
+                }
+                GetAudioOutputConfigurationResponseElementTypeSerializerState::Done__ => {
+                    return Ok(None)
+                }
+                GetAudioOutputConfigurationResponseElementTypeSerializerState::Phantom__(_) => {
+                    unreachable!()
+                }
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for GetAudioOutputConfigurationResponseElementTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state = GetAudioOutputConfigurationResponseElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct GetCompatibleAudioOutputConfigurationsElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::GetCompatibleAudioOutputConfigurationsElementType,
+    pub(super) state:
+        ::std::boxed::Box<GetCompatibleAudioOutputConfigurationsElementTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum GetCompatibleAudioOutputConfigurationsElementTypeSerializerState<'ser> {
+    Init__,
+    ProfileToken(<::std::string::String as WithSerializer>::Serializer<'ser>),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> GetCompatibleAudioOutputConfigurationsElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                GetCompatibleAudioOutputConfigurationsElementTypeSerializerState::Init__ => {
+                    * self . state = GetCompatibleAudioOutputConfigurationsElementTypeSerializerState :: ProfileToken (WithSerializer :: serializer (& self . value . profile_token , Some ("trt:ProfileToken") , false) ?) ;
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TRT),
+                            &super::super::NS_TRT,
+                        );
+                    }
+                    return Ok(Some(Event::Start(bytes)));
+                }
+                GetCompatibleAudioOutputConfigurationsElementTypeSerializerState::ProfileToken(
+                    x,
+                ) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => *self.state =
+                            GetCompatibleAudioOutputConfigurationsElementTypeSerializerState::End__,
+                    }
+                }
+                GetCompatibleAudioOutputConfigurationsElementTypeSerializerState::End__ => {
+                    *self.state =
+                        GetCompatibleAudioOutputConfigurationsElementTypeSerializerState::Done__;
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::End(BytesEnd::new(self.name))));
+                }
+                GetCompatibleAudioOutputConfigurationsElementTypeSerializerState::Done__ => {
+                    return Ok(None)
+                }
+                GetCompatibleAudioOutputConfigurationsElementTypeSerializerState::Phantom__(_) => {
+                    unreachable!()
+                }
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for GetCompatibleAudioOutputConfigurationsElementTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state =
+                    GetCompatibleAudioOutputConfigurationsElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct GetCompatibleAudioOutputConfigurationsResponseElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::GetCompatibleAudioOutputConfigurationsResponseElementType,
+    pub(super) state: ::std::boxed::Box<
+        GetCompatibleAudioOutputConfigurationsResponseElementTypeSerializerState<'ser>,
+    >,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum GetCompatibleAudioOutputConfigurationsResponseElementTypeSerializerState<'ser> {
+    Init__,
+    Configurations(
+        IterSerializer<
+            'ser,
+            &'ser [super::super::tt::AudioOutputConfigurationType],
+            super::super::tt::AudioOutputConfigurationType,
+        >,
+    ),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> GetCompatibleAudioOutputConfigurationsResponseElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match & mut * self . state { GetCompatibleAudioOutputConfigurationsResponseElementTypeSerializerState :: Init__ => { * self . state = GetCompatibleAudioOutputConfigurationsResponseElementTypeSerializerState :: Configurations (IterSerializer :: new (& self . value . configurations [..] , Some ("trt:Configurations") , false)) ; let mut bytes = BytesStart :: new (self . name) ; helper . begin_ns_scope () ; if self . is_root { helper . write_xmlns (& mut bytes , Some (& super :: super :: PREFIX_TT) , & super :: super :: NS_TT) ; helper . write_xmlns (& mut bytes , Some (& super :: super :: PREFIX_TRT) , & super :: super :: NS_TRT) ; } return Ok (Some (Event :: Start (bytes))) } GetCompatibleAudioOutputConfigurationsResponseElementTypeSerializerState :: Configurations (x) => match x . next (helper) . transpose () ? { Some (event) => return Ok (Some (event)) , None => * self . state = GetCompatibleAudioOutputConfigurationsResponseElementTypeSerializerState :: End__ , } GetCompatibleAudioOutputConfigurationsResponseElementTypeSerializerState :: End__ => { * self . state = GetCompatibleAudioOutputConfigurationsResponseElementTypeSerializerState :: Done__ ; helper . end_ns_scope () ; return Ok (Some (Event :: End (BytesEnd :: new (self . name)))) ; } GetCompatibleAudioOutputConfigurationsResponseElementTypeSerializerState :: Done__ => return Ok (None) , GetCompatibleAudioOutputConfigurationsResponseElementTypeSerializerState :: Phantom__ (_) => unreachable ! () , }
+        }
+    }
+}
+impl<'ser> Serializer<'ser>
+    for GetCompatibleAudioOutputConfigurationsResponseElementTypeSerializer<'ser>
+{
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                * self . state = GetCompatibleAudioOutputConfigurationsResponseElementTypeSerializerState :: Done__ ;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct GetAudioOutputConfigurationOptionsElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::GetAudioOutputConfigurationOptionsElementType,
+    pub(super) state:
+        ::std::boxed::Box<GetAudioOutputConfigurationOptionsElementTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum GetAudioOutputConfigurationOptionsElementTypeSerializerState<'ser> {
+    Init__,
+    ConfigurationToken(
+        IterSerializer<
+            'ser,
+            ::core::option::Option<&'ser ::std::string::String>,
+            ::std::string::String,
+        >,
+    ),
+    ProfileToken(
+        IterSerializer<
+            'ser,
+            ::core::option::Option<&'ser ::std::string::String>,
+            ::std::string::String,
+        >,
+    ),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> GetAudioOutputConfigurationOptionsElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match & mut * self . state { GetAudioOutputConfigurationOptionsElementTypeSerializerState :: Init__ => { * self . state = GetAudioOutputConfigurationOptionsElementTypeSerializerState :: ConfigurationToken (IterSerializer :: new (self . value . configuration_token . as_ref () , Some ("trt:ConfigurationToken") , false)) ; let mut bytes = BytesStart :: new (self . name) ; helper . begin_ns_scope () ; if self . is_root { helper . write_xmlns (& mut bytes , Some (& super :: super :: PREFIX_TRT) , & super :: super :: NS_TRT) ; } return Ok (Some (Event :: Start (bytes))) } GetAudioOutputConfigurationOptionsElementTypeSerializerState :: ConfigurationToken (x) => match x . next (helper) . transpose () ? { Some (event) => return Ok (Some (event)) , None => * self . state = GetAudioOutputConfigurationOptionsElementTypeSerializerState :: ProfileToken (IterSerializer :: new (self . value . profile_token . as_ref () , Some ("trt:ProfileToken") , false)) , } GetAudioOutputConfigurationOptionsElementTypeSerializerState :: ProfileToken (x) => match x . next (helper) . transpose () ? { Some (event) => return Ok (Some (event)) , None => * self . state = GetAudioOutputConfigurationOptionsElementTypeSerializerState :: End__ , } GetAudioOutputConfigurationOptionsElementTypeSerializerState :: End__ => { * self . state = GetAudioOutputConfigurationOptionsElementTypeSerializerState :: Done__ ; helper . end_ns_scope () ; return Ok (Some (Event :: End (BytesEnd :: new (self . name)))) ; } GetAudioOutputConfigurationOptionsElementTypeSerializerState :: Done__ => return Ok (None) , GetAudioOutputConfigurationOptionsElementTypeSerializerState :: Phantom__ (_) => unreachable ! () , }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for GetAudioOutputConfigurationOptionsElementTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state = GetAudioOutputConfigurationOptionsElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct GetAudioOutputConfigurationOptionsResponseElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::GetAudioOutputConfigurationOptionsResponseElementType,
+    pub(super) state: ::std::boxed::Box<
+        GetAudioOutputConfigurationOptionsResponseElementTypeSerializerState<'ser>,
+    >,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum GetAudioOutputConfigurationOptionsResponseElementTypeSerializerState<'ser> {
+    Init__,
+    Options(
+        <super::super::tt::AudioOutputConfigurationOptionsType as WithSerializer>::Serializer<'ser>,
+    ),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> GetAudioOutputConfigurationOptionsResponseElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                GetAudioOutputConfigurationOptionsResponseElementTypeSerializerState::Init__ => {
+                    * self . state = GetAudioOutputConfigurationOptionsResponseElementTypeSerializerState :: Options (WithSerializer :: serializer (& self . value . options , Some ("trt:Options") , false) ?) ;
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TT),
+                            &super::super::NS_TT,
+                        );
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TRT),
+                            &super::super::NS_TRT,
+                        );
+                    }
+                    return Ok(Some(Event::Start(bytes)));
+                }
+                GetAudioOutputConfigurationOptionsResponseElementTypeSerializerState::Options(
+                    x,
+                ) => match x.next(helper).transpose()? {
+                    Some(event) => return Ok(Some(event)),
+                    None => *self.state =
+                        GetAudioOutputConfigurationOptionsResponseElementTypeSerializerState::End__,
+                },
+                GetAudioOutputConfigurationOptionsResponseElementTypeSerializerState::End__ => {
+                    * self . state = GetAudioOutputConfigurationOptionsResponseElementTypeSerializerState :: Done__ ;
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::End(BytesEnd::new(self.name))));
+                }
+                GetAudioOutputConfigurationOptionsResponseElementTypeSerializerState::Done__ => {
+                    return Ok(None)
+                }
+                GetAudioOutputConfigurationOptionsResponseElementTypeSerializerState::Phantom__(
+                    _,
+                ) => unreachable!(),
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser>
+    for GetAudioOutputConfigurationOptionsResponseElementTypeSerializer<'ser>
+{
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state =
+                    GetAudioOutputConfigurationOptionsResponseElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct SetAudioOutputConfigurationElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::SetAudioOutputConfigurationElementType,
+    pub(super) state:
+        ::std::boxed::Box<SetAudioOutputConfigurationElementTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum SetAudioOutputConfigurationElementTypeSerializerState<'ser> {
+    Init__,
+    Configuration(
+        <super::super::tt::AudioOutputConfigurationType as WithSerializer>::Serializer<'ser>,
+    ),
+    ForcePersistence(<::core::primitive::bool as WithSerializer>::Serializer<'ser>),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> SetAudioOutputConfigurationElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                SetAudioOutputConfigurationElementTypeSerializerState::Init__ => {
+                    *self.state =
+                        SetAudioOutputConfigurationElementTypeSerializerState::Configuration(
+                            WithSerializer::serializer(
+                                &self.value.configuration,
+                                Some("trt:Configuration"),
+                                false,
+                            )?,
+                        );
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TT),
+                            &super::super::NS_TT,
+                        );
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TRT),
+                            &super::super::NS_TRT,
+                        );
+                    }
+                    return Ok(Some(Event::Start(bytes)));
+                }
+                SetAudioOutputConfigurationElementTypeSerializerState::Configuration(x) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => *self.state =
+                            SetAudioOutputConfigurationElementTypeSerializerState::ForcePersistence(
+                                WithSerializer::serializer(
+                                    &self.value.force_persistence,
+                                    Some("trt:ForcePersistence"),
+                                    false,
+                                )?,
+                            ),
+                    }
+                }
+                SetAudioOutputConfigurationElementTypeSerializerState::ForcePersistence(x) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => {
+                            *self.state =
+                                SetAudioOutputConfigurationElementTypeSerializerState::End__
+                        }
+                    }
+                }
+                SetAudioOutputConfigurationElementTypeSerializerState::End__ => {
+                    *self.state = SetAudioOutputConfigurationElementTypeSerializerState::Done__;
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::End(BytesEnd::new(self.name))));
+                }
+                SetAudioOutputConfigurationElementTypeSerializerState::Done__ => return Ok(None),
+                SetAudioOutputConfigurationElementTypeSerializerState::Phantom__(_) => {
+                    unreachable!()
+                }
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for SetAudioOutputConfigurationElementTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state = SetAudioOutputConfigurationElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct SetAudioOutputConfigurationResponseElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::SetAudioOutputConfigurationResponseElementType,
+    pub(super) state:
+        ::std::boxed::Box<SetAudioOutputConfigurationResponseElementTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum SetAudioOutputConfigurationResponseElementTypeSerializerState<'ser> {
+    Init__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> SetAudioOutputConfigurationResponseElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                SetAudioOutputConfigurationResponseElementTypeSerializerState::Init__ => {
+                    *self.state =
+                        SetAudioOutputConfigurationResponseElementTypeSerializerState::Done__;
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TRT),
+                            &super::super::NS_TRT,
+                        );
+                    }
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::Empty(bytes)));
+                }
+                SetAudioOutputConfigurationResponseElementTypeSerializerState::Done__ => {
+                    return Ok(None)
+                }
+                SetAudioOutputConfigurationResponseElementTypeSerializerState::Phantom__(_) => {
+                    unreachable!()
+                }
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for SetAudioOutputConfigurationResponseElementTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state = SetAudioOutputConfigurationResponseElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct AddAudioOutputConfigurationElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::AddAudioOutputConfigurationElementType,
+    pub(super) state:
+        ::std::boxed::Box<AddAudioOutputConfigurationElementTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum AddAudioOutputConfigurationElementTypeSerializerState<'ser> {
+    Init__,
+    ProfileToken(<::std::string::String as WithSerializer>::Serializer<'ser>),
+    ConfigurationToken(<::std::string::String as WithSerializer>::Serializer<'ser>),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> AddAudioOutputConfigurationElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                AddAudioOutputConfigurationElementTypeSerializerState::Init__ => {
+                    *self.state =
+                        AddAudioOutputConfigurationElementTypeSerializerState::ProfileToken(
+                            WithSerializer::serializer(
+                                &self.value.profile_token,
+                                Some("trt:ProfileToken"),
+                                false,
+                            )?,
+                        );
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TRT),
+                            &super::super::NS_TRT,
+                        );
+                    }
+                    return Ok(Some(Event::Start(bytes)));
+                }
+                AddAudioOutputConfigurationElementTypeSerializerState::ProfileToken(x) => match x
+                    .next(helper)
+                    .transpose()?
+                {
+                    Some(event) => return Ok(Some(event)),
+                    None => *self.state =
+                        AddAudioOutputConfigurationElementTypeSerializerState::ConfigurationToken(
+                            WithSerializer::serializer(
+                                &self.value.configuration_token,
+                                Some("trt:ConfigurationToken"),
+                                false,
+                            )?,
+                        ),
+                },
+                AddAudioOutputConfigurationElementTypeSerializerState::ConfigurationToken(x) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => {
+                            *self.state =
+                                AddAudioOutputConfigurationElementTypeSerializerState::End__
+                        }
+                    }
+                }
+                AddAudioOutputConfigurationElementTypeSerializerState::End__ => {
+                    *self.state = AddAudioOutputConfigurationElementTypeSerializerState::Done__;
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::End(BytesEnd::new(self.name))));
+                }
+                AddAudioOutputConfigurationElementTypeSerializerState::Done__ => return Ok(None),
+                AddAudioOutputConfigurationElementTypeSerializerState::Phantom__(_) => {
+                    unreachable!()
+                }
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for AddAudioOutputConfigurationElementTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state = AddAudioOutputConfigurationElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct AddAudioOutputConfigurationResponseElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::AddAudioOutputConfigurationResponseElementType,
+    pub(super) state:
+        ::std::boxed::Box<AddAudioOutputConfigurationResponseElementTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum AddAudioOutputConfigurationResponseElementTypeSerializerState<'ser> {
+    Init__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> AddAudioOutputConfigurationResponseElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                AddAudioOutputConfigurationResponseElementTypeSerializerState::Init__ => {
+                    *self.state =
+                        AddAudioOutputConfigurationResponseElementTypeSerializerState::Done__;
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TRT),
+                            &super::super::NS_TRT,
+                        );
+                    }
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::Empty(bytes)));
+                }
+                AddAudioOutputConfigurationResponseElementTypeSerializerState::Done__ => {
+                    return Ok(None)
+                }
+                AddAudioOutputConfigurationResponseElementTypeSerializerState::Phantom__(_) => {
+                    unreachable!()
+                }
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for AddAudioOutputConfigurationResponseElementTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state = AddAudioOutputConfigurationResponseElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct RemoveAudioOutputConfigurationElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::RemoveAudioOutputConfigurationElementType,
+    pub(super) state:
+        ::std::boxed::Box<RemoveAudioOutputConfigurationElementTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum RemoveAudioOutputConfigurationElementTypeSerializerState<'ser> {
+    Init__,
+    ProfileToken(<::std::string::String as WithSerializer>::Serializer<'ser>),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> RemoveAudioOutputConfigurationElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                RemoveAudioOutputConfigurationElementTypeSerializerState::Init__ => {
+                    *self.state =
+                        RemoveAudioOutputConfigurationElementTypeSerializerState::ProfileToken(
+                            WithSerializer::serializer(
+                                &self.value.profile_token,
+                                Some("trt:ProfileToken"),
+                                false,
+                            )?,
+                        );
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TRT),
+                            &super::super::NS_TRT,
+                        );
+                    }
+                    return Ok(Some(Event::Start(bytes)));
+                }
+                RemoveAudioOutputConfigurationElementTypeSerializerState::ProfileToken(x) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => {
+                            *self.state =
+                                RemoveAudioOutputConfigurationElementTypeSerializerState::End__
+                        }
+                    }
+                }
+                RemoveAudioOutputConfigurationElementTypeSerializerState::End__ => {
+                    *self.state = RemoveAudioOutputConfigurationElementTypeSerializerState::Done__;
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::End(BytesEnd::new(self.name))));
+                }
+                RemoveAudioOutputConfigurationElementTypeSerializerState::Done__ => {
+                    return Ok(None)
+                }
+                RemoveAudioOutputConfigurationElementTypeSerializerState::Phantom__(_) => {
+                    unreachable!()
+                }
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for RemoveAudioOutputConfigurationElementTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state = RemoveAudioOutputConfigurationElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct RemoveAudioOutputConfigurationResponseElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::RemoveAudioOutputConfigurationResponseElementType,
+    pub(super) state:
+        ::std::boxed::Box<RemoveAudioOutputConfigurationResponseElementTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum RemoveAudioOutputConfigurationResponseElementTypeSerializerState<'ser> {
+    Init__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> RemoveAudioOutputConfigurationResponseElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                RemoveAudioOutputConfigurationResponseElementTypeSerializerState::Init__ => {
+                    *self.state =
+                        RemoveAudioOutputConfigurationResponseElementTypeSerializerState::Done__;
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TRT),
+                            &super::super::NS_TRT,
+                        );
+                    }
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::Empty(bytes)));
+                }
+                RemoveAudioOutputConfigurationResponseElementTypeSerializerState::Done__ => {
+                    return Ok(None)
+                }
+                RemoveAudioOutputConfigurationResponseElementTypeSerializerState::Phantom__(_) => {
+                    unreachable!()
+                }
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for RemoveAudioOutputConfigurationResponseElementTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state =
+                    RemoveAudioOutputConfigurationResponseElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct GetAudioDecoderConfigurationsElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::GetAudioDecoderConfigurationsElementType,
+    pub(super) state:
+        ::std::boxed::Box<GetAudioDecoderConfigurationsElementTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum GetAudioDecoderConfigurationsElementTypeSerializerState<'ser> {
+    Init__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> GetAudioDecoderConfigurationsElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                GetAudioDecoderConfigurationsElementTypeSerializerState::Init__ => {
+                    *self.state = GetAudioDecoderConfigurationsElementTypeSerializerState::Done__;
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TRT),
+                            &super::super::NS_TRT,
+                        );
+                    }
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::Empty(bytes)));
+                }
+                GetAudioDecoderConfigurationsElementTypeSerializerState::Done__ => return Ok(None),
+                GetAudioDecoderConfigurationsElementTypeSerializerState::Phantom__(_) => {
+                    unreachable!()
+                }
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for GetAudioDecoderConfigurationsElementTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state = GetAudioDecoderConfigurationsElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct GetAudioDecoderConfigurationsResponseElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::GetAudioDecoderConfigurationsResponseElementType,
+    pub(super) state:
+        ::std::boxed::Box<GetAudioDecoderConfigurationsResponseElementTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum GetAudioDecoderConfigurationsResponseElementTypeSerializerState<'ser> {
+    Init__,
+    Configurations(
+        IterSerializer<
+            'ser,
+            &'ser [super::super::tt::AudioDecoderConfigurationType],
+            super::super::tt::AudioDecoderConfigurationType,
+        >,
+    ),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> GetAudioDecoderConfigurationsResponseElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                GetAudioDecoderConfigurationsResponseElementTypeSerializerState::Init__ => {
+                    * self . state = GetAudioDecoderConfigurationsResponseElementTypeSerializerState :: Configurations (IterSerializer :: new (& self . value . configurations [..] , Some ("trt:Configurations") , false)) ;
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TT),
+                            &super::super::NS_TT,
+                        );
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TRT),
+                            &super::super::NS_TRT,
+                        );
+                    }
+                    return Ok(Some(Event::Start(bytes)));
+                }
+                GetAudioDecoderConfigurationsResponseElementTypeSerializerState::Configurations(
+                    x,
+                ) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => *self.state =
+                            GetAudioDecoderConfigurationsResponseElementTypeSerializerState::End__,
+                    }
+                }
+                GetAudioDecoderConfigurationsResponseElementTypeSerializerState::End__ => {
+                    *self.state =
+                        GetAudioDecoderConfigurationsResponseElementTypeSerializerState::Done__;
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::End(BytesEnd::new(self.name))));
+                }
+                GetAudioDecoderConfigurationsResponseElementTypeSerializerState::Done__ => {
+                    return Ok(None)
+                }
+                GetAudioDecoderConfigurationsResponseElementTypeSerializerState::Phantom__(_) => {
+                    unreachable!()
+                }
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for GetAudioDecoderConfigurationsResponseElementTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state =
+                    GetAudioDecoderConfigurationsResponseElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct GetAudioDecoderConfigurationElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::GetAudioDecoderConfigurationElementType,
+    pub(super) state:
+        ::std::boxed::Box<GetAudioDecoderConfigurationElementTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum GetAudioDecoderConfigurationElementTypeSerializerState<'ser> {
+    Init__,
+    ConfigurationToken(<::std::string::String as WithSerializer>::Serializer<'ser>),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> GetAudioDecoderConfigurationElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                GetAudioDecoderConfigurationElementTypeSerializerState::Init__ => {
+                    *self.state =
+                        GetAudioDecoderConfigurationElementTypeSerializerState::ConfigurationToken(
+                            WithSerializer::serializer(
+                                &self.value.configuration_token,
+                                Some("trt:ConfigurationToken"),
+                                false,
+                            )?,
+                        );
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TRT),
+                            &super::super::NS_TRT,
+                        );
+                    }
+                    return Ok(Some(Event::Start(bytes)));
+                }
+                GetAudioDecoderConfigurationElementTypeSerializerState::ConfigurationToken(x) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => {
+                            *self.state =
+                                GetAudioDecoderConfigurationElementTypeSerializerState::End__
+                        }
+                    }
+                }
+                GetAudioDecoderConfigurationElementTypeSerializerState::End__ => {
+                    *self.state = GetAudioDecoderConfigurationElementTypeSerializerState::Done__;
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::End(BytesEnd::new(self.name))));
+                }
+                GetAudioDecoderConfigurationElementTypeSerializerState::Done__ => return Ok(None),
+                GetAudioDecoderConfigurationElementTypeSerializerState::Phantom__(_) => {
+                    unreachable!()
+                }
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for GetAudioDecoderConfigurationElementTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state = GetAudioDecoderConfigurationElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct GetAudioDecoderConfigurationResponseElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::GetAudioDecoderConfigurationResponseElementType,
+    pub(super) state:
+        ::std::boxed::Box<GetAudioDecoderConfigurationResponseElementTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum GetAudioDecoderConfigurationResponseElementTypeSerializerState<'ser> {
+    Init__,
+    Configuration(
+        <super::super::tt::AudioDecoderConfigurationType as WithSerializer>::Serializer<'ser>,
+    ),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> GetAudioDecoderConfigurationResponseElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                GetAudioDecoderConfigurationResponseElementTypeSerializerState::Init__ => {
+                    * self . state = GetAudioDecoderConfigurationResponseElementTypeSerializerState :: Configuration (WithSerializer :: serializer (& self . value . configuration , Some ("trt:Configuration") , false) ?) ;
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TT),
+                            &super::super::NS_TT,
+                        );
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TRT),
+                            &super::super::NS_TRT,
+                        );
+                    }
+                    return Ok(Some(Event::Start(bytes)));
+                }
+                GetAudioDecoderConfigurationResponseElementTypeSerializerState::Configuration(
+                    x,
+                ) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => *self.state =
+                            GetAudioDecoderConfigurationResponseElementTypeSerializerState::End__,
+                    }
+                }
+                GetAudioDecoderConfigurationResponseElementTypeSerializerState::End__ => {
+                    *self.state =
+                        GetAudioDecoderConfigurationResponseElementTypeSerializerState::Done__;
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::End(BytesEnd::new(self.name))));
+                }
+                GetAudioDecoderConfigurationResponseElementTypeSerializerState::Done__ => {
+                    return Ok(None)
+                }
+                GetAudioDecoderConfigurationResponseElementTypeSerializerState::Phantom__(_) => {
+                    unreachable!()
+                }
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for GetAudioDecoderConfigurationResponseElementTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state =
+                    GetAudioDecoderConfigurationResponseElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct GetCompatibleAudioDecoderConfigurationsElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::GetCompatibleAudioDecoderConfigurationsElementType,
+    pub(super) state:
+        ::std::boxed::Box<GetCompatibleAudioDecoderConfigurationsElementTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum GetCompatibleAudioDecoderConfigurationsElementTypeSerializerState<'ser> {
+    Init__,
+    ProfileToken(<::std::string::String as WithSerializer>::Serializer<'ser>),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> GetCompatibleAudioDecoderConfigurationsElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                GetCompatibleAudioDecoderConfigurationsElementTypeSerializerState::Init__ => {
+                    * self . state = GetCompatibleAudioDecoderConfigurationsElementTypeSerializerState :: ProfileToken (WithSerializer :: serializer (& self . value . profile_token , Some ("trt:ProfileToken") , false) ?) ;
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TRT),
+                            &super::super::NS_TRT,
+                        );
+                    }
+                    return Ok(Some(Event::Start(bytes)));
+                }
+                GetCompatibleAudioDecoderConfigurationsElementTypeSerializerState::ProfileToken(
+                    x,
+                ) => match x.next(helper).transpose()? {
+                    Some(event) => return Ok(Some(event)),
+                    None => {
+                        *self.state =
+                            GetCompatibleAudioDecoderConfigurationsElementTypeSerializerState::End__
+                    }
+                },
+                GetCompatibleAudioDecoderConfigurationsElementTypeSerializerState::End__ => {
+                    *self.state =
+                        GetCompatibleAudioDecoderConfigurationsElementTypeSerializerState::Done__;
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::End(BytesEnd::new(self.name))));
+                }
+                GetCompatibleAudioDecoderConfigurationsElementTypeSerializerState::Done__ => {
+                    return Ok(None)
+                }
+                GetCompatibleAudioDecoderConfigurationsElementTypeSerializerState::Phantom__(_) => {
+                    unreachable!()
+                }
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for GetCompatibleAudioDecoderConfigurationsElementTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state =
+                    GetCompatibleAudioDecoderConfigurationsElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct GetCompatibleAudioDecoderConfigurationsResponseElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::GetCompatibleAudioDecoderConfigurationsResponseElementType,
+    pub(super) state: ::std::boxed::Box<
+        GetCompatibleAudioDecoderConfigurationsResponseElementTypeSerializerState<'ser>,
+    >,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum GetCompatibleAudioDecoderConfigurationsResponseElementTypeSerializerState<'ser> {
+    Init__,
+    Configurations(
+        IterSerializer<
+            'ser,
+            &'ser [super::super::tt::AudioDecoderConfigurationType],
+            super::super::tt::AudioDecoderConfigurationType,
+        >,
+    ),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> GetCompatibleAudioDecoderConfigurationsResponseElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match & mut * self . state { GetCompatibleAudioDecoderConfigurationsResponseElementTypeSerializerState :: Init__ => { * self . state = GetCompatibleAudioDecoderConfigurationsResponseElementTypeSerializerState :: Configurations (IterSerializer :: new (& self . value . configurations [..] , Some ("trt:Configurations") , false)) ; let mut bytes = BytesStart :: new (self . name) ; helper . begin_ns_scope () ; if self . is_root { helper . write_xmlns (& mut bytes , Some (& super :: super :: PREFIX_TT) , & super :: super :: NS_TT) ; helper . write_xmlns (& mut bytes , Some (& super :: super :: PREFIX_TRT) , & super :: super :: NS_TRT) ; } return Ok (Some (Event :: Start (bytes))) } GetCompatibleAudioDecoderConfigurationsResponseElementTypeSerializerState :: Configurations (x) => match x . next (helper) . transpose () ? { Some (event) => return Ok (Some (event)) , None => * self . state = GetCompatibleAudioDecoderConfigurationsResponseElementTypeSerializerState :: End__ , } GetCompatibleAudioDecoderConfigurationsResponseElementTypeSerializerState :: End__ => { * self . state = GetCompatibleAudioDecoderConfigurationsResponseElementTypeSerializerState :: Done__ ; helper . end_ns_scope () ; return Ok (Some (Event :: End (BytesEnd :: new (self . name)))) ; } GetCompatibleAudioDecoderConfigurationsResponseElementTypeSerializerState :: Done__ => return Ok (None) , GetCompatibleAudioDecoderConfigurationsResponseElementTypeSerializerState :: Phantom__ (_) => unreachable ! () , }
+        }
+    }
+}
+impl<'ser> Serializer<'ser>
+    for GetCompatibleAudioDecoderConfigurationsResponseElementTypeSerializer<'ser>
+{
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                * self . state = GetCompatibleAudioDecoderConfigurationsResponseElementTypeSerializerState :: Done__ ;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct GetAudioDecoderConfigurationOptionsElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::GetAudioDecoderConfigurationOptionsElementType,
+    pub(super) state:
+        ::std::boxed::Box<GetAudioDecoderConfigurationOptionsElementTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum GetAudioDecoderConfigurationOptionsElementTypeSerializerState<'ser> {
+    Init__,
+    ConfigurationToken(
+        IterSerializer<
+            'ser,
+            ::core::option::Option<&'ser ::std::string::String>,
+            ::std::string::String,
+        >,
+    ),
+    ProfileToken(
+        IterSerializer<
+            'ser,
+            ::core::option::Option<&'ser ::std::string::String>,
+            ::std::string::String,
+        >,
+    ),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> GetAudioDecoderConfigurationOptionsElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match & mut * self . state { GetAudioDecoderConfigurationOptionsElementTypeSerializerState :: Init__ => { * self . state = GetAudioDecoderConfigurationOptionsElementTypeSerializerState :: ConfigurationToken (IterSerializer :: new (self . value . configuration_token . as_ref () , Some ("trt:ConfigurationToken") , false)) ; let mut bytes = BytesStart :: new (self . name) ; helper . begin_ns_scope () ; if self . is_root { helper . write_xmlns (& mut bytes , Some (& super :: super :: PREFIX_TRT) , & super :: super :: NS_TRT) ; } return Ok (Some (Event :: Start (bytes))) } GetAudioDecoderConfigurationOptionsElementTypeSerializerState :: ConfigurationToken (x) => match x . next (helper) . transpose () ? { Some (event) => return Ok (Some (event)) , None => * self . state = GetAudioDecoderConfigurationOptionsElementTypeSerializerState :: ProfileToken (IterSerializer :: new (self . value . profile_token . as_ref () , Some ("trt:ProfileToken") , false)) , } GetAudioDecoderConfigurationOptionsElementTypeSerializerState :: ProfileToken (x) => match x . next (helper) . transpose () ? { Some (event) => return Ok (Some (event)) , None => * self . state = GetAudioDecoderConfigurationOptionsElementTypeSerializerState :: End__ , } GetAudioDecoderConfigurationOptionsElementTypeSerializerState :: End__ => { * self . state = GetAudioDecoderConfigurationOptionsElementTypeSerializerState :: Done__ ; helper . end_ns_scope () ; return Ok (Some (Event :: End (BytesEnd :: new (self . name)))) ; } GetAudioDecoderConfigurationOptionsElementTypeSerializerState :: Done__ => return Ok (None) , GetAudioDecoderConfigurationOptionsElementTypeSerializerState :: Phantom__ (_) => unreachable ! () , }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for GetAudioDecoderConfigurationOptionsElementTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state = GetAudioDecoderConfigurationOptionsElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct GetAudioDecoderConfigurationOptionsResponseElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::GetAudioDecoderConfigurationOptionsResponseElementType,
+    pub(super) state: ::std::boxed::Box<
+        GetAudioDecoderConfigurationOptionsResponseElementTypeSerializerState<'ser>,
+    >,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum GetAudioDecoderConfigurationOptionsResponseElementTypeSerializerState<'ser> {
+    Init__,
+    Options(
+        <super::super::tt::AudioDecoderConfigurationOptionsType as WithSerializer>::Serializer<
+            'ser,
+        >,
+    ),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> GetAudioDecoderConfigurationOptionsResponseElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match & mut * self . state { GetAudioDecoderConfigurationOptionsResponseElementTypeSerializerState :: Init__ => { * self . state = GetAudioDecoderConfigurationOptionsResponseElementTypeSerializerState :: Options (WithSerializer :: serializer (& self . value . options , Some ("trt:Options") , false) ?) ; let mut bytes = BytesStart :: new (self . name) ; helper . begin_ns_scope () ; if self . is_root { helper . write_xmlns (& mut bytes , Some (& super :: super :: PREFIX_TT) , & super :: super :: NS_TT) ; helper . write_xmlns (& mut bytes , Some (& super :: super :: PREFIX_TRT) , & super :: super :: NS_TRT) ; } return Ok (Some (Event :: Start (bytes))) } GetAudioDecoderConfigurationOptionsResponseElementTypeSerializerState :: Options (x) => match x . next (helper) . transpose () ? { Some (event) => return Ok (Some (event)) , None => * self . state = GetAudioDecoderConfigurationOptionsResponseElementTypeSerializerState :: End__ , } GetAudioDecoderConfigurationOptionsResponseElementTypeSerializerState :: End__ => { * self . state = GetAudioDecoderConfigurationOptionsResponseElementTypeSerializerState :: Done__ ; helper . end_ns_scope () ; return Ok (Some (Event :: End (BytesEnd :: new (self . name)))) ; } GetAudioDecoderConfigurationOptionsResponseElementTypeSerializerState :: Done__ => return Ok (None) , GetAudioDecoderConfigurationOptionsResponseElementTypeSerializerState :: Phantom__ (_) => unreachable ! () , }
+        }
+    }
+}
+impl<'ser> Serializer<'ser>
+    for GetAudioDecoderConfigurationOptionsResponseElementTypeSerializer<'ser>
+{
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state =
+                    GetAudioDecoderConfigurationOptionsResponseElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct SetAudioDecoderConfigurationElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::SetAudioDecoderConfigurationElementType,
+    pub(super) state:
+        ::std::boxed::Box<SetAudioDecoderConfigurationElementTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum SetAudioDecoderConfigurationElementTypeSerializerState<'ser> {
+    Init__,
+    Configuration(
+        <super::super::tt::AudioDecoderConfigurationType as WithSerializer>::Serializer<'ser>,
+    ),
+    ForcePersistence(<::core::primitive::bool as WithSerializer>::Serializer<'ser>),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> SetAudioDecoderConfigurationElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                SetAudioDecoderConfigurationElementTypeSerializerState::Init__ => {
+                    *self.state =
+                        SetAudioDecoderConfigurationElementTypeSerializerState::Configuration(
+                            WithSerializer::serializer(
+                                &self.value.configuration,
+                                Some("trt:Configuration"),
+                                false,
+                            )?,
+                        );
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TT),
+                            &super::super::NS_TT,
+                        );
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TRT),
+                            &super::super::NS_TRT,
+                        );
+                    }
+                    return Ok(Some(Event::Start(bytes)));
+                }
+                SetAudioDecoderConfigurationElementTypeSerializerState::Configuration(x) => match x
+                    .next(helper)
+                    .transpose()?
+                {
+                    Some(event) => return Ok(Some(event)),
+                    None => {
+                        *self.state =
+                            SetAudioDecoderConfigurationElementTypeSerializerState::ForcePersistence(
+                                WithSerializer::serializer(
+                                    &self.value.force_persistence,
+                                    Some("trt:ForcePersistence"),
+                                    false,
+                                )?,
+                            )
+                    }
+                },
+                SetAudioDecoderConfigurationElementTypeSerializerState::ForcePersistence(x) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => {
+                            *self.state =
+                                SetAudioDecoderConfigurationElementTypeSerializerState::End__
+                        }
+                    }
+                }
+                SetAudioDecoderConfigurationElementTypeSerializerState::End__ => {
+                    *self.state = SetAudioDecoderConfigurationElementTypeSerializerState::Done__;
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::End(BytesEnd::new(self.name))));
+                }
+                SetAudioDecoderConfigurationElementTypeSerializerState::Done__ => return Ok(None),
+                SetAudioDecoderConfigurationElementTypeSerializerState::Phantom__(_) => {
+                    unreachable!()
+                }
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for SetAudioDecoderConfigurationElementTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state = SetAudioDecoderConfigurationElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct SetAudioDecoderConfigurationResponseElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::SetAudioDecoderConfigurationResponseElementType,
+    pub(super) state:
+        ::std::boxed::Box<SetAudioDecoderConfigurationResponseElementTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum SetAudioDecoderConfigurationResponseElementTypeSerializerState<'ser> {
+    Init__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> SetAudioDecoderConfigurationResponseElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                SetAudioDecoderConfigurationResponseElementTypeSerializerState::Init__ => {
+                    *self.state =
+                        SetAudioDecoderConfigurationResponseElementTypeSerializerState::Done__;
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TRT),
+                            &super::super::NS_TRT,
+                        );
+                    }
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::Empty(bytes)));
+                }
+                SetAudioDecoderConfigurationResponseElementTypeSerializerState::Done__ => {
+                    return Ok(None)
+                }
+                SetAudioDecoderConfigurationResponseElementTypeSerializerState::Phantom__(_) => {
+                    unreachable!()
+                }
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for SetAudioDecoderConfigurationResponseElementTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state =
+                    SetAudioDecoderConfigurationResponseElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct AddAudioDecoderConfigurationElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::AddAudioDecoderConfigurationElementType,
+    pub(super) state:
+        ::std::boxed::Box<AddAudioDecoderConfigurationElementTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum AddAudioDecoderConfigurationElementTypeSerializerState<'ser> {
+    Init__,
+    ProfileToken(<::std::string::String as WithSerializer>::Serializer<'ser>),
+    ConfigurationToken(<::std::string::String as WithSerializer>::Serializer<'ser>),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> AddAudioDecoderConfigurationElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                AddAudioDecoderConfigurationElementTypeSerializerState::Init__ => {
+                    *self.state =
+                        AddAudioDecoderConfigurationElementTypeSerializerState::ProfileToken(
+                            WithSerializer::serializer(
+                                &self.value.profile_token,
+                                Some("trt:ProfileToken"),
+                                false,
+                            )?,
+                        );
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TRT),
+                            &super::super::NS_TRT,
+                        );
+                    }
+                    return Ok(Some(Event::Start(bytes)));
+                }
+                AddAudioDecoderConfigurationElementTypeSerializerState::ProfileToken(x) => match x
+                    .next(helper)
+                    .transpose()?
+                {
+                    Some(event) => return Ok(Some(event)),
+                    None => *self.state =
+                        AddAudioDecoderConfigurationElementTypeSerializerState::ConfigurationToken(
+                            WithSerializer::serializer(
+                                &self.value.configuration_token,
+                                Some("trt:ConfigurationToken"),
+                                false,
+                            )?,
+                        ),
+                },
+                AddAudioDecoderConfigurationElementTypeSerializerState::ConfigurationToken(x) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => {
+                            *self.state =
+                                AddAudioDecoderConfigurationElementTypeSerializerState::End__
+                        }
+                    }
+                }
+                AddAudioDecoderConfigurationElementTypeSerializerState::End__ => {
+                    *self.state = AddAudioDecoderConfigurationElementTypeSerializerState::Done__;
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::End(BytesEnd::new(self.name))));
+                }
+                AddAudioDecoderConfigurationElementTypeSerializerState::Done__ => return Ok(None),
+                AddAudioDecoderConfigurationElementTypeSerializerState::Phantom__(_) => {
+                    unreachable!()
+                }
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for AddAudioDecoderConfigurationElementTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state = AddAudioDecoderConfigurationElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct AddAudioDecoderConfigurationResponseElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::AddAudioDecoderConfigurationResponseElementType,
+    pub(super) state:
+        ::std::boxed::Box<AddAudioDecoderConfigurationResponseElementTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum AddAudioDecoderConfigurationResponseElementTypeSerializerState<'ser> {
+    Init__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> AddAudioDecoderConfigurationResponseElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                AddAudioDecoderConfigurationResponseElementTypeSerializerState::Init__ => {
+                    *self.state =
+                        AddAudioDecoderConfigurationResponseElementTypeSerializerState::Done__;
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TRT),
+                            &super::super::NS_TRT,
+                        );
+                    }
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::Empty(bytes)));
+                }
+                AddAudioDecoderConfigurationResponseElementTypeSerializerState::Done__ => {
+                    return Ok(None)
+                }
+                AddAudioDecoderConfigurationResponseElementTypeSerializerState::Phantom__(_) => {
+                    unreachable!()
+                }
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for AddAudioDecoderConfigurationResponseElementTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state =
+                    AddAudioDecoderConfigurationResponseElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct RemoveAudioDecoderConfigurationElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::RemoveAudioDecoderConfigurationElementType,
+    pub(super) state:
+        ::std::boxed::Box<RemoveAudioDecoderConfigurationElementTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum RemoveAudioDecoderConfigurationElementTypeSerializerState<'ser> {
+    Init__,
+    ProfileToken(<::std::string::String as WithSerializer>::Serializer<'ser>),
+    End__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> RemoveAudioDecoderConfigurationElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                RemoveAudioDecoderConfigurationElementTypeSerializerState::Init__ => {
+                    *self.state =
+                        RemoveAudioDecoderConfigurationElementTypeSerializerState::ProfileToken(
+                            WithSerializer::serializer(
+                                &self.value.profile_token,
+                                Some("trt:ProfileToken"),
+                                false,
+                            )?,
+                        );
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TRT),
+                            &super::super::NS_TRT,
+                        );
+                    }
+                    return Ok(Some(Event::Start(bytes)));
+                }
+                RemoveAudioDecoderConfigurationElementTypeSerializerState::ProfileToken(x) => {
+                    match x.next(helper).transpose()? {
+                        Some(event) => return Ok(Some(event)),
+                        None => {
+                            *self.state =
+                                RemoveAudioDecoderConfigurationElementTypeSerializerState::End__
+                        }
+                    }
+                }
+                RemoveAudioDecoderConfigurationElementTypeSerializerState::End__ => {
+                    *self.state = RemoveAudioDecoderConfigurationElementTypeSerializerState::Done__;
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::End(BytesEnd::new(self.name))));
+                }
+                RemoveAudioDecoderConfigurationElementTypeSerializerState::Done__ => {
+                    return Ok(None)
+                }
+                RemoveAudioDecoderConfigurationElementTypeSerializerState::Phantom__(_) => {
+                    unreachable!()
+                }
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for RemoveAudioDecoderConfigurationElementTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state = RemoveAudioDecoderConfigurationElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}
+#[derive(Debug)]
+pub struct RemoveAudioDecoderConfigurationResponseElementTypeSerializer<'ser> {
+    pub(super) value: &'ser super::RemoveAudioDecoderConfigurationResponseElementType,
+    pub(super) state:
+        ::std::boxed::Box<RemoveAudioDecoderConfigurationResponseElementTypeSerializerState<'ser>>,
+    pub(super) name: &'ser ::core::primitive::str,
+    pub(super) is_root: ::core::primitive::bool,
+}
+#[derive(Debug)]
+pub(super) enum RemoveAudioDecoderConfigurationResponseElementTypeSerializerState<'ser> {
+    Init__,
+    Done__,
+    Phantom__(&'ser ()),
+}
+impl<'ser> RemoveAudioDecoderConfigurationResponseElementTypeSerializer<'ser> {
+    fn next_event(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::result::Result<::core::option::Option<Event<'ser>>, Error> {
+        loop {
+            match &mut *self.state {
+                RemoveAudioDecoderConfigurationResponseElementTypeSerializerState::Init__ => {
+                    *self.state =
+                        RemoveAudioDecoderConfigurationResponseElementTypeSerializerState::Done__;
+                    let mut bytes = BytesStart::new(self.name);
+                    helper.begin_ns_scope();
+                    if self.is_root {
+                        helper.write_xmlns(
+                            &mut bytes,
+                            Some(&super::super::PREFIX_TRT),
+                            &super::super::NS_TRT,
+                        );
+                    }
+                    helper.end_ns_scope();
+                    return Ok(Some(Event::Empty(bytes)));
+                }
+                RemoveAudioDecoderConfigurationResponseElementTypeSerializerState::Done__ => {
+                    return Ok(None)
+                }
+                RemoveAudioDecoderConfigurationResponseElementTypeSerializerState::Phantom__(_) => {
+                    unreachable!()
+                }
+            }
+        }
+    }
+}
+impl<'ser> Serializer<'ser> for RemoveAudioDecoderConfigurationResponseElementTypeSerializer<'ser> {
+    fn next(
+        &mut self,
+        helper: &mut SerializeHelper,
+    ) -> ::core::option::Option<::core::result::Result<Event<'ser>, Error>> {
+        match self.next_event(helper) {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(error) => {
+                *self.state =
+                    RemoveAudioDecoderConfigurationResponseElementTypeSerializerState::Done__;
+                Some(Err(error))
+            }
+        }
+    }
+}

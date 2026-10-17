@@ -1,0 +1,5 @@
+# Merged with the repository's .cargo/config.toml (camera target, linker,
+# build-std). Only the output moves: under the ignored top-level target/
+# instead of a stray tools/re/pcm-probe/target. Relative to tools/re/pcm-probe.
+[build]
+target-dir = "../../../target/pcm-probe"

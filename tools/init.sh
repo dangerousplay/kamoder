@@ -9,7 +9,15 @@
 #   sh /mnt/disc1/anyka_rust/init.sh --check  validate everything and exit
 #   sh /mnt/disc1/anyka_rust/init.sh --stop   stop a running stack
 #
-# Settings come from camera.conf beside this file (see camera.conf.example).
+# Settings come from camera.conf in the data root (see camera.conf.example).
+#
+# Code and data may live apart (A/B updates, OTA-05):
+#   KAMODER_SLOT  code directory: bin/, lib/, supervisor.toml, boards/
+#   KAMODER_DATA  data root: camera.conf, etc/, logs/, backup/
+# Factory/config.sh sets both when it boots a slot. Unset, both are this
+# script's directory (the legacy single tree, unchanged), except that a copy
+# run from <root>/slots/<x>/ takes <root> as its data root, so starting or
+# stopping a slot by hand finds the real camera.conf and logs.
 #
 # Design rule for this file: **it must never be able to brick the camera.**
 # Every step either succeeds or is skipped with a logged reason. Nothing here
@@ -26,7 +34,20 @@ case "$0" in
     *)   _self=. ;;
 esac
 SELF_DIR=$(CDPATH= cd -- "$_self" 2>/dev/null && pwd) || SELF_DIR=/mnt/disc1/anyka_rust
-BASE=$SELF_DIR
+case "$SELF_DIR" in
+    */slots/?*) _default_data=${SELF_DIR%/slots/*} ;;
+    *)          _default_data=$SELF_DIR ;;
+esac
+SLOT=${KAMODER_SLOT:-$SELF_DIR}
+DATA=${KAMODER_DATA:-$_default_data}
+# Absolute, so the supervisor and its children agree on them whatever their
+# working directory. Left as given if they do not exist (yet): main() checks.
+SLOT=$(CDPATH= cd -- "$SLOT" 2>/dev/null && pwd) || SLOT=${KAMODER_SLOT:-$SELF_DIR}
+DATA=$(CDPATH= cd -- "$DATA" 2>/dev/null && pwd) || DATA=${KAMODER_DATA:-$_default_data}
+# Not exported: the supervisor gets them as --slot-dir/--data-dir, and an ssh
+# shell (a grandchild) must not inherit them into a hand-run init.sh.
+# Data root. Everything written at runtime lives under it.
+BASE=$DATA
 
 LOG_DIR=$BASE/logs
 INIT_LOG=$LOG_DIR/init.log
@@ -34,17 +55,19 @@ PID_FILE=/tmp/anyka_rust.pid
 # The restart loop runs in its own shell; it has to be stopped before the
 # supervisor, or it would just start a new one.
 LOOP_PID_FILE=/tmp/anyka_rust.loop.pid
-SUPERVISOR=$BASE/bin/supervisor
-CONFIG=$BASE/supervisor.toml
+# Code, from the slot.
+SUPERVISOR=$SLOT/bin/supervisor
+CONFIG=$SLOT/supervisor.toml
+SSHD=$SLOT/bin/sshd
+WEB=$SLOT/bin/web
+FALLBACK_FEEDER=$SLOT/bin/wdt_feeder
+# Resolves camera.conf's TIMEZONE to a POSIX TZ string (`ntp tz`).
+NTP=$SLOT/bin/ntp
+# Data, from the data root.
 CAMERA_CONF=$BASE/camera.conf
-SSHD=$BASE/bin/sshd
 SSH_PASSWD=$BASE/etc/anyka-sshd.passwd
-WEB=$BASE/bin/web
 WEB_USERS=$BASE/etc/web-users
 ONVIF_SECRET=$BASE/etc/onvif.secret
-FALLBACK_FEEDER=$BASE/bin/wdt_feeder
-# Resolves camera.conf's TIMEZONE to a POSIX TZ string (`ntp tz`).
-NTP=$BASE/bin/ntp
 # Vendor processes stopped when stop_vendor_ipc=1, matched against
 # /proc/<pid>/comm. The watchers that respawn `ipc` or reboot the board when it
 # disappears go first, then the IPC binary itself.
@@ -133,10 +156,10 @@ RUNTIME_LIBS="libpthread.so.0 libm.so.0 librt.so.0 libdl.so.0 libgcc_s.so.1 libs
 check_runtime_libs() {
     missing=""
     for lib in $RUNTIME_LIBS; do
-        [ -f "$BASE/lib/sys/$lib" ] || missing="$missing $lib"
+        [ -f "$SLOT/lib/sys/$lib" ] || missing="$missing $lib"
     done
     [ -z "$missing" ] && return 0
-    log "ERROR: $BASE/lib/sys is incomplete, missing:$missing (rebuild the card with ./x sd)"
+    log "ERROR: $SLOT/lib/sys is incomplete, missing:$missing (rebuild the card with ./x sd)"
     return 1
 }
 
@@ -180,6 +203,7 @@ load_settings() {
     NTP_SERVERS=${NTP_SERVERS:-}
     NTP_INTERVAL=${NTP_INTERVAL:-}
     NTP_ENABLED=${NTP_ENABLED:-}
+    FOLLOW_ENABLED=${FOLLOW_ENABLED:-}
     # shellcheck source=/dev/null
     [ -f "$CAMERA_CONF" ] && . "$CAMERA_CONF"
     return 0
@@ -341,6 +365,11 @@ export_env() {
     if [ -n "$NTP_ENABLED" ]; then
         export NTP_ENABLED
     fi
+    # Seeds the follow-movement switch until it is first toggled from the web
+    # UI (then etc/follow.json wins).
+    if [ -n "$FOLLOW_ENABLED" ]; then
+        export FOLLOW_ENABLED
+    fi
 }
 
 # Sets the local time zone from camera.conf's TIMEZONE (TZ-02).
@@ -394,7 +423,12 @@ preflight() {
     if [ "$ok" -eq 0 ]; then
         # The supervisor validates its own config and reports missing
         # executables, which is a better check than anything repeated here.
-        if ! "$SUPERVISOR" --config "$CONFIG" --check; then
+        if [ "$SLOT" = "$DATA" ]; then
+            "$SUPERVISOR" --config "$CONFIG" --check
+        else
+            "$SUPERVISOR" --config "$CONFIG" --slot-dir "$SLOT" --data-dir "$DATA" --check
+        fi
+        if [ $? -ne 0 ]; then
             log "ERROR: configuration check failed"
             ok=1
         fi
@@ -576,7 +610,13 @@ run_supervisor_loop() {
     failures=0
     while :; do
         log "starting supervisor"
-        "$SUPERVISOR" --config "$CONFIG" &
+        # A legacy tree (code and data in one directory) gets exactly the
+        # command line from before slots, which older supervisors accept.
+        if [ "$SLOT" = "$DATA" ]; then
+            "$SUPERVISOR" --config "$CONFIG" &
+        else
+            "$SUPERVISOR" --config "$CONFIG" --slot-dir "$SLOT" --data-dir "$DATA" &
+        fi
         child=$!
         echo "$child" > "$PID_FILE"
         wait "$child"
@@ -704,7 +744,7 @@ main() {
     fi
 
     exec >> "$INIT_LOG" 2>&1
-    log "----- anyka_rust starting from $BASE -----"
+    log "----- anyka_rust starting from $SLOT (data $BASE) -----"
 
     export_env
     apply_timezone || log "continuing in UTC"

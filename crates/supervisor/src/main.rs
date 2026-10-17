@@ -13,6 +13,7 @@
 //! ```sh
 //! supervisor --config /mnt/anyka_rust/supervisor.toml
 //! supervisor --config ... --check    # validate and exit
+//! supervisor --config slots/b/supervisor.toml --slot-dir slots/b --data-dir .
 //! supervisor board --shell            # board facts for init.sh to eval
 //! ```
 //!
@@ -56,6 +57,15 @@ struct Args {
     /// Service configuration.
     #[arg(long, default_value = "/mnt/disc1/anyka_rust/supervisor.toml")]
     config: PathBuf,
+    /// Code directory (A/B slot): expands `{slot}` in service commands and
+    /// arguments, and holds `boards/`. Default: the config's directory.
+    #[arg(long)]
+    slot_dir: Option<PathBuf>,
+    /// Shared data directory (camera.conf, etc/, logs/): expands `{data}`,
+    /// is every service's working directory and the base of a relative
+    /// `log_dir`. Default: the config's directory.
+    #[arg(long)]
+    data_dir: Option<PathBuf>,
     /// Validate the configuration and exit.
     #[arg(long = "check")]
     check_only: bool,
@@ -75,7 +85,9 @@ struct Args {
     /// Print the boot banner to stdout and exit.
     #[arg(long)]
     banner: bool,
-    /// Board profile directory. Default: `boards/` next to the config.
+    /// Board profile directory; `{slot}`/`{data}` are expanded. Default:
+    /// `boards/` in the slot directory (next to the config unless
+    /// `--slot-dir` says otherwise).
     #[arg(long, env = "KAMODER_BOARDS_DIR")]
     boards_dir: Option<PathBuf>,
     /// Board profile name, skipping detection (init.sh exports `BOARD`
@@ -119,6 +131,18 @@ fn board_command(shell: bool, boards_dir: Option<PathBuf>, board: Option<&str>) 
         print!("{}", board_select::human(&resolved));
     }
     Ok(())
+}
+
+/// The board profile directory: `--boards-dir` (placeholders expanded), else
+/// `boards/` in the slot directory.
+fn boards_dir(flag: Option<&Path>, config: &Config) -> PathBuf {
+    match flag {
+        Some(dir) => match dir.to_str() {
+            Some(text) => PathBuf::from(config::expand(text, &config.slot_dir, &config.data_dir)),
+            None => dir.to_path_buf(),
+        },
+        None => config.slot_dir.join("boards"),
+    }
 }
 
 fn describe_metrics() {
@@ -212,7 +236,11 @@ fn main() -> Result<()> {
     let _telemetry = telemetry::install_with_console("supervisor", console_sink)?;
     describe_metrics();
 
-    let mut config = Config::load(&args.config)?;
+    let mut config = Config::load_with_dirs(
+        &args.config,
+        args.slot_dir.as_deref(),
+        args.data_dir.as_deref(),
+    )?;
     // Counted before the board can switch anything off: an empty config is
     // a mistake, a board without optional hardware is not.
     let configured = config.enabled_services().count();
@@ -221,10 +249,7 @@ fn main() -> Result<()> {
     // board would skip; a board that cannot be resolved never fails the
     // check (init.sh's preflight must not fall back to the feeder alone
     // because of `boards/`).
-    let boards_dir = args
-        .boards_dir
-        .clone()
-        .unwrap_or_else(|| config.base_dir.join("boards"));
+    let boards_dir = boards_dir(args.boards_dir.as_deref(), &config);
     let board = {
         let dir = &boards_dir;
         match board_select::resolve(dir, args.board.as_deref()) {
@@ -331,10 +356,10 @@ fn main() -> Result<()> {
         None => {}
     }
 
-    // Logs live on the SD card, so resolve a relative log_dir against the
-    // config rather than the working directory.
+    // Logs live on the SD card with the other data, so resolve a relative
+    // log_dir against the data directory rather than the working directory.
     let ready_console = console.clone();
-    let log_dir = config.resolve(&config.supervisor.log_dir);
+    let log_dir = config.resolve_data(&config.supervisor.log_dir);
     let sink = logs::start(
         &log_dir,
         config.supervisor.log_max_bytes,
@@ -445,5 +470,47 @@ mod cli_tests {
     fn cli_definition_is_valid() {
         use clap::CommandFactory;
         Args::command().debug_assert();
+    }
+
+    /// Without the new flags the supervisor runs as before: slot and data
+    /// default to the config's directory (resolved in `Config`).
+    #[test]
+    fn slot_and_data_flags_are_optional() {
+        let args = Args::try_parse_from(["supervisor", "--config", "x.toml"]).unwrap();
+        assert!(args.slot_dir.is_none() && args.data_dir.is_none());
+        let args = Args::try_parse_from([
+            "supervisor",
+            "--config",
+            "/r/slots/b/supervisor.toml",
+            "--slot-dir",
+            "/r/slots/b",
+            "--data-dir",
+            "/r",
+            "--check",
+        ])
+        .unwrap();
+        assert_eq!(args.slot_dir.as_deref(), Some(Path::new("/r/slots/b")));
+        assert_eq!(args.data_dir.as_deref(), Some(Path::new("/r")));
+        assert!(args.check_only);
+    }
+
+    #[test]
+    fn boards_dir_defaults_to_the_slot_and_expands_placeholders() {
+        let dir = std::env::temp_dir().join(format!("supervisor-boards-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("supervisor.toml");
+        std::fs::write(&path, "").unwrap();
+        let slot = Path::new("/r/slots/b");
+        let config = Config::load_with_dirs(&path, Some(slot), Some(Path::new("/r"))).unwrap();
+        let _ = std::fs::remove_dir_all(&dir);
+        assert_eq!(boards_dir(None, &config), slot.join("boards"));
+        assert_eq!(
+            boards_dir(Some(Path::new("{data}/boards")), &config),
+            Path::new("/r/boards")
+        );
+        assert_eq!(
+            boards_dir(Some(Path::new("/elsewhere")), &config),
+            Path::new("/elsewhere")
+        );
     }
 }

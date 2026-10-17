@@ -2,6 +2,7 @@
 //!
 //! ```text
 //! camera serve [--listen 127.0.0.1:3000]     every sensor, snapshots over HTTP
+//!              [--motion-hz 10]              motion grids on /tmp/kamoder-motion.sock
 //! camera probe --index 1 --frames 5 --save /tmp/cam1.jpg
 //! ```
 //!
@@ -112,6 +113,13 @@ struct Serve {
     /// Unix socket the `rtsp` service reads H.264 from.
     #[arg(long, default_value = video_proto::DEFAULT_SOCKET)]
     video_socket: PathBuf,
+    /// Unix socket the `follow` service reads motion grids from (mode 0600).
+    #[arg(long, default_value = video_proto::DEFAULT_MOTION_SOCKET)]
+    motion_socket: PathBuf,
+    /// Motion grids sampled per second and sensor; 0 turns sampling off.
+    #[arg(long, default_value_t = service::DEFAULT_MOTION_HZ,
+          value_parser = clap::value_parser!(u32).range(0..=service::MAX_MOTION_HZ as i64))]
+    motion_hz: u32,
 }
 
 #[derive(Args, Debug)]
@@ -362,11 +370,13 @@ fn serve(s: Serve) -> Result<()> {
     let snap = settings::snapshot(video, s.snapshot_max_width, s.quality);
     let opts = CaptureOptions {
         snapshot_max_width: snap.max_width,
+        motion_hz: s.motion_hz,
         ..CaptureOptions::default()
     };
     let app = App {
         listen: s.listen,
         video_socket: s.video_socket.clone(),
+        motion_socket: s.motion_socket.clone(),
         quality: snap.quality,
     };
     match video.backend.as_str() {
@@ -474,7 +484,28 @@ fn serve_av100(
 struct App {
     listen: SocketAddr,
     video_socket: PathBuf,
+    motion_socket: PathBuf,
     quality: u8,
+}
+
+/// Binds a socket only root's services may use (mode 0600): a stale socket
+/// at `path` is replaced, any other file there is an error. Must run inside
+/// the tokio runtime.
+fn bind_private(path: &Path) -> Result<tokio::net::UnixListener> {
+    use std::os::unix::fs::{FileTypeExt, PermissionsExt};
+    match std::fs::symlink_metadata(path) {
+        Ok(meta) if meta.file_type().is_socket() => std::fs::remove_file(path)
+            .wrap_err_with(|| format!("cannot remove the stale {}", path.display()))?,
+        Ok(_) => bail!("{} exists and is not a socket", path.display()),
+        Err(_) => {}
+    }
+    let listener = tokio::net::UnixListener::bind(path)
+        .wrap_err_with(|| format!("cannot listen on {}", path.display()))?;
+    // Root with umask 022: other users could connect only in this window,
+    // and the camera has no other users (as the lights socket).
+    std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600))
+        .wrap_err_with(|| format!("cannot restrict {} to mode 0600", path.display()))?;
+    Ok(listener)
 }
 
 /// One camera per sensor served, each keyed by its board index: clients
@@ -517,6 +548,8 @@ fn run<B: Backend + 'static>(
         let video = tokio::net::UnixListener::bind(&app.video_socket)
             .wrap_err_with(|| format!("cannot listen on {}", app.video_socket.display()))?;
         tokio::spawn(service::serve_video(video, Arc::clone(&state.cameras)));
+        let motion = bind_private(&app.motion_socket)?;
+        tokio::spawn(service::serve_motion(motion, Arc::clone(&state.cameras)));
         let mut term = signal(SignalKind::terminate())?;
         let mut int = signal(SignalKind::interrupt())?;
         axum::serve(listener, service::router(state))
@@ -548,6 +581,14 @@ mod tests {
         assert_eq!((s.quality, s.fps, s.kbps, s.gop), (None, None, None, None));
         assert!(s.stream.is_none() && s.common.conf_dir.is_none() && s.sensors.is_empty());
         assert_eq!(s.video_socket, Path::new("/tmp/kamoder-video.sock"));
+        assert_eq!(s.motion_socket, Path::new("/tmp/kamoder-motion.sock"));
+        assert_eq!(s.motion_hz, 10);
+        assert!(Cli::try_parse_from(["camera", "serve", "--motion-hz", "26"]).is_err());
+        let cli = Cli::try_parse_from(["camera", "serve", "--motion-hz", "0"]).unwrap();
+        let Command::Serve(s) = cli.command else {
+            panic!("not serve")
+        };
+        assert_eq!(s.motion_hz, 0);
         let cli =
             Cli::try_parse_from(["camera", "serve", "--stream", "off", "--kbps", "1000"]).unwrap();
         let Command::Serve(s) = cli.command else {
@@ -597,6 +638,76 @@ mod tests {
         assert_eq!(service::find(&cameras, 1).map(Camera::index), Some(1));
         assert_eq!(cameras[0].status().index, 1);
         assert!(service::find(&cameras, 0).is_none());
+    }
+
+    /// T4: the motion socket as `run` sets it up (0600, stale socket
+    /// replaced), fed by the capture loop over the fake backend.
+    #[tokio::test(flavor = "current_thread")]
+    async fn motion_socket_end_to_end() {
+        use camera::fake::{FakeBackend, FakeMotion};
+        use std::os::unix::fs::PermissionsExt;
+        use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
+        use video_proto::motion::{self, MotionGrid};
+
+        let dir = std::env::temp_dir().join(format!("camerad-motion-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("motion.sock");
+        let file = dir.join("not-a-socket");
+        std::fs::write(&file, b"").unwrap();
+        assert!(bind_private(&file).is_err(), "only sockets are replaced");
+        drop(std::os::unix::net::UnixListener::bind(&path).unwrap());
+        let listener = bind_private(&path).unwrap();
+        let mode = std::fs::metadata(&path).unwrap().permissions().mode() & 0o777;
+        assert_eq!(mode, 0o600);
+
+        let grid = MotionGrid::new(0, 0, 32, 24, 500, (0..768).collect()).unwrap();
+        let backend = FakeBackend {
+            motion: vec![FakeMotion::Grid(grid.clone())],
+            ..FakeBackend::with_indices(vec![1], 32, 16)
+        };
+        let cameras = cameras_for(&[1]);
+        let stop = Arc::new(AtomicBool::new(false));
+        let worker = {
+            let (cameras, stop) = (cameras.clone(), Arc::clone(&stop));
+            let opts = CaptureOptions {
+                motion_hz: 25,
+                ..CaptureOptions::default()
+            };
+            std::thread::spawn(move || service::capture(backend, cameras, Vec::new(), stop, opts))
+        };
+        tokio::spawn(service::serve_motion(listener, Arc::new(cameras)));
+
+        let test = async {
+            let mut bad = tokio::net::UnixStream::connect(&path).await.unwrap();
+            bad.write_all(video_proto::subscribe_line(0).as_bytes())
+                .await
+                .unwrap();
+            let mut rest = Vec::new();
+            bad.read_to_end(&mut rest).await.unwrap();
+            assert!(rest.is_empty(), "unknown sensor closed");
+
+            let mut conn = tokio::net::UnixStream::connect(&path).await.unwrap();
+            conn.write_all(video_proto::subscribe_line(1).as_bytes())
+                .await
+                .unwrap();
+            let mut conn = BufReader::new(conn);
+            let mut last = 0;
+            for _ in 0..3 {
+                let mut line = String::new();
+                conn.read_line(&mut line).await.unwrap();
+                let got = motion::decode_line(line.as_bytes()).unwrap();
+                assert!(got.seq > last, "{} after {last}", got.seq);
+                last = got.seq;
+                assert_eq!((got.cols, got.rows, got.max), (32, 24, 500));
+                assert_eq!(got.cells, grid.cells);
+            }
+        };
+        let result = tokio::time::timeout(Duration::from_secs(10), test).await;
+        stop.store(true, Ordering::Relaxed);
+        worker.join().unwrap();
+        let _ = std::fs::remove_dir_all(&dir);
+        result.expect("motion socket test timed out");
     }
 
     #[test]

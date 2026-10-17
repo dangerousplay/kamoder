@@ -22,7 +22,7 @@ See `.specs/codebase/STACK.md`.
 
 **v1 includes:** board profile + autodetect; camera service split into generic core + backends (AV100, generic V4L2); producer protocol consumed by rtsp/web/onvif; lights/wifi/PTZ configured from profile; single packaging for all boards.
 
-**Explicitly out of scope (v1):** audio pipeline; new silicon beyond AV100 implemented end-to-end (EV200/EV300 pure-Rust backend is a later milestone, needs RE + hardware); OTA; cloud features.
+**Explicitly out of scope (v1):** new silicon beyond AV100 implemented end-to-end (EV200/EV300 pure-Rust backend is a later milestone, needs RE + hardware); cloud features.
 
 ## Constraints
 

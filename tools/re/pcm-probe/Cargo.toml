@@ -1,0 +1,27 @@
+[package]
+name = "pcm-probe"
+description = "RE aid: exercise the AV100 ak_pcm.ko audio nodes (params, capture stats + WAV, tone playback, raw ioctls)"
+version = "0.1.0"
+edition = "2021"
+license = "GPL-3.0-or-later"
+publish = false
+
+# A throwaway reverse-engineering tool, not a shipped service: it is its own
+# workspace so it stays out of `./x build`, `./x dist` and `./x ci`. The
+# workspace's .cargo/config.toml still applies (camera target, linker,
+# build-std); .cargo/config.toml here only moves the target dir under the
+# repository's ignored /target.
+[workspace]
+
+[dependencies]
+anyka-av100 = { path = "../../../crates/anyka-av100" }
+clap = { version = "4", features = ["derive"] }
+eyre = "0.6"
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+# Same reason as the workspace: drops close the device and stop the stream.
+panic = "unwind"
+debug = "line-tables-only"

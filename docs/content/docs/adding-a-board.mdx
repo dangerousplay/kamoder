@@ -195,6 +195,29 @@ Optional.
 | `pan`, `tilt` | `[min, max]` floats | required | Degrees; finite with `min < max` |
 | `steps_per_degree` | float | `1.0` | Finite and positive |
 
+### `[ptz.follow]`
+
+Optional, and only meaningful under `[ptz]`. Present (even empty) turns on motion
+following for the board with the defaults below; absent, the board never follows.
+The defaults are first guesses: `fov_deg` is unmeasured and `t_on`/`t_off` are in the
+ISP's u16 per-cell motion-energy units, so tune them on hardware.
+
+| Key | Type | Default | Rule |
+| --- | --- | --- | --- |
+| `hz` | u8 | `10` | Motion grid samples per second, `1..=25` |
+| `dead_zone_permille` | `[x, y]` u16 | `[300, 400]` | Centre zone (permille of the frame) where a target does not move the head; each `<= 1000` |
+| `max_step_deg` | float | `15.0` | Largest single move, degrees; positive |
+| `fov_deg` | `[h, v]` floats | `[90.0, 50.0]` | Field of view, degrees; positive |
+| `decision_frames` | u8 | `5` | Consecutive agreeing grids before a move; at least 1 |
+| `settle_ms` | u32 | `300` | Grids ignored after a move |
+| `return_after_s` | u32 | `15` | Seconds without motion before returning to `home` |
+| `manual_hold_s` | u32 | `60` | Seconds following pauses after a manual move |
+| `t_on` | u16 | `600` | Cell energy that makes a cell active |
+| `t_off` | u16 | `300` | Cell energy below which it turns inactive; must be below `t_on` |
+| `min_cells` | u16 | `2` | Fewest active cells that count as a target |
+| `max_fraction_permille` | u16 | `600` | More active cells than this is a global change, not a target; `<= 1000` |
+| `home` | `[pan, tilt]` floats | none (PTZ home) | Return position, degrees; inside `pan`/`tilt` |
+
 ### A minimal profile
 
 ```toml title="boards/acme-cam.toml"

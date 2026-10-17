@@ -1,0 +1,6 @@
+# PLACEHOLDER: no rotation ("next") update key.
+#
+# During a key rotation put the *new* public key here (or set
+# KAMODER_UPDATE_PUBKEY_NEXT at build time), ship one release that trusts
+# both keys, then start signing with the new key and move it to kamoder.pub.
+# Lines starting with `#` are ignored; this file may stay a placeholder.

@@ -290,3 +290,79 @@ fn undeclared_prefixes_are_rejected() {
     let xml = r#"<tptz:ContinuousMove><tptz:ProfileToken>Profile_1</tptz:ProfileToken><tptz:Velocity><tt:PanTilt x="0.5" y="-0.25"/></tptz:Velocity></tptz:ContinuousMove>"#;
     assert!(from_xml::<tptz::ContinuousMove>(xml).is_err());
 }
+
+#[test]
+fn audio_encoder_configurations_response_is_qualified_and_round_trips() {
+    let response = trt::GetAudioEncoderConfigurationsResponse {
+        configurations: vec![tt::AudioEncoderConfigurationType {
+            token: "AudioEncoder_1".into(),
+            any_attribute: AnyAttributes::default(),
+            name: "G711".into(),
+            use_count: 2,
+            encoding: tt::AudioEncodingType::G711,
+            bitrate: 64,
+            sample_rate: 8,
+            multicast: tt::MulticastConfigurationType {
+                any_attribute: AnyAttributes::default(),
+                address: tt::IpAddressType {
+                    type_: tt::IpType::IPv4,
+                    i_pv_4_address: Some("0.0.0.0".into()),
+                    i_pv_6_address: None,
+                },
+                port: 0,
+                ttl: 0,
+                auto_start: false,
+                any: vec![],
+            },
+            session_timeout: "PT60S".into(),
+            any: vec![],
+        }],
+    };
+    let xml = to_xml(&response, "trt:GetAudioEncoderConfigurationsResponse").unwrap();
+
+    assert!(
+        xml.starts_with("<trt:GetAudioEncoderConfigurationsResponse"),
+        "{xml}"
+    );
+    assert!(xml.contains(&format!(r#"xmlns:trt="{TRT}""#)), "{xml}");
+    assert!(
+        xml.contains(r#"<trt:Configurations token="AudioEncoder_1">"#),
+        "{xml}"
+    );
+    assert!(xml.contains("<tt:Encoding>G711</tt:Encoding>"), "{xml}");
+    assert!(xml.contains("<tt:Bitrate>64</tt:Bitrate>"), "{xml}");
+    assert!(xml.contains("<tt:SampleRate>8</tt:SampleRate>"), "{xml}");
+
+    let back: trt::GetAudioEncoderConfigurationsResponse = from_xml(&xml).unwrap();
+    assert!(matches!(
+        back.configurations[0].encoding,
+        tt::AudioEncodingType::G711
+    ));
+    assert_eq!(
+        to_xml(&back, "trt:GetAudioEncoderConfigurationsResponse").unwrap(),
+        xml
+    );
+}
+
+#[test]
+fn audio_outputs_response_is_qualified_and_round_trips() {
+    let response = trt::GetAudioOutputsResponse {
+        audio_outputs: vec![tt::AudioOutputType {
+            token: "AudioOutput_1".into(),
+            any_attribute: AnyAttributes::default(),
+            any: vec![],
+        }],
+    };
+    let xml = to_xml(&response, "trt:GetAudioOutputsResponse").unwrap();
+
+    assert!(xml.starts_with("<trt:GetAudioOutputsResponse"), "{xml}");
+    assert!(xml.contains(&format!(r#"xmlns:trt="{TRT}""#)), "{xml}");
+    assert!(
+        xml.contains(r#"<trt:AudioOutputs token="AudioOutput_1""#),
+        "{xml}"
+    );
+
+    let back: trt::GetAudioOutputsResponse = from_xml(&xml).unwrap();
+    assert_eq!(back.audio_outputs[0].token, "AudioOutput_1");
+    assert_eq!(to_xml(&back, "trt:GetAudioOutputsResponse").unwrap(), xml);
+}

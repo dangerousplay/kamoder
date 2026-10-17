@@ -8,7 +8,15 @@
 //! Inside `anyka_rust/`, the camera-owned entries (`SD_PRESERVED`) are never
 //! overwritten: the camera blanks `ssh_password` from its `camera.conf` after
 //! hashing it, and keeps keys, logs and backups next to it. They are only
-//! seeded when the card does not have them yet.
+//! seeded when the card does not have them yet. `media/` and the updater's
+//! `update/state.json` (settings, anti-replay `highest_seq`) are kept too.
+//!
+//! A reflash resets the OTA A/B state (`tasks::clear_build_owned`): it
+//! writes the legacy tree (code directly in `anyka_rust/`) and deletes
+//! `slots/`, the selector records `boot/sel.0`/`boot/sel.1`, `boot/last`
+//! and downloaded packages in `update/`, so the card deterministically boots
+//! what was just flashed instead of a stale slot. `boot/` is rewritten with
+//! the new kboot. The next OTA update migrates the card to slots again.
 //!
 //!   ./x flash                        build, then write to the card labelled ANYKA
 //!   ./x flash --no-build             write the last `./x sd` output
@@ -149,11 +157,16 @@ fn mountpoint(device: &Path) -> Result<Option<PathBuf>> {
 /// ones only where the card lacks them.
 fn sync_anyka_rust(source: &Path, target: &Path) -> Result<()> {
     std::fs::create_dir_all(target)?;
+    let ab_state = target.join("slots").exists()
+        || target.join("boot/sel.0").exists()
+        || target.join("boot/sel.1").exists();
     for entry in std::fs::read_dir(target)? {
-        let path = entry?.path();
-        if !is_preserved(&path) {
-            remove(&path)?;
-        }
+        tasks::clear_build_owned(&entry?.path())?;
+    }
+    if ab_state {
+        println!(
+            "  reset  A/B state (slots/, boot/sel.*, boot/last): the card boots the legacy tree"
+        );
     }
     for entry in std::fs::read_dir(source)? {
         let from = entry?.path();
@@ -173,7 +186,7 @@ fn sync_anyka_rust(source: &Path, target: &Path) -> Result<()> {
 fn is_preserved(path: &Path) -> bool {
     path.file_name()
         .and_then(|name| name.to_str())
-        .is_some_and(|name| tasks::SD_PRESERVED.contains(&name))
+        .is_some_and(tasks::is_camera_owned)
 }
 
 fn replace_dir(source: &Path, target: &Path) -> Result<()> {

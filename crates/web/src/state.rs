@@ -24,6 +24,10 @@ pub const LOGIN_FAILURE_DELAY: Duration = Duration::from_secs(1);
 /// Concurrent log streams (SSE). Each holds a file descriptor and a poll
 /// timer; the cap keeps a forgotten pile of browser tabs from adding up.
 pub const MAX_LOG_STREAMS: usize = 4;
+/// Concurrent `/api/audio/listen` sockets. Each holds one of the audio
+/// service's few connections (rtsp and onvif need theirs too) and a reader
+/// task.
+pub const MAX_AUDIO_LISTENERS: usize = 3;
 
 #[derive(Debug, Snafu)]
 pub enum Error {
@@ -57,6 +61,18 @@ pub struct Config {
     pub ptz_socket: PathBuf,
     /// `lights` ownership socket (IND-07).
     pub lights_socket: PathBuf,
+    /// `follow` control socket (FOL-16).
+    pub follow_socket: PathBuf,
+    /// `audio` service socket (AUD-08).
+    pub audio_socket: PathBuf,
+    /// `update` service socket (OTA-16).
+    pub update_socket: PathBuf,
+    /// The data root, where uploaded packages go
+    /// ([`update_proto::UPLOAD_PATH`] is relative to it); `.` in production.
+    pub data_root: PathBuf,
+    /// Port of the HTTPS server when it is running (AUD-18), reported by
+    /// `/api/audio/devices` so the UI can link to push-to-talk.
+    pub https_port: Option<u16>,
     /// Port the `rtsp` service listens on, for `/api/cameras` URLs.
     pub rtsp_port: u16,
     /// The board profile, resolved once at start-up (BRD-06); `None` when
@@ -100,6 +116,8 @@ pub struct Tuning {
     pub reboot_delay: Duration,
     /// What reboot does; tests swap in a recorder.
     pub reboot: fn(&Config),
+    /// Largest `/api/update/upload` body ([`crate::update::UPLOAD_LIMIT`]).
+    pub update_upload_limit: u64,
 }
 
 impl Default for Tuning {
@@ -112,6 +130,7 @@ impl Default for Tuning {
             snapshot_timeout: Duration::from_secs(3),
             reboot_delay: Duration::from_secs(1),
             reboot: crate::system::reboot_now,
+            update_upload_limit: crate::update::UPLOAD_LIMIT,
         }
     }
 }
@@ -137,6 +156,10 @@ pub struct Inner {
     pub log_streams: Arc<Semaphore>,
     /// The single MJPEG client (VID-01).
     pub mjpeg: Arc<Semaphore>,
+    /// Permits for concurrent audio listeners ([`MAX_AUDIO_LISTENERS`]).
+    pub audio_listeners: Arc<Semaphore>,
+    /// The single package upload (OTA-17).
+    pub update_upload: Semaphore,
     /// Flips to `true` when the server starts shutting down, so long-lived
     /// responses (log streams, MJPEG) end and graceful shutdown can finish.
     shutdown: watch::Sender<bool>,
@@ -185,6 +208,8 @@ impl AppState {
             pbkdf2: Semaphore::new(1),
             log_streams: Arc::new(Semaphore::new(MAX_LOG_STREAMS)),
             mjpeg: Arc::new(Semaphore::new(1)),
+            audio_listeners: Arc::new(Semaphore::new(MAX_AUDIO_LISTENERS)),
+            update_upload: Semaphore::new(1),
             shutdown: watch::channel(false).0,
         }))
     }

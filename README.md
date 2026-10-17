@@ -22,8 +22,11 @@ vendored Anyka SDK through safe wrappers.
 Longer engineering notes in `docs/notes/`:
 
 * [`docs/notes/HARDWARE-FINDINGS.md`](docs/notes/HARDWARE-FINDINGS.md) — what a live camera
-  showed, including why the ISP and audio paths do not work on that unit and
-  which failures are pre-existing rather than caused by this port.
+  showed: why the vendor-SDK ISP and audio paths failed on that unit, which
+  failures are pre-existing, and the pure-Rust video and audio (`ak_pcm`)
+  paths that replaced them (§11).
+* [`docs/notes/OTA.md`](docs/notes/OTA.md) — signed A/B updates: SD layout,
+  boot shim (`kboot`), automatic rollback, recovery, and release packages.
 * [`docs/notes/IMPLEMENTATION.md`](docs/notes/IMPLEMENTATION.md) — the design of each
   crate and the reasoning behind the awkward parts.
 * [`docs/notes/SDK-SOURCES.md`](docs/notes/SDK-SOURCES.md) — the camera is an
@@ -467,8 +470,10 @@ telnet, binaries pushed to the SD card with `nc`:
 | Prometheus textfile metrics | **yes** — `kamoder_supervisor_service_up{service="sshd"} 1`, `kamoder_watchdog_feeds_total` climbing |
 | Board stability | no reboot across the whole session (uptime 3 h 38 m) |
 
-**The ISP and audio paths do not work on this particular camera, and it is not
-the port's fault.** Both were verified against the vendor's own prebuilt C
+**The vendor-SDK ISP and audio paths do not work on this particular camera, and
+it is not the port's fault.** (Both have since been replaced by pure-Rust
+paths that do work: `crates/camera` for video, `crates/audio` for the
+microphone and speaker; see HARDWARE-FINDINGS §11.) Both were verified against the vendor's own prebuilt C
 demos on the same unit:
 
 * **ISP.** Every `isp_*.conf` on the device is rejected by the vendored

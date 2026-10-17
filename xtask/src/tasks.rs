@@ -29,7 +29,16 @@ const BINARIES: &[&str] = &[
     "onvif",
     "rtsp",
     "camera",
+    "follow",
+    "audio",
+    "update",
 ];
+
+/// Staged in `boot/bin/` instead of `bin/`, with their own `boot/lib/sys/`
+/// (OTA design §1, §3): the boot helper runs before a slot is chosen, so it
+/// must not live in, or load anything from, either slot. Their link-time
+/// RPATH (`$ORIGIN/../lib/sys`) finds that copy.
+const BOOT_BINARIES: &[&str] = &["kboot"];
 
 /// SDK demos, staged (with the SDK objects they load) only by
 /// `./x dist --with-demos`.
@@ -60,13 +69,23 @@ pub fn help() {
     println!(
         "  dist [--with-demos]     build and stage dist/anyka_rust: vendor-free binaries, boards/,"
     );
-    println!("                          www/ if webui is built; --with-demos adds the SDK demos + SDK libs");
+    println!("                          www/ if webui is built, boot/ (kboot + its lib/sys, outside the slots);");
+    println!("                          --with-demos adds the SDK demos + SDK libs");
     println!("  sd [--with-demos]       dist, strip, and assemble the SD card tree in dist/sdcard");
     println!("  flash [--no-build] [--device /dev/sdXN] [--keep-mounted] [--with-demos]");
     println!("                          sd, then mount the card (label ANYKA) and write it");
+    println!("                          sd/flash write the legacy tree and reset OTA A/B state: they delete");
+    println!("                          slots/, boot/sel.*, boot/last and update/ packages (keep update/state.json,");
+    println!("                          camera.conf, etc/, logs/, backup/, metrics/, media/)");
     println!("  itest [--no-build] [-- pytest args]  system tests: the SD card on a simulated camera (labgrid)");
     println!("  qemu <binary> [args...] run a staged binary under qemu-arm-static");
-    println!("  deploy <user@host:dir>  copy dist/anyka_rust over scp");
+    println!(
+        "  deploy <user@host:dir>  copy dist/anyka_rust over scp (legacy tree only: with A/B slots"
+    );
+    println!(
+        "                          active the camera boots its slot; use an OTA upload instead)"
+    );
+    crate::kup::help();
     println!("  check-boards            load + validate boards/*.toml, fail on detection ties");
     println!("  check-literals          fail on board literals (AV100, wlan0, /dev/venc...) in generic crates");
     println!(
@@ -99,7 +118,7 @@ fn toolchain() -> String {
     std::env::var(TOOLCHAIN_ENV).unwrap_or_else(|_| DEFAULT_TOOLCHAIN.into())
 }
 
-fn cross_toolchain() -> PathBuf {
+pub(crate) fn cross_toolchain() -> PathBuf {
     PathBuf::from(
         std::env::var(TOOLCHAIN_ENV_CROSS).unwrap_or_else(|_| DEFAULT_CROSS_TOOLCHAIN.into()),
     )
@@ -233,6 +252,16 @@ const HOST_TESTABLE: &[&str] = &[
     "ptz-proto",
     "lights-proto",
     "lights",
+    "follow-proto",
+    "follow",
+    "audio-proto",
+    "audio",
+    "ota-manifest",
+    "bootctl",
+    "update-proto",
+    "ota",
+    "kboot",
+    "fetch",
     "onvif-schema",
     "sshd",
     "web",
@@ -416,15 +445,24 @@ pub fn dist(extra: &[String]) -> Result<()> {
     let built = root.join("target").join(TARGET).join("release");
     let mut staged = Vec::new();
     let demos: &[&str] = if with_demos { DEMOS } else { &[] };
-    for binary in BINARIES.iter().chain(demos) {
+    let boot_bin_dir = dist.join("boot/bin");
+    let slot_binaries = BINARIES.iter().chain(demos).map(|b| (b, &bin_dir));
+    let boot_binaries = BOOT_BINARIES.iter().map(|b| (b, &boot_bin_dir));
+    for (binary, dir) in slot_binaries.chain(boot_binaries) {
         let source = built.join(binary);
         if !source.is_file() {
             continue;
         }
-        let destination = bin_dir.join(binary);
+        std::fs::create_dir_all(dir)?;
+        let destination = dir.join(binary);
         std::fs::copy(&source, &destination)
             .wrap_err_with(|| format!("cannot copy {}", source.display()))?;
-        staged.push((*binary, std::fs::metadata(&destination)?.len()));
+        let name = if dir == &bin_dir {
+            (*binary).to_owned()
+        } else {
+            format!("boot/bin/{binary}")
+        };
+        staged.push((name, std::fs::metadata(&destination)?.len()));
     }
     if staged.is_empty() {
         bail!("nothing was built; run ./x build first");
@@ -454,6 +492,7 @@ pub fn dist(extra: &[String]) -> Result<()> {
         }
     }
     stage_runtime(&root, &lib_dir)?;
+    stage_boot_runtime(&dist)?;
     check_closure(&dist)?;
 
     copy_executable(
@@ -510,6 +549,69 @@ pub fn dist(extra: &[String]) -> Result<()> {
 /// Wi-Fi backups.
 pub(crate) const SD_PRESERVED: &[&str] = &["camera.conf", "etc", "logs", "backup", "metrics"];
 
+/// Further camera-owned data-root entries a reflash keeps (OTA design §1):
+/// the media store. Not in [`SD_PRESERVED`] only because `kup` lists it
+/// separately.
+const SD_PRESERVED_DATA: &[&str] = &["media"];
+
+/// The updater's directory under the data root. A reflash keeps only
+/// [`UPDATE_KEPT`] in it and deletes downloaded/uploaded packages.
+const UPDATE_DIR: &str = "update";
+
+/// What a reflash keeps in [`UPDATE_DIR`]: the updater's settings and its
+/// anti-replay counter (`highest_seq`), which must never go backwards.
+const UPDATE_KEPT: &[&str] = &["state.json"];
+
+/// Whether `anyka_rust/<name>` on a card belongs to the camera: never
+/// overwritten by `sd`/`flash`, only seeded when missing.
+pub(crate) fn is_camera_owned(name: &str) -> bool {
+    SD_PRESERVED.contains(&name) || SD_PRESERVED_DATA.contains(&name) || name == UPDATE_DIR
+}
+
+/// Clears the entry `path` of a card's `anyka_rust/` before `sd`/`flash`
+/// write the freshly built legacy tree.
+///
+/// A reflash resets the A/B state (OTA design §1) so the card boots exactly
+/// what was just written: `slots/` and the whole `boot/` (the selector
+/// records `sel.0`/`sel.1`, `last`, and the old kboot) are deleted, and
+/// `boot/` is rewritten with only the new kboot and its runtime. With no
+/// selector records, kboot and config.sh fall back to the legacy tree (slot
+/// a = `anyka_rust/` itself). Keeping the records instead would point the
+/// card at stale slots, or at a slot that no longer exists. In `update/`
+/// only `state.json` survives (settings and `highest_seq`); packages are
+/// deleted. Camera data ([`SD_PRESERVED`], `media/`) is never touched.
+pub(crate) fn clear_build_owned(path: &Path) -> Result<()> {
+    let name = path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or_default();
+    if SD_PRESERVED.contains(&name) || SD_PRESERVED_DATA.contains(&name) {
+        return Ok(());
+    }
+    let removal = |path: &Path| {
+        if path.is_dir() {
+            std::fs::remove_dir_all(path)
+        } else {
+            std::fs::remove_file(path)
+        }
+        .wrap_err_with(|| format!("cannot remove {}", path.display()))
+    };
+    if name == UPDATE_DIR && path.is_dir() {
+        for entry in std::fs::read_dir(path)? {
+            let entry = entry?.path();
+            let kept = entry
+                .file_name()
+                .and_then(|n| n.to_str())
+                .is_some_and(|n| UPDATE_KEPT.contains(&n));
+            if !kept {
+                removal(&entry)?;
+            }
+        }
+        return Ok(());
+    }
+    removal(path)
+}
+
 /// The tree that mirrors the root of the SD card: `dist/sdcard`, or
 /// `$ANYKA_SD_TREE` to keep a tree that lives elsewhere (camera-owned files
 /// in it are preserved, see [`SD_PRESERVED`]).
@@ -544,48 +646,48 @@ pub fn sd(extra: &[String]) -> Result<()> {
     let target = card.join("anyka_rust");
     std::fs::create_dir_all(&target)?;
 
-    // Replace everything the build owns; keep what the camera owns.
+    // Replace everything the build owns; keep what the camera owns. This
+    // also resets the A/B state, see [`clear_build_owned`].
     for entry in std::fs::read_dir(&target)? {
-        let path = entry?.path();
-        let name = path
-            .file_name()
-            .and_then(|n| n.to_str())
-            .unwrap_or_default();
-        if SD_PRESERVED.contains(&name) {
-            continue;
-        }
-        if path.is_dir() {
-            std::fs::remove_dir_all(&path)?;
-        } else {
-            std::fs::remove_file(&path)?;
-        }
+        clear_build_owned(&entry?.path())?;
     }
 
     let strip = cross_toolchain().join("usr/bin/arm-anykav200-linux-uclibcgnueabi-strip");
     if !strip.is_file() {
         bail!("strip not found at {}", strip.display());
     }
-    let bin = target.join("bin");
-    std::fs::create_dir_all(&bin)?;
     println!("\nstripped for {}:", target.display());
-    for entry in std::fs::read_dir(dist.join("bin"))? {
-        let source = entry?.path();
-        let file = source.file_name().ok_or_else(|| eyre!("unnamed binary"))?;
-        let destination = bin.join(file);
-        let status = Command::new(&strip)
-            .arg("-o")
-            .arg(&destination)
-            .arg(&source)
-            .status()
-            .wrap_err("cannot run strip")?;
-        if !status.success() {
-            bail!("strip {} failed with {status}", source.display());
+    for (dir, prefix) in [("bin", ""), ("boot/bin", "boot/bin/")] {
+        let from = dist.join(dir);
+        if !from.is_dir() {
+            continue;
         }
-        println!(
-            "  {:<16} {:>8} bytes",
-            file.to_string_lossy(),
-            std::fs::metadata(&destination)?.len()
-        );
+        let bin = target.join(dir);
+        std::fs::create_dir_all(&bin)?;
+        for entry in std::fs::read_dir(&from)? {
+            let source = entry?.path();
+            let file = source.file_name().ok_or_else(|| eyre!("unnamed binary"))?;
+            let destination = bin.join(file);
+            let status = Command::new(&strip)
+                .arg("-o")
+                .arg(&destination)
+                .arg(&source)
+                .status()
+                .wrap_err("cannot run strip")?;
+            if !status.success() {
+                bail!("strip {} failed with {status}", source.display());
+            }
+            println!(
+                "  {:<16} {:>8} bytes",
+                format!("{prefix}{}", file.to_string_lossy()),
+                std::fs::metadata(&destination)?.len()
+            );
+        }
+    }
+    // The boot helper's own runtime (see stage_boot_runtime).
+    let boot_sys = dist.join("boot/lib/sys");
+    if boot_sys.is_dir() {
+        stage_objects(&boot_sys, &target.join("boot/lib/sys"))?;
     }
 
     for entry in std::fs::read_dir(dist.join("lib"))? {
@@ -879,6 +981,42 @@ fn stage_runtime(root: &Path, lib_dir: &Path) -> Result<()> {
     Ok(())
 }
 
+/// Gives `boot/bin/*` their own `boot/lib/sys/`: each library they need
+/// that the slot ships in `lib/sys/` (the same files). Libraries the
+/// firmware provides ([`FIRMWARE_LIBS`]) are not copied. Runs after
+/// [`stage_runtime`], and before [`check_closure`], which then checks the
+/// boot helper the way the camera's ld.so will load it.
+fn stage_boot_runtime(dist: &Path) -> Result<()> {
+    let boot_bin = dist.join("boot/bin");
+    if !boot_bin.is_dir() {
+        return Ok(());
+    }
+    let sys = dist.join("lib/sys");
+    let boot_sys = dist.join("boot/lib/sys");
+    std::fs::create_dir_all(&boot_sys)?;
+    let mut queue = Vec::new();
+    for entry in std::fs::read_dir(&boot_bin)? {
+        queue.push(entry?.path());
+    }
+    let mut seen = std::collections::HashSet::new();
+    while let Some(object) = queue.pop() {
+        let (needed, _) = dynamic_entries(&object)?;
+        for library in needed {
+            if FIRMWARE_LIBS.contains(&library.as_str()) || !seen.insert(library.clone()) {
+                continue;
+            }
+            let source = sys.join(&library);
+            if source.is_file() {
+                let destination = boot_sys.join(&library);
+                std::fs::copy(&source, &destination)
+                    .wrap_err_with(|| format!("cannot copy {}", source.display()))?;
+                queue.push(destination);
+            }
+        }
+    }
+    Ok(())
+}
+
 /// `DT_NEEDED` entries and `RPATH`/`RUNPATH` directories of an ELF object.
 fn dynamic_entries(object: &Path) -> Result<(Vec<String>, Vec<String>)> {
     let readelf = cross_toolchain().join("usr/bin/arm-anykav200-linux-uclibcgnueabi-readelf");
@@ -914,8 +1052,16 @@ fn dynamic_entries(object: &Path) -> Result<(Vec<String>, Vec<String>)> {
 fn check_closure(dist: &Path) -> Result<()> {
     let firmware = firmware_symbols()?;
     let mut problems = Vec::new();
-    for entry in std::fs::read_dir(dist.join("bin"))? {
-        let binary = entry?.path();
+    let mut binaries = Vec::new();
+    for dir in ["bin", "boot/bin"] {
+        let dir = dist.join(dir);
+        if dir.is_dir() {
+            for entry in std::fs::read_dir(&dir)? {
+                binaries.push(entry?.path());
+            }
+        }
+    }
+    for binary in binaries {
         let name = binary
             .file_name()
             .unwrap_or_default()
@@ -1028,4 +1174,55 @@ fn dynamic_symbols(object: &Path) -> Result<DynamicSymbols> {
         }
     }
     Ok(symbols)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A reflash resets the A/B state but keeps camera data and the
+    /// updater's state.json.
+    #[test]
+    fn reflash_resets_ab_state_and_keeps_camera_data() {
+        let card = std::env::temp_dir().join(format!("xtask-reflash-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&card);
+        let files = [
+            "boot/sel.0",
+            "boot/sel.1",
+            "boot/last",
+            "boot/bin/kboot",
+            "slots/b/init.sh",
+            "update/state.json",
+            "update/kamoder-1-update.kup",
+            "update/download.part",
+            "bin/web",
+            "camera.conf",
+            "etc/web-users",
+            "logs/boot.log",
+            "media/clip.mp4",
+        ];
+        for file in files {
+            let path = card.join(file);
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(&path, b"x").unwrap();
+        }
+        for entry in std::fs::read_dir(&card).unwrap() {
+            clear_build_owned(&entry.unwrap().path()).unwrap();
+        }
+        let left: Vec<_> = files.iter().filter(|f| card.join(f).exists()).collect();
+        assert_eq!(
+            left,
+            [
+                &"update/state.json",
+                &"camera.conf",
+                &"etc/web-users",
+                &"logs/boot.log",
+                &"media/clip.mp4"
+            ]
+        );
+        assert!(!card.join("boot").exists() && !card.join("slots").exists());
+        assert!(is_camera_owned("update") && is_camera_owned("media"));
+        assert!(!is_camera_owned("boot") && !is_camera_owned("slots"));
+        std::fs::remove_dir_all(&card).unwrap();
+    }
 }

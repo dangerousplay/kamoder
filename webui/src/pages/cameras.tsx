@@ -2,6 +2,7 @@ import * as React from "react"
 import { CheckIcon, CopyIcon } from "lucide-react"
 import { toast } from "sonner"
 
+import { CameraListenButton } from "@/components/audio/listen-button"
 import { SnapshotView } from "@/components/video/snapshot-view"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -157,13 +158,21 @@ export default function CamerasPage() {
     )
   }
   return (
-    <div className="grid items-start gap-4 lg:grid-cols-2">
-      {cameras.data.map((cam) => (
-        <CameraCard key={cam.index} cam={cam} />
-      ))}
-      {cameras.data.length === 0 && (
-        <p className="text-sm text-muted-foreground">No image sensor found.</p>
-      )}
+    <div className="flex flex-col gap-4">
+      {/* One microphone serves every sensor, so one Listen for the page. */}
+      <div className="flex justify-end">
+        <CameraListenButton size="default" />
+      </div>
+      <div className="grid items-start gap-4 lg:grid-cols-2">
+        {cameras.data.map((cam) => (
+          <CameraCard key={cam.index} cam={cam} />
+        ))}
+        {cameras.data.length === 0 && (
+          <p className="text-sm text-muted-foreground">
+            No image sensor found.
+          </p>
+        )}
+      </div>
     </div>
   )
 }

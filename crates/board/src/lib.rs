@@ -36,8 +36,8 @@ mod test_support;
 
 pub use handoff::{current, read_handoff, write_handoff, DEFAULT_HANDOFF_PATH, HANDOFF_ENV};
 pub use profile::{
-    load, LightLine, Lights, MatchRules, Platform, Profile, Ptz, PtzBackend, Role, Snapshot,
-    Stream, StreamOverride, Video, Violation, Wifi,
+    load, Audio, AudioDevice, Follow, LightLine, Lights, MatchRules, Platform, Profile, Ptz,
+    PtzBackend, Role, Snapshot, Stream, StreamOverride, Video, Violation, Wifi,
 };
 pub use resolve::{detect, resolve, Detected, Resolved, FALLBACK};
 

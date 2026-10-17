@@ -11,6 +11,12 @@
 # workflow's OIDC identity, and every signature is logged in Rekor. Each asset
 # gets a <file>.sigstore.json bundle, and GitHub stores an SLSA build-provenance
 # attestation. See the docs site, "Verify a release".
+#
+# OTA (docs/notes/OTA.md): with the MINISIGN_SECRET_KEY/MINISIGN_PASSWORD
+# secrets set, package-release.sh also builds kamoder-<ver>-update.kup and
+# the minisign-signed manifest.json(.minisig) cameras check for updates. The
+# asset must be named exactly manifest.json: the stable channel fetches
+# releases/latest/download/manifest.json.
 name: release
 
 on:
@@ -69,7 +75,8 @@ jobs:
       - name: Host packages
         run: |
           sudo apt-get update -q
-          sudo apt-get install -y -q clang libclang-dev
+          # minisign: signs the OTA manifest (./x kup).
+          sudo apt-get install -y -q clang libclang-dev minisign
 
       - name: Prepare toolchain directory
         # actions/cache restores as the runner user; /opt is root-owned.
@@ -120,7 +127,15 @@ jobs:
       - name: Package
         env:
           VERSION: ${{ steps.version.outputs.version }}
-        run: tools/package-release.sh "$VERSION" release
+          # Unset (forks, first runs before the key exists): the .kup is
+          # skipped with a warning and the rest is still released.
+          MINISIGN_SECRET_KEY: ${{ secrets.MINISIGN_SECRET_KEY }}
+          MINISIGN_PASSWORD: ${{ secrets.MINISIGN_PASSWORD }}
+        run: |
+          tools/package-release.sh "$VERSION" release
+          if [ ! -f release/manifest.json ]; then
+            echo "::warning::MINISIGN_SECRET_KEY not set: no OTA update package in this release"
+          fi
 
       - name: Changelog (git-cliff)
         uses: orhun/git-cliff-action@v4
@@ -145,7 +160,8 @@ jobs:
       - name: Sign with Sigstore (keyless)
         working-directory: release
         run: |
-          for f in *.tar.gz mtdpatch-armv5 SHA256SUMS; do
+          shopt -s nullglob  # the OTA files exist only when the key is set
+          for f in *.tar.gz mtdpatch-armv5 SHA256SUMS *.kup manifest.json manifest.json.minisig; do
             cosign sign-blob --yes --bundle "$f.sigstore.json" "$f"
           done
 
@@ -155,6 +171,8 @@ jobs:
           subject-path: |
             release/*.tar.gz
             release/mtdpatch-armv5
+            release/*.kup
+            release/manifest.json
 
       - uses: actions/upload-artifact@v4
         with:
@@ -184,6 +202,17 @@ jobs:
           gh attestation verify kamoder-${TAG#v}-sdcard.tar.gz --repo ${GITHUB_REPOSITORY}
           \`\`\`
           EOF
+          if [ -f release/manifest.json ]; then
+            cat >> notes.md <<EOF
+
+          OTA update: install \`kamoder-${TAG#v}-update.kup\` from the web UI (Settings, Updates),
+          or let the camera find it. Its manifest is signed with the project minisign key:
+
+          \`\`\`bash
+          minisign -V -p kamoder.pub -m manifest.json   # kamoder.pub: crates/ota-manifest/keys/
+          \`\`\`
+          EOF
+          fi
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" release/* --clobber
           else

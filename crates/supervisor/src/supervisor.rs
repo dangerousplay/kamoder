@@ -99,8 +99,8 @@ impl Supervisor {
                 working_dir: service
                     .working_dir
                     .clone()
-                    .map(|dir| config.resolve(&dir))
-                    .unwrap_or_else(|| config.base_dir.clone()),
+                    .map(|dir| config.resolve_data(&dir))
+                    .unwrap_or_else(|| config.data_dir.clone()),
                 service: service.clone(),
                 logs: logs.clone(),
                 status: new_status(service.enabled),

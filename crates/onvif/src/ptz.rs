@@ -29,10 +29,20 @@
 //! socket's `timeout_ms` (default 1 s there, because a browser can vanish
 //! mid-press). One task per process watches the latest deadline and stops
 //! the motor when it passes, unless a newer motion command replaced it.
+//!
+//! # Manual activity
+//!
+//! Every motion method takes the [`Source`] of the command. The time of the
+//! last [`Source::Manual`] one (every ONVIF move, and socket requests not
+//! tagged `follow`) is kept so the follow tracker can see a person steering
+//! and pause; the socket's `status` reports it as `last_manual_ms_ago`.
+//! Recorded when the command arrives, whether or not the backend accepts it:
+//! the intent to steer is what matters.
 
 use anyka_ptz::{BackendKind, Limits, OpenOptions, Position, Preset, PtzBackend};
+pub use ptz_proto::Source;
 use std::path::Path;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio::sync::watch;
 use tokio::time::Instant;
@@ -171,6 +181,9 @@ pub struct Ptz {
     backend: Arc<dyn PtzBackend>,
     /// Deadline of the current continuous move, if it has one.
     deadline: watch::Sender<Option<Instant>>,
+    /// When the last manual motion command arrived (tokio clock, so paused
+    /// tests control it).
+    last_manual: Mutex<Option<Instant>>,
 }
 
 impl Ptz {
@@ -180,7 +193,11 @@ impl Ptz {
         let backend: Arc<dyn PtzBackend> = Arc::from(backend);
         let (deadline, watcher) = watch::channel(None);
         tokio::spawn(deadman(Arc::clone(&backend), watcher));
-        Arc::new(Self { backend, deadline })
+        Arc::new(Self {
+            backend,
+            deadline,
+            last_manual: Mutex::new(None),
+        })
     }
 
     pub fn name(&self) -> &'static str {
@@ -199,6 +216,20 @@ impl Ptz {
         self.backend.list_presets()
     }
 
+    /// Time since the last manual motion command; `None` if there has been
+    /// none.
+    pub fn last_manual_ago(&self) -> Option<Duration> {
+        let at = *self.last_manual.lock().unwrap_or_else(|e| e.into_inner());
+        at.map(|at| at.elapsed())
+    }
+
+    /// Notes a motion command from `source`.
+    fn record(&self, source: Source) {
+        if source == Source::Manual {
+            *self.last_manual.lock().unwrap_or_else(|e| e.into_inner()) = Some(Instant::now());
+        }
+    }
+
     /// Continuous move; stopped automatically after `timeout` if given and
     /// no newer motion command arrives first.
     pub fn continuous_move(
@@ -206,20 +237,24 @@ impl Ptz {
         pan: f32,
         tilt: f32,
         timeout: Option<Duration>,
+        source: Source,
     ) -> anyka_ptz::Result<()> {
+        self.record(source);
         self.backend.continuous_move(pan, tilt)?;
         let moving = pan != 0.0 || tilt != 0.0;
         self.set_deadline(timeout.filter(|_| moving).map(|t| Instant::now() + t));
         Ok(())
     }
 
-    pub fn stop(&self) -> anyka_ptz::Result<()> {
+    pub fn stop(&self, source: Source) -> anyka_ptz::Result<()> {
+        self.record(source);
         self.set_deadline(None);
         self.backend.stop()
     }
 
     /// Absolute move in degrees (clamped by the backend).
-    pub fn goto(&self, pan_deg: f32, tilt_deg: f32) -> anyka_ptz::Result<()> {
+    pub fn goto(&self, pan_deg: f32, tilt_deg: f32, source: Source) -> anyka_ptz::Result<()> {
+        self.record(source);
         self.backend.goto(pan_deg, tilt_deg)?;
         self.set_deadline(None);
         Ok(())
@@ -229,7 +264,8 @@ impl Ptz {
         self.backend.set_preset(name, token)
     }
 
-    pub fn goto_preset(&self, token: &str) -> anyka_ptz::Result<()> {
+    pub fn goto_preset(&self, token: &str, source: Source) -> anyka_ptz::Result<()> {
+        self.record(source);
         self.backend.goto_preset(token)?;
         self.set_deadline(None);
         Ok(())
@@ -240,7 +276,8 @@ impl Ptz {
     }
 
     /// The backend's homing run if it has one, else the centre of the limits.
-    pub fn home(&self) -> anyka_ptz::Result<()> {
+    pub fn home(&self, source: Source) -> anyka_ptz::Result<()> {
+        self.record(source);
         match self.backend.home() {
             Err(anyka_ptz::Error::Unsupported { .. }) => {
                 let (pan, tilt) = self.limits().center();
@@ -296,6 +333,8 @@ pub mod tests {
     use super::*;
     use anyka_ptz::{PresetStore, Sim, SimConfig};
 
+    const M: Source = Source::Manual;
+
     /// A simulated head on the real clock (the deadman uses tokio time).
     pub fn sim() -> Arc<Ptz> {
         Ptz::new(Box::new(
@@ -306,7 +345,7 @@ pub mod tests {
     #[tokio::test(flavor = "current_thread")]
     async fn deadman_stops_a_timed_move() {
         let ptz = sim();
-        ptz.continuous_move(1.0, 0.0, Some(Duration::from_millis(50)))
+        ptz.continuous_move(1.0, 0.0, Some(Duration::from_millis(50)), M)
             .unwrap();
         assert!(ptz.position().moving);
         tokio::time::sleep(Duration::from_millis(150)).await;
@@ -316,11 +355,11 @@ pub mod tests {
     #[tokio::test(flavor = "current_thread")]
     async fn a_newer_command_replaces_the_deadline() {
         let ptz = sim();
-        ptz.continuous_move(1.0, 0.0, Some(Duration::from_millis(50)))
+        ptz.continuous_move(1.0, 0.0, Some(Duration::from_millis(50)), M)
             .unwrap();
         // Re-sent with a longer deadline before the first expires.
         tokio::time::sleep(Duration::from_millis(20)).await;
-        ptz.continuous_move(1.0, 0.0, Some(Duration::from_millis(300)))
+        ptz.continuous_move(1.0, 0.0, Some(Duration::from_millis(300)), M)
             .unwrap();
         tokio::time::sleep(Duration::from_millis(100)).await;
         assert!(
@@ -328,10 +367,10 @@ pub mod tests {
             "the first deadline no longer applies"
         );
         // An untimed move is not stopped at all.
-        ptz.continuous_move(0.0, 1.0, None).unwrap();
+        ptz.continuous_move(0.0, 1.0, None, M).unwrap();
         tokio::time::sleep(Duration::from_millis(400)).await;
         assert!(ptz.position().moving);
-        ptz.stop().unwrap();
+        ptz.stop(M).unwrap();
         assert!(!ptz.position().moving);
     }
 
@@ -339,9 +378,37 @@ pub mod tests {
     async fn home_falls_back_to_the_backend_or_centre() {
         let ptz = sim();
         // Sim implements home(): it travels to the minimum.
-        ptz.home().unwrap();
+        ptz.home(M).unwrap();
         assert!(ptz.position().moving);
-        ptz.stop().unwrap();
+        ptz.stop(M).unwrap();
+    }
+
+    /// The follow tracker's commands are not manual activity; everyone
+    /// else's are.
+    #[tokio::test(flavor = "current_thread", start_paused = true)]
+    async fn only_manual_commands_count_as_manual_activity() {
+        let ptz = sim();
+        assert_eq!(ptz.last_manual_ago(), None);
+        let f = Source::Follow;
+        ptz.continuous_move(0.5, 0.0, None, f).unwrap();
+        ptz.goto(10.0, 10.0, f).unwrap();
+        ptz.home(f).unwrap();
+        ptz.stop(f).unwrap();
+        assert_eq!(ptz.last_manual_ago(), None, "follow moves are not manual");
+
+        ptz.goto(20.0, 20.0, M).unwrap();
+        assert_eq!(ptz.last_manual_ago(), Some(Duration::ZERO));
+        tokio::time::advance(Duration::from_millis(1500)).await;
+        ptz.continuous_move(0.0, 0.5, None, f).unwrap();
+        ptz.stop(f).unwrap();
+        assert_eq!(
+            ptz.last_manual_ago(),
+            Some(Duration::from_millis(1500)),
+            "a follow move leaves the manual time alone"
+        );
+        // A failed manual command still shows intent.
+        assert!(ptz.goto_preset("nope", M).is_err());
+        assert_eq!(ptz.last_manual_ago(), Some(Duration::ZERO));
     }
 
     #[test]
@@ -370,6 +437,7 @@ pub mod tests {
             pan: [10.0, 300.0],
             tilt: [5.0, 90.0],
             steps_per_degree: 2.5,
+            follow: None,
         }
     }
 

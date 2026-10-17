@@ -1,0 +1,35 @@
+[package]
+name = "follow"
+description = "PTZ follow movement: tracks motion from the ISP grid and keeps the subject centred"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+# No SDK and no hardware access: motion grids come from camerad's motion
+# socket and moves go through the ptz socket, so the whole tracker is
+# host-testable.
+[dependencies]
+follow-proto.workspace = true
+ptz-proto.workspace = true
+video-proto.workspace = true
+board.workspace = true
+# Pulls in the `pthread_setname_np` shim the crosstool's uClibc lacks.
+os.workspace = true
+telemetry.workspace = true
+clap.workspace = true
+eyre.workspace = true
+snafu.workspace = true
+tracing.workspace = true
+metrics.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+# A current-thread runtime, as everywhere on this 32 MB board.
+tokio = { version = "1", features = ["rt", "net", "io-util", "macros", "time", "signal", "sync"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["test-util"] }
+
+[[bin]]
+name = "follow"
+path = "src/main.rs"

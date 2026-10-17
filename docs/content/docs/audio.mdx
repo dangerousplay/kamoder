@@ -1,0 +1,69 @@
+---
+title: Audio
+description: Microphone on RTSP and ONVIF, live listening and push-to-talk in the web UI, ONVIF talk-back.
+icon: Mic
+---
+
+Boards whose profile has an `[audio]` section get a microphone and a speaker.
+The `audio` service owns the codec. It talks to the AV100's `ak_pcm.ko`
+nodes directly, with no vendor library. Everything else reaches the codec
+through `/tmp/kamoder-audio.sock`.
+
+| Where | What you get |
+| --- | --- |
+| RTSP `/vs0`, `/vs1`, … | A second track: G.711 A-law (PCMA), 8 kHz mono, 20 ms packets, beside H.264. Clients that only set up video are unaffected. |
+| ONVIF | An audio source and a G.711 encoder configuration on every profile. Speaker output and decoder configurations are included too. |
+| ONVIF talk-back | RTSP backchannel (`Require: www.onvif.org/ver20/backchannel`). NVRs that support two-way audio can speak through the camera. |
+| Web UI | The **Audio** card on the dashboard lists devices, has gain and volume sliders, **Listen**, and hold-to-**Talk**. **Listen** is also on the Cameras page and the live view. |
+
+## Push-to-talk needs HTTPS
+
+Browsers only hand the microphone to secure pages. `web` therefore also
+serves HTTPS on port 443, with a self-signed certificate generated on first
+start (`etc/web-tls.crt`, `etc/web-tls.key`). Open `https://<camera-ip>/`
+and accept the certificate warning once. On plain HTTP the Talk button
+is disabled and links to the HTTPS address.
+
+Pick the microphone your browser should use in the Audio card. **Test mic**
+shows a live level meter without sending anything. On Linux desktops the
+"system default" input is often a monitor source that only captures silence.
+
+Only one talker holds the speaker at a time, from the web or ONVIF. A second
+one gets "speaker busy".
+
+## Board profile
+
+```toml
+[audio]
+backend = "ak-pcm"
+rate = 8000            # driver rate; other multiples of 8 kHz are resampled
+
+[[audio.input]]
+id = "mic0"
+name = "Microphone"
+device = "/dev/pcmC0D0c"
+gain = 3
+gain_range = [0, 7]
+
+[[audio.output]]
+id = "spk0"
+name = "Speaker"
+device = "/dev/pcmC0D0p"
+gain = 4
+gain_range = [0, 6]
+```
+
+Gain and volume changes made in the web UI or over ONVIF are saved in
+`etc/audio.json`.
+
+## AV100 notes
+
+- The `/dev/pcmC0D0*` nodes look like ALSA but are a vendor character
+  device (major 248). Capture runs natively at 8 kHz.
+- The speaker amplifier (GPIO 37) is **active low**. The driver drives it the
+  wrong way round, so `audio` switches the amplifier through the `lights`
+  service (`--amp lights`, the default). It does so after the playback node is
+  set up, and mutes again after the node closes.
+- There is no echo cancellation: listening and talking at once can feed back.
+
+The details are in `docs/notes/HARDWARE-FINDINGS.md` §11 in the repository.

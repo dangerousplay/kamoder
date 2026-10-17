@@ -3785,3 +3785,10217 @@ impl<'de> Deserializer<'de, super::GetAudioSourcesResponseElementType>
         })
     }
 }
+#[derive(Debug)]
+pub struct GetAudioSourceConfigurationsElementTypeDeserializer {
+    state__: ::std::boxed::Box<GetAudioSourceConfigurationsElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum GetAudioSourceConfigurationsElementTypeDeserializerState {
+    Init__,
+    Unknown__,
+}
+impl GetAudioSourceConfigurationsElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            state__: ::std::boxed::Box::new(
+                GetAudioSourceConfigurationsElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: GetAudioSourceConfigurationsElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        Ok(())
+    }
+}
+impl<'de> Deserializer<'de, super::GetAudioSourceConfigurationsElementType>
+    for GetAudioSourceConfigurationsElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioSourceConfigurationsElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioSourceConfigurationsElementType> {
+        if let Event::End(_) = &event {
+            Ok(DeserializerOutput {
+                artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                event: DeserializerEvent::None,
+                allow_any: false,
+            })
+        } else {
+            Ok(DeserializerOutput {
+                artifact: DeserializerArtifact::Deserializer(self),
+                event: DeserializerEvent::Break(event),
+                allow_any: false,
+            })
+        }
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::GetAudioSourceConfigurationsElementType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            GetAudioSourceConfigurationsElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::GetAudioSourceConfigurationsElementType {})
+    }
+}
+#[derive(Debug)]
+pub struct GetAudioSourceConfigurationsResponseElementTypeDeserializer {
+    configurations: ::std::vec::Vec<super::super::tt::AudioSourceConfigurationType>,
+    state__: ::std::boxed::Box<GetAudioSourceConfigurationsResponseElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum GetAudioSourceConfigurationsResponseElementTypeDeserializerState {
+    Init__,
+    Configurations(
+        ::core::option::Option<
+            <super::super::tt::AudioSourceConfigurationType as WithDeserializer>::Deserializer,
+        >,
+    ),
+    Done__,
+    Unknown__,
+}
+impl GetAudioSourceConfigurationsResponseElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            configurations: ::std::vec::Vec::new(),
+            state__: ::std::boxed::Box::new(
+                GetAudioSourceConfigurationsResponseElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: GetAudioSourceConfigurationsResponseElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use GetAudioSourceConfigurationsResponseElementTypeDeserializerState as S;
+        match state {
+            S::Configurations(Some(deserializer)) => {
+                self.store_configurations(deserializer.finish(helper)?)?
+            }
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_configurations(
+        &mut self,
+        value: super::super::tt::AudioSourceConfigurationType,
+    ) -> ::core::result::Result<(), Error> {
+        self.configurations.push(value);
+        Ok(())
+    }
+    fn handle_configurations<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, super::super::tt::AudioSourceConfigurationType>,
+        fallback: &mut ::core::option::Option<
+            GetAudioSourceConfigurationsResponseElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use GetAudioSourceConfigurationsResponseElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            *self.state__ = S::Done__;
+            return Ok(ElementHandlerOutput::from_event(event, allow_any));
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_configurations(data)?;
+                *self.state__ = S::Configurations(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::Configurations(Some(deserializer)));
+                *self.state__ = S::Configurations(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::GetAudioSourceConfigurationsResponseElementType>
+    for GetAudioSourceConfigurationsResponseElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioSourceConfigurationsResponseElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioSourceConfigurationsResponseElementType> {
+        use GetAudioSourceConfigurationsResponseElementTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::Configurations(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_configurations(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::Configurations(None);
+                    event
+                }
+                (S::Configurations(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"Configurations",
+                        false,
+                    )?;
+                    match self.handle_configurations(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Done__, event) => {
+                    *self.state__ = S::Done__;
+                    break (DeserializerEvent::Continue(event), allow_any_element);
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::GetAudioSourceConfigurationsResponseElementType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            GetAudioSourceConfigurationsResponseElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::GetAudioSourceConfigurationsResponseElementType {
+            configurations: self.configurations,
+        })
+    }
+}
+#[derive(Debug)]
+pub struct GetAudioSourceConfigurationElementTypeDeserializer {
+    configuration_token: ::core::option::Option<::std::string::String>,
+    state__: ::std::boxed::Box<GetAudioSourceConfigurationElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum GetAudioSourceConfigurationElementTypeDeserializerState {
+    Init__,
+    ConfigurationToken(
+        ::core::option::Option<<::std::string::String as WithDeserializer>::Deserializer>,
+    ),
+    Done__,
+    Unknown__,
+}
+impl GetAudioSourceConfigurationElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            configuration_token: None,
+            state__: ::std::boxed::Box::new(
+                GetAudioSourceConfigurationElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: GetAudioSourceConfigurationElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use GetAudioSourceConfigurationElementTypeDeserializerState as S;
+        match state {
+            S::ConfigurationToken(Some(deserializer)) => {
+                self.store_configuration_token(deserializer.finish(helper)?)?
+            }
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_configuration_token(
+        &mut self,
+        value: ::std::string::String,
+    ) -> ::core::result::Result<(), Error> {
+        if self.configuration_token.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"ConfigurationToken",
+            )))?;
+        }
+        self.configuration_token = Some(value);
+        Ok(())
+    }
+    fn handle_configuration_token<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, ::std::string::String>,
+        fallback: &mut ::core::option::Option<
+            GetAudioSourceConfigurationElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use GetAudioSourceConfigurationElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::ConfigurationToken(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_configuration_token(data)?;
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::ConfigurationToken(Some(deserializer)));
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::GetAudioSourceConfigurationElementType>
+    for GetAudioSourceConfigurationElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioSourceConfigurationElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioSourceConfigurationElementType> {
+        use GetAudioSourceConfigurationElementTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::ConfigurationToken(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_configuration_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::ConfigurationToken(None);
+                    event
+                }
+                (S::ConfigurationToken(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"ConfigurationToken",
+                        false,
+                    )?;
+                    match self.handle_configuration_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Done__, event) => {
+                    *self.state__ = S::Done__;
+                    break (DeserializerEvent::Continue(event), allow_any_element);
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::GetAudioSourceConfigurationElementType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            GetAudioSourceConfigurationElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::GetAudioSourceConfigurationElementType {
+            configuration_token: helper
+                .finish_element("ConfigurationToken", self.configuration_token)?,
+        })
+    }
+}
+#[derive(Debug)]
+pub struct GetAudioSourceConfigurationResponseElementTypeDeserializer {
+    configuration: ::core::option::Option<super::super::tt::AudioSourceConfigurationType>,
+    state__: ::std::boxed::Box<GetAudioSourceConfigurationResponseElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum GetAudioSourceConfigurationResponseElementTypeDeserializerState {
+    Init__,
+    Configuration(
+        ::core::option::Option<
+            <super::super::tt::AudioSourceConfigurationType as WithDeserializer>::Deserializer,
+        >,
+    ),
+    Done__,
+    Unknown__,
+}
+impl GetAudioSourceConfigurationResponseElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            configuration: None,
+            state__: ::std::boxed::Box::new(
+                GetAudioSourceConfigurationResponseElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: GetAudioSourceConfigurationResponseElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use GetAudioSourceConfigurationResponseElementTypeDeserializerState as S;
+        match state {
+            S::Configuration(Some(deserializer)) => {
+                self.store_configuration(deserializer.finish(helper)?)?
+            }
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_configuration(
+        &mut self,
+        value: super::super::tt::AudioSourceConfigurationType,
+    ) -> ::core::result::Result<(), Error> {
+        if self.configuration.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"Configuration",
+            )))?;
+        }
+        self.configuration = Some(value);
+        Ok(())
+    }
+    fn handle_configuration<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, super::super::tt::AudioSourceConfigurationType>,
+        fallback: &mut ::core::option::Option<
+            GetAudioSourceConfigurationResponseElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use GetAudioSourceConfigurationResponseElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::Configuration(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_configuration(data)?;
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::Configuration(Some(deserializer)));
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::GetAudioSourceConfigurationResponseElementType>
+    for GetAudioSourceConfigurationResponseElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioSourceConfigurationResponseElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioSourceConfigurationResponseElementType> {
+        use GetAudioSourceConfigurationResponseElementTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::Configuration(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_configuration(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::Configuration(None);
+                    event
+                }
+                (S::Configuration(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"Configuration",
+                        false,
+                    )?;
+                    match self.handle_configuration(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Done__, event) => {
+                    *self.state__ = S::Done__;
+                    break (DeserializerEvent::Continue(event), allow_any_element);
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::GetAudioSourceConfigurationResponseElementType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            GetAudioSourceConfigurationResponseElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::GetAudioSourceConfigurationResponseElementType {
+            configuration: helper.finish_element("Configuration", self.configuration)?,
+        })
+    }
+}
+#[derive(Debug)]
+pub struct GetCompatibleAudioSourceConfigurationsElementTypeDeserializer {
+    profile_token: ::core::option::Option<::std::string::String>,
+    state__: ::std::boxed::Box<GetCompatibleAudioSourceConfigurationsElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum GetCompatibleAudioSourceConfigurationsElementTypeDeserializerState {
+    Init__,
+    ProfileToken(::core::option::Option<<::std::string::String as WithDeserializer>::Deserializer>),
+    Done__,
+    Unknown__,
+}
+impl GetCompatibleAudioSourceConfigurationsElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            profile_token: None,
+            state__: ::std::boxed::Box::new(
+                GetCompatibleAudioSourceConfigurationsElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: GetCompatibleAudioSourceConfigurationsElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use GetCompatibleAudioSourceConfigurationsElementTypeDeserializerState as S;
+        match state {
+            S::ProfileToken(Some(deserializer)) => {
+                self.store_profile_token(deserializer.finish(helper)?)?
+            }
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_profile_token(
+        &mut self,
+        value: ::std::string::String,
+    ) -> ::core::result::Result<(), Error> {
+        if self.profile_token.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"ProfileToken",
+            )))?;
+        }
+        self.profile_token = Some(value);
+        Ok(())
+    }
+    fn handle_profile_token<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, ::std::string::String>,
+        fallback: &mut ::core::option::Option<
+            GetCompatibleAudioSourceConfigurationsElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use GetCompatibleAudioSourceConfigurationsElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::ProfileToken(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_profile_token(data)?;
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::ProfileToken(Some(deserializer)));
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::GetCompatibleAudioSourceConfigurationsElementType>
+    for GetCompatibleAudioSourceConfigurationsElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetCompatibleAudioSourceConfigurationsElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetCompatibleAudioSourceConfigurationsElementType> {
+        use GetCompatibleAudioSourceConfigurationsElementTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::ProfileToken(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_profile_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::ProfileToken(None);
+                    event
+                }
+                (S::ProfileToken(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"ProfileToken",
+                        false,
+                    )?;
+                    match self.handle_profile_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Done__, event) => {
+                    *self.state__ = S::Done__;
+                    break (DeserializerEvent::Continue(event), allow_any_element);
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::GetCompatibleAudioSourceConfigurationsElementType, Error>
+    {
+        let state = replace(
+            &mut *self.state__,
+            GetCompatibleAudioSourceConfigurationsElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::GetCompatibleAudioSourceConfigurationsElementType {
+            profile_token: helper.finish_element("ProfileToken", self.profile_token)?,
+        })
+    }
+}
+#[derive(Debug)]
+pub struct GetCompatibleAudioSourceConfigurationsResponseElementTypeDeserializer {
+    configurations: ::std::vec::Vec<super::super::tt::AudioSourceConfigurationType>,
+    state__: ::std::boxed::Box<
+        GetCompatibleAudioSourceConfigurationsResponseElementTypeDeserializerState,
+    >,
+}
+#[derive(Debug)]
+enum GetCompatibleAudioSourceConfigurationsResponseElementTypeDeserializerState {
+    Init__,
+    Configurations(
+        ::core::option::Option<
+            <super::super::tt::AudioSourceConfigurationType as WithDeserializer>::Deserializer,
+        >,
+    ),
+    Done__,
+    Unknown__,
+}
+impl GetCompatibleAudioSourceConfigurationsResponseElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            configurations: ::std::vec::Vec::new(),
+            state__: ::std::boxed::Box::new(
+                GetCompatibleAudioSourceConfigurationsResponseElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: GetCompatibleAudioSourceConfigurationsResponseElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use GetCompatibleAudioSourceConfigurationsResponseElementTypeDeserializerState as S;
+        match state {
+            S::Configurations(Some(deserializer)) => {
+                self.store_configurations(deserializer.finish(helper)?)?
+            }
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_configurations(
+        &mut self,
+        value: super::super::tt::AudioSourceConfigurationType,
+    ) -> ::core::result::Result<(), Error> {
+        self.configurations.push(value);
+        Ok(())
+    }
+    fn handle_configurations<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, super::super::tt::AudioSourceConfigurationType>,
+        fallback: &mut ::core::option::Option<
+            GetCompatibleAudioSourceConfigurationsResponseElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use GetCompatibleAudioSourceConfigurationsResponseElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            *self.state__ = S::Done__;
+            return Ok(ElementHandlerOutput::from_event(event, allow_any));
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_configurations(data)?;
+                *self.state__ = S::Configurations(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::Configurations(Some(deserializer)));
+                *self.state__ = S::Configurations(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::GetCompatibleAudioSourceConfigurationsResponseElementType>
+    for GetCompatibleAudioSourceConfigurationsResponseElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetCompatibleAudioSourceConfigurationsResponseElementType>
+    {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetCompatibleAudioSourceConfigurationsResponseElementType>
+    {
+        use GetCompatibleAudioSourceConfigurationsResponseElementTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::Configurations(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_configurations(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::Configurations(None);
+                    event
+                }
+                (S::Configurations(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"Configurations",
+                        false,
+                    )?;
+                    match self.handle_configurations(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Done__, event) => {
+                    *self.state__ = S::Done__;
+                    break (DeserializerEvent::Continue(event), allow_any_element);
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<
+        super::GetCompatibleAudioSourceConfigurationsResponseElementType,
+        Error,
+    > {
+        let state = replace(
+            &mut *self.state__,
+            GetCompatibleAudioSourceConfigurationsResponseElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(
+            super::GetCompatibleAudioSourceConfigurationsResponseElementType {
+                configurations: self.configurations,
+            },
+        )
+    }
+}
+#[derive(Debug)]
+pub struct GetAudioSourceConfigurationOptionsElementTypeDeserializer {
+    configuration_token: ::core::option::Option<::std::string::String>,
+    profile_token: ::core::option::Option<::std::string::String>,
+    state__: ::std::boxed::Box<GetAudioSourceConfigurationOptionsElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum GetAudioSourceConfigurationOptionsElementTypeDeserializerState {
+    Init__,
+    ConfigurationToken(
+        ::core::option::Option<<::std::string::String as WithDeserializer>::Deserializer>,
+    ),
+    ProfileToken(::core::option::Option<<::std::string::String as WithDeserializer>::Deserializer>),
+    Done__,
+    Unknown__,
+}
+impl GetAudioSourceConfigurationOptionsElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            configuration_token: None,
+            profile_token: None,
+            state__: ::std::boxed::Box::new(
+                GetAudioSourceConfigurationOptionsElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: GetAudioSourceConfigurationOptionsElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use GetAudioSourceConfigurationOptionsElementTypeDeserializerState as S;
+        match state {
+            S::ConfigurationToken(Some(deserializer)) => {
+                self.store_configuration_token(deserializer.finish(helper)?)?
+            }
+            S::ProfileToken(Some(deserializer)) => {
+                self.store_profile_token(deserializer.finish(helper)?)?
+            }
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_configuration_token(
+        &mut self,
+        value: ::std::string::String,
+    ) -> ::core::result::Result<(), Error> {
+        if self.configuration_token.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"ConfigurationToken",
+            )))?;
+        }
+        self.configuration_token = Some(value);
+        Ok(())
+    }
+    fn store_profile_token(
+        &mut self,
+        value: ::std::string::String,
+    ) -> ::core::result::Result<(), Error> {
+        if self.profile_token.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"ProfileToken",
+            )))?;
+        }
+        self.profile_token = Some(value);
+        Ok(())
+    }
+    fn handle_configuration_token<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, ::std::string::String>,
+        fallback: &mut ::core::option::Option<
+            GetAudioSourceConfigurationOptionsElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use GetAudioSourceConfigurationOptionsElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            *self.state__ = S::ProfileToken(None);
+            return Ok(ElementHandlerOutput::from_event(event, allow_any));
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_configuration_token(data)?;
+                *self.state__ = S::ProfileToken(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::ConfigurationToken(Some(deserializer)));
+                *self.state__ = S::ProfileToken(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+    fn handle_profile_token<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, ::std::string::String>,
+        fallback: &mut ::core::option::Option<
+            GetAudioSourceConfigurationOptionsElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use GetAudioSourceConfigurationOptionsElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            *self.state__ = S::Done__;
+            return Ok(ElementHandlerOutput::from_event(event, allow_any));
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_profile_token(data)?;
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::ProfileToken(Some(deserializer)));
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::GetAudioSourceConfigurationOptionsElementType>
+    for GetAudioSourceConfigurationOptionsElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioSourceConfigurationOptionsElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioSourceConfigurationOptionsElementType> {
+        use GetAudioSourceConfigurationOptionsElementTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::ConfigurationToken(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_configuration_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::ProfileToken(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_profile_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::ConfigurationToken(None);
+                    event
+                }
+                (S::ConfigurationToken(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"ConfigurationToken",
+                        false,
+                    )?;
+                    match self.handle_configuration_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::ProfileToken(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"ProfileToken",
+                        false,
+                    )?;
+                    match self.handle_profile_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Done__, event) => {
+                    *self.state__ = S::Done__;
+                    break (DeserializerEvent::Continue(event), allow_any_element);
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::GetAudioSourceConfigurationOptionsElementType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            GetAudioSourceConfigurationOptionsElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::GetAudioSourceConfigurationOptionsElementType {
+            configuration_token: self.configuration_token,
+            profile_token: self.profile_token,
+        })
+    }
+}
+#[derive(Debug)]
+pub struct GetAudioSourceConfigurationOptionsResponseElementTypeDeserializer {
+    options: ::core::option::Option<super::super::tt::AudioSourceConfigurationOptionsType>,
+    state__:
+        ::std::boxed::Box<GetAudioSourceConfigurationOptionsResponseElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum GetAudioSourceConfigurationOptionsResponseElementTypeDeserializerState {
+    Init__ , Options (:: core :: option :: Option << super :: super :: tt :: AudioSourceConfigurationOptionsType as WithDeserializer > :: Deserializer >) , Done__ , Unknown__ , }
+impl GetAudioSourceConfigurationOptionsResponseElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            options: None,
+            state__: ::std::boxed::Box::new(
+                GetAudioSourceConfigurationOptionsResponseElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: GetAudioSourceConfigurationOptionsResponseElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use GetAudioSourceConfigurationOptionsResponseElementTypeDeserializerState as S;
+        match state {
+            S::Options(Some(deserializer)) => self.store_options(deserializer.finish(helper)?)?,
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_options(
+        &mut self,
+        value: super::super::tt::AudioSourceConfigurationOptionsType,
+    ) -> ::core::result::Result<(), Error> {
+        if self.options.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"Options",
+            )))?;
+        }
+        self.options = Some(value);
+        Ok(())
+    }
+    fn handle_options<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, super::super::tt::AudioSourceConfigurationOptionsType>,
+        fallback: &mut ::core::option::Option<
+            GetAudioSourceConfigurationOptionsResponseElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use GetAudioSourceConfigurationOptionsResponseElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::Options(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_options(data)?;
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::Options(Some(deserializer)));
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::GetAudioSourceConfigurationOptionsResponseElementType>
+    for GetAudioSourceConfigurationOptionsResponseElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioSourceConfigurationOptionsResponseElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioSourceConfigurationOptionsResponseElementType> {
+        use GetAudioSourceConfigurationOptionsResponseElementTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::Options(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_options(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::Options(None);
+                    event
+                }
+                (S::Options(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"Options",
+                        false,
+                    )?;
+                    match self.handle_options(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Done__, event) => {
+                    *self.state__ = S::Done__;
+                    break (DeserializerEvent::Continue(event), allow_any_element);
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::GetAudioSourceConfigurationOptionsResponseElementType, Error>
+    {
+        let state = replace(
+            &mut *self.state__,
+            GetAudioSourceConfigurationOptionsResponseElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(
+            super::GetAudioSourceConfigurationOptionsResponseElementType {
+                options: helper.finish_element("Options", self.options)?,
+            },
+        )
+    }
+}
+#[derive(Debug)]
+pub struct SetAudioSourceConfigurationElementTypeDeserializer {
+    configuration: ::core::option::Option<super::super::tt::AudioSourceConfigurationType>,
+    force_persistence: ::core::option::Option<::core::primitive::bool>,
+    state__: ::std::boxed::Box<SetAudioSourceConfigurationElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum SetAudioSourceConfigurationElementTypeDeserializerState {
+    Init__,
+    Configuration(
+        ::core::option::Option<
+            <super::super::tt::AudioSourceConfigurationType as WithDeserializer>::Deserializer,
+        >,
+    ),
+    ForcePersistence(
+        ::core::option::Option<<::core::primitive::bool as WithDeserializer>::Deserializer>,
+    ),
+    Done__,
+    Unknown__,
+}
+impl SetAudioSourceConfigurationElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            configuration: None,
+            force_persistence: None,
+            state__: ::std::boxed::Box::new(
+                SetAudioSourceConfigurationElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: SetAudioSourceConfigurationElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use SetAudioSourceConfigurationElementTypeDeserializerState as S;
+        match state {
+            S::Configuration(Some(deserializer)) => {
+                self.store_configuration(deserializer.finish(helper)?)?
+            }
+            S::ForcePersistence(Some(deserializer)) => {
+                self.store_force_persistence(deserializer.finish(helper)?)?
+            }
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_configuration(
+        &mut self,
+        value: super::super::tt::AudioSourceConfigurationType,
+    ) -> ::core::result::Result<(), Error> {
+        if self.configuration.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"Configuration",
+            )))?;
+        }
+        self.configuration = Some(value);
+        Ok(())
+    }
+    fn store_force_persistence(
+        &mut self,
+        value: ::core::primitive::bool,
+    ) -> ::core::result::Result<(), Error> {
+        if self.force_persistence.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"ForcePersistence",
+            )))?;
+        }
+        self.force_persistence = Some(value);
+        Ok(())
+    }
+    fn handle_configuration<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, super::super::tt::AudioSourceConfigurationType>,
+        fallback: &mut ::core::option::Option<
+            SetAudioSourceConfigurationElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use SetAudioSourceConfigurationElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::Configuration(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_configuration(data)?;
+                *self.state__ = S::ForcePersistence(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::Configuration(Some(deserializer)));
+                *self.state__ = S::ForcePersistence(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+    fn handle_force_persistence<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, ::core::primitive::bool>,
+        fallback: &mut ::core::option::Option<
+            SetAudioSourceConfigurationElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use SetAudioSourceConfigurationElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::ForcePersistence(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_force_persistence(data)?;
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::ForcePersistence(Some(deserializer)));
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::SetAudioSourceConfigurationElementType>
+    for SetAudioSourceConfigurationElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::SetAudioSourceConfigurationElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::SetAudioSourceConfigurationElementType> {
+        use SetAudioSourceConfigurationElementTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::Configuration(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_configuration(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::ForcePersistence(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_force_persistence(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::Configuration(None);
+                    event
+                }
+                (S::Configuration(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"Configuration",
+                        false,
+                    )?;
+                    match self.handle_configuration(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::ForcePersistence(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"ForcePersistence",
+                        false,
+                    )?;
+                    match self.handle_force_persistence(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Done__, event) => {
+                    *self.state__ = S::Done__;
+                    break (DeserializerEvent::Continue(event), allow_any_element);
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::SetAudioSourceConfigurationElementType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            SetAudioSourceConfigurationElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::SetAudioSourceConfigurationElementType {
+            configuration: helper.finish_element("Configuration", self.configuration)?,
+            force_persistence: helper.finish_element("ForcePersistence", self.force_persistence)?,
+        })
+    }
+}
+#[derive(Debug)]
+pub struct SetAudioSourceConfigurationResponseElementTypeDeserializer {
+    state__: ::std::boxed::Box<SetAudioSourceConfigurationResponseElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum SetAudioSourceConfigurationResponseElementTypeDeserializerState {
+    Init__,
+    Unknown__,
+}
+impl SetAudioSourceConfigurationResponseElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            state__: ::std::boxed::Box::new(
+                SetAudioSourceConfigurationResponseElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: SetAudioSourceConfigurationResponseElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        Ok(())
+    }
+}
+impl<'de> Deserializer<'de, super::SetAudioSourceConfigurationResponseElementType>
+    for SetAudioSourceConfigurationResponseElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::SetAudioSourceConfigurationResponseElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::SetAudioSourceConfigurationResponseElementType> {
+        if let Event::End(_) = &event {
+            Ok(DeserializerOutput {
+                artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                event: DeserializerEvent::None,
+                allow_any: false,
+            })
+        } else {
+            Ok(DeserializerOutput {
+                artifact: DeserializerArtifact::Deserializer(self),
+                event: DeserializerEvent::Break(event),
+                allow_any: false,
+            })
+        }
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::SetAudioSourceConfigurationResponseElementType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            SetAudioSourceConfigurationResponseElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::SetAudioSourceConfigurationResponseElementType {})
+    }
+}
+#[derive(Debug)]
+pub struct AddAudioSourceConfigurationElementTypeDeserializer {
+    profile_token: ::core::option::Option<::std::string::String>,
+    configuration_token: ::core::option::Option<::std::string::String>,
+    state__: ::std::boxed::Box<AddAudioSourceConfigurationElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum AddAudioSourceConfigurationElementTypeDeserializerState {
+    Init__,
+    ProfileToken(::core::option::Option<<::std::string::String as WithDeserializer>::Deserializer>),
+    ConfigurationToken(
+        ::core::option::Option<<::std::string::String as WithDeserializer>::Deserializer>,
+    ),
+    Done__,
+    Unknown__,
+}
+impl AddAudioSourceConfigurationElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            profile_token: None,
+            configuration_token: None,
+            state__: ::std::boxed::Box::new(
+                AddAudioSourceConfigurationElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: AddAudioSourceConfigurationElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use AddAudioSourceConfigurationElementTypeDeserializerState as S;
+        match state {
+            S::ProfileToken(Some(deserializer)) => {
+                self.store_profile_token(deserializer.finish(helper)?)?
+            }
+            S::ConfigurationToken(Some(deserializer)) => {
+                self.store_configuration_token(deserializer.finish(helper)?)?
+            }
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_profile_token(
+        &mut self,
+        value: ::std::string::String,
+    ) -> ::core::result::Result<(), Error> {
+        if self.profile_token.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"ProfileToken",
+            )))?;
+        }
+        self.profile_token = Some(value);
+        Ok(())
+    }
+    fn store_configuration_token(
+        &mut self,
+        value: ::std::string::String,
+    ) -> ::core::result::Result<(), Error> {
+        if self.configuration_token.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"ConfigurationToken",
+            )))?;
+        }
+        self.configuration_token = Some(value);
+        Ok(())
+    }
+    fn handle_profile_token<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, ::std::string::String>,
+        fallback: &mut ::core::option::Option<
+            AddAudioSourceConfigurationElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use AddAudioSourceConfigurationElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::ProfileToken(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_profile_token(data)?;
+                *self.state__ = S::ConfigurationToken(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::ProfileToken(Some(deserializer)));
+                *self.state__ = S::ConfigurationToken(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+    fn handle_configuration_token<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, ::std::string::String>,
+        fallback: &mut ::core::option::Option<
+            AddAudioSourceConfigurationElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use AddAudioSourceConfigurationElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::ConfigurationToken(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_configuration_token(data)?;
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::ConfigurationToken(Some(deserializer)));
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::AddAudioSourceConfigurationElementType>
+    for AddAudioSourceConfigurationElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::AddAudioSourceConfigurationElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::AddAudioSourceConfigurationElementType> {
+        use AddAudioSourceConfigurationElementTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::ProfileToken(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_profile_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::ConfigurationToken(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_configuration_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::ProfileToken(None);
+                    event
+                }
+                (S::ProfileToken(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"ProfileToken",
+                        false,
+                    )?;
+                    match self.handle_profile_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::ConfigurationToken(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"ConfigurationToken",
+                        false,
+                    )?;
+                    match self.handle_configuration_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Done__, event) => {
+                    *self.state__ = S::Done__;
+                    break (DeserializerEvent::Continue(event), allow_any_element);
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::AddAudioSourceConfigurationElementType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            AddAudioSourceConfigurationElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::AddAudioSourceConfigurationElementType {
+            profile_token: helper.finish_element("ProfileToken", self.profile_token)?,
+            configuration_token: helper
+                .finish_element("ConfigurationToken", self.configuration_token)?,
+        })
+    }
+}
+#[derive(Debug)]
+pub struct AddAudioSourceConfigurationResponseElementTypeDeserializer {
+    state__: ::std::boxed::Box<AddAudioSourceConfigurationResponseElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum AddAudioSourceConfigurationResponseElementTypeDeserializerState {
+    Init__,
+    Unknown__,
+}
+impl AddAudioSourceConfigurationResponseElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            state__: ::std::boxed::Box::new(
+                AddAudioSourceConfigurationResponseElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: AddAudioSourceConfigurationResponseElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        Ok(())
+    }
+}
+impl<'de> Deserializer<'de, super::AddAudioSourceConfigurationResponseElementType>
+    for AddAudioSourceConfigurationResponseElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::AddAudioSourceConfigurationResponseElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::AddAudioSourceConfigurationResponseElementType> {
+        if let Event::End(_) = &event {
+            Ok(DeserializerOutput {
+                artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                event: DeserializerEvent::None,
+                allow_any: false,
+            })
+        } else {
+            Ok(DeserializerOutput {
+                artifact: DeserializerArtifact::Deserializer(self),
+                event: DeserializerEvent::Break(event),
+                allow_any: false,
+            })
+        }
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::AddAudioSourceConfigurationResponseElementType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            AddAudioSourceConfigurationResponseElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::AddAudioSourceConfigurationResponseElementType {})
+    }
+}
+#[derive(Debug)]
+pub struct RemoveAudioSourceConfigurationElementTypeDeserializer {
+    profile_token: ::core::option::Option<::std::string::String>,
+    state__: ::std::boxed::Box<RemoveAudioSourceConfigurationElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum RemoveAudioSourceConfigurationElementTypeDeserializerState {
+    Init__,
+    ProfileToken(::core::option::Option<<::std::string::String as WithDeserializer>::Deserializer>),
+    Done__,
+    Unknown__,
+}
+impl RemoveAudioSourceConfigurationElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            profile_token: None,
+            state__: ::std::boxed::Box::new(
+                RemoveAudioSourceConfigurationElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: RemoveAudioSourceConfigurationElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use RemoveAudioSourceConfigurationElementTypeDeserializerState as S;
+        match state {
+            S::ProfileToken(Some(deserializer)) => {
+                self.store_profile_token(deserializer.finish(helper)?)?
+            }
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_profile_token(
+        &mut self,
+        value: ::std::string::String,
+    ) -> ::core::result::Result<(), Error> {
+        if self.profile_token.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"ProfileToken",
+            )))?;
+        }
+        self.profile_token = Some(value);
+        Ok(())
+    }
+    fn handle_profile_token<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, ::std::string::String>,
+        fallback: &mut ::core::option::Option<
+            RemoveAudioSourceConfigurationElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use RemoveAudioSourceConfigurationElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::ProfileToken(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_profile_token(data)?;
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::ProfileToken(Some(deserializer)));
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::RemoveAudioSourceConfigurationElementType>
+    for RemoveAudioSourceConfigurationElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::RemoveAudioSourceConfigurationElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::RemoveAudioSourceConfigurationElementType> {
+        use RemoveAudioSourceConfigurationElementTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::ProfileToken(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_profile_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::ProfileToken(None);
+                    event
+                }
+                (S::ProfileToken(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"ProfileToken",
+                        false,
+                    )?;
+                    match self.handle_profile_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Done__, event) => {
+                    *self.state__ = S::Done__;
+                    break (DeserializerEvent::Continue(event), allow_any_element);
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::RemoveAudioSourceConfigurationElementType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            RemoveAudioSourceConfigurationElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::RemoveAudioSourceConfigurationElementType {
+            profile_token: helper.finish_element("ProfileToken", self.profile_token)?,
+        })
+    }
+}
+#[derive(Debug)]
+pub struct RemoveAudioSourceConfigurationResponseElementTypeDeserializer {
+    state__: ::std::boxed::Box<RemoveAudioSourceConfigurationResponseElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum RemoveAudioSourceConfigurationResponseElementTypeDeserializerState {
+    Init__,
+    Unknown__,
+}
+impl RemoveAudioSourceConfigurationResponseElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            state__: ::std::boxed::Box::new(
+                RemoveAudioSourceConfigurationResponseElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: RemoveAudioSourceConfigurationResponseElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        Ok(())
+    }
+}
+impl<'de> Deserializer<'de, super::RemoveAudioSourceConfigurationResponseElementType>
+    for RemoveAudioSourceConfigurationResponseElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::RemoveAudioSourceConfigurationResponseElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::RemoveAudioSourceConfigurationResponseElementType> {
+        if let Event::End(_) = &event {
+            Ok(DeserializerOutput {
+                artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                event: DeserializerEvent::None,
+                allow_any: false,
+            })
+        } else {
+            Ok(DeserializerOutput {
+                artifact: DeserializerArtifact::Deserializer(self),
+                event: DeserializerEvent::Break(event),
+                allow_any: false,
+            })
+        }
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::RemoveAudioSourceConfigurationResponseElementType, Error>
+    {
+        let state = replace(
+            &mut *self.state__,
+            RemoveAudioSourceConfigurationResponseElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::RemoveAudioSourceConfigurationResponseElementType {})
+    }
+}
+#[derive(Debug)]
+pub struct GetAudioEncoderConfigurationsElementTypeDeserializer {
+    state__: ::std::boxed::Box<GetAudioEncoderConfigurationsElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum GetAudioEncoderConfigurationsElementTypeDeserializerState {
+    Init__,
+    Unknown__,
+}
+impl GetAudioEncoderConfigurationsElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            state__: ::std::boxed::Box::new(
+                GetAudioEncoderConfigurationsElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: GetAudioEncoderConfigurationsElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        Ok(())
+    }
+}
+impl<'de> Deserializer<'de, super::GetAudioEncoderConfigurationsElementType>
+    for GetAudioEncoderConfigurationsElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioEncoderConfigurationsElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioEncoderConfigurationsElementType> {
+        if let Event::End(_) = &event {
+            Ok(DeserializerOutput {
+                artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                event: DeserializerEvent::None,
+                allow_any: false,
+            })
+        } else {
+            Ok(DeserializerOutput {
+                artifact: DeserializerArtifact::Deserializer(self),
+                event: DeserializerEvent::Break(event),
+                allow_any: false,
+            })
+        }
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::GetAudioEncoderConfigurationsElementType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            GetAudioEncoderConfigurationsElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::GetAudioEncoderConfigurationsElementType {})
+    }
+}
+#[derive(Debug)]
+pub struct GetAudioEncoderConfigurationsResponseElementTypeDeserializer {
+    configurations: ::std::vec::Vec<super::super::tt::AudioEncoderConfigurationType>,
+    state__: ::std::boxed::Box<GetAudioEncoderConfigurationsResponseElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum GetAudioEncoderConfigurationsResponseElementTypeDeserializerState {
+    Init__,
+    Configurations(
+        ::core::option::Option<
+            <super::super::tt::AudioEncoderConfigurationType as WithDeserializer>::Deserializer,
+        >,
+    ),
+    Done__,
+    Unknown__,
+}
+impl GetAudioEncoderConfigurationsResponseElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            configurations: ::std::vec::Vec::new(),
+            state__: ::std::boxed::Box::new(
+                GetAudioEncoderConfigurationsResponseElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: GetAudioEncoderConfigurationsResponseElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use GetAudioEncoderConfigurationsResponseElementTypeDeserializerState as S;
+        match state {
+            S::Configurations(Some(deserializer)) => {
+                self.store_configurations(deserializer.finish(helper)?)?
+            }
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_configurations(
+        &mut self,
+        value: super::super::tt::AudioEncoderConfigurationType,
+    ) -> ::core::result::Result<(), Error> {
+        self.configurations.push(value);
+        Ok(())
+    }
+    fn handle_configurations<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, super::super::tt::AudioEncoderConfigurationType>,
+        fallback: &mut ::core::option::Option<
+            GetAudioEncoderConfigurationsResponseElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use GetAudioEncoderConfigurationsResponseElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            *self.state__ = S::Done__;
+            return Ok(ElementHandlerOutput::from_event(event, allow_any));
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_configurations(data)?;
+                *self.state__ = S::Configurations(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::Configurations(Some(deserializer)));
+                *self.state__ = S::Configurations(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::GetAudioEncoderConfigurationsResponseElementType>
+    for GetAudioEncoderConfigurationsResponseElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioEncoderConfigurationsResponseElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioEncoderConfigurationsResponseElementType> {
+        use GetAudioEncoderConfigurationsResponseElementTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::Configurations(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_configurations(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::Configurations(None);
+                    event
+                }
+                (S::Configurations(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"Configurations",
+                        false,
+                    )?;
+                    match self.handle_configurations(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Done__, event) => {
+                    *self.state__ = S::Done__;
+                    break (DeserializerEvent::Continue(event), allow_any_element);
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::GetAudioEncoderConfigurationsResponseElementType, Error>
+    {
+        let state = replace(
+            &mut *self.state__,
+            GetAudioEncoderConfigurationsResponseElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::GetAudioEncoderConfigurationsResponseElementType {
+            configurations: self.configurations,
+        })
+    }
+}
+#[derive(Debug)]
+pub struct GetAudioEncoderConfigurationElementTypeDeserializer {
+    configuration_token: ::core::option::Option<::std::string::String>,
+    state__: ::std::boxed::Box<GetAudioEncoderConfigurationElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum GetAudioEncoderConfigurationElementTypeDeserializerState {
+    Init__,
+    ConfigurationToken(
+        ::core::option::Option<<::std::string::String as WithDeserializer>::Deserializer>,
+    ),
+    Done__,
+    Unknown__,
+}
+impl GetAudioEncoderConfigurationElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            configuration_token: None,
+            state__: ::std::boxed::Box::new(
+                GetAudioEncoderConfigurationElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: GetAudioEncoderConfigurationElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use GetAudioEncoderConfigurationElementTypeDeserializerState as S;
+        match state {
+            S::ConfigurationToken(Some(deserializer)) => {
+                self.store_configuration_token(deserializer.finish(helper)?)?
+            }
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_configuration_token(
+        &mut self,
+        value: ::std::string::String,
+    ) -> ::core::result::Result<(), Error> {
+        if self.configuration_token.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"ConfigurationToken",
+            )))?;
+        }
+        self.configuration_token = Some(value);
+        Ok(())
+    }
+    fn handle_configuration_token<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, ::std::string::String>,
+        fallback: &mut ::core::option::Option<
+            GetAudioEncoderConfigurationElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use GetAudioEncoderConfigurationElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::ConfigurationToken(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_configuration_token(data)?;
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::ConfigurationToken(Some(deserializer)));
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::GetAudioEncoderConfigurationElementType>
+    for GetAudioEncoderConfigurationElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioEncoderConfigurationElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioEncoderConfigurationElementType> {
+        use GetAudioEncoderConfigurationElementTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::ConfigurationToken(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_configuration_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::ConfigurationToken(None);
+                    event
+                }
+                (S::ConfigurationToken(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"ConfigurationToken",
+                        false,
+                    )?;
+                    match self.handle_configuration_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Done__, event) => {
+                    *self.state__ = S::Done__;
+                    break (DeserializerEvent::Continue(event), allow_any_element);
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::GetAudioEncoderConfigurationElementType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            GetAudioEncoderConfigurationElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::GetAudioEncoderConfigurationElementType {
+            configuration_token: helper
+                .finish_element("ConfigurationToken", self.configuration_token)?,
+        })
+    }
+}
+#[derive(Debug)]
+pub struct GetAudioEncoderConfigurationResponseElementTypeDeserializer {
+    configuration: ::core::option::Option<super::super::tt::AudioEncoderConfigurationType>,
+    state__: ::std::boxed::Box<GetAudioEncoderConfigurationResponseElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum GetAudioEncoderConfigurationResponseElementTypeDeserializerState {
+    Init__,
+    Configuration(
+        ::core::option::Option<
+            <super::super::tt::AudioEncoderConfigurationType as WithDeserializer>::Deserializer,
+        >,
+    ),
+    Done__,
+    Unknown__,
+}
+impl GetAudioEncoderConfigurationResponseElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            configuration: None,
+            state__: ::std::boxed::Box::new(
+                GetAudioEncoderConfigurationResponseElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: GetAudioEncoderConfigurationResponseElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use GetAudioEncoderConfigurationResponseElementTypeDeserializerState as S;
+        match state {
+            S::Configuration(Some(deserializer)) => {
+                self.store_configuration(deserializer.finish(helper)?)?
+            }
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_configuration(
+        &mut self,
+        value: super::super::tt::AudioEncoderConfigurationType,
+    ) -> ::core::result::Result<(), Error> {
+        if self.configuration.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"Configuration",
+            )))?;
+        }
+        self.configuration = Some(value);
+        Ok(())
+    }
+    fn handle_configuration<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, super::super::tt::AudioEncoderConfigurationType>,
+        fallback: &mut ::core::option::Option<
+            GetAudioEncoderConfigurationResponseElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use GetAudioEncoderConfigurationResponseElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::Configuration(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_configuration(data)?;
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::Configuration(Some(deserializer)));
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::GetAudioEncoderConfigurationResponseElementType>
+    for GetAudioEncoderConfigurationResponseElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioEncoderConfigurationResponseElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioEncoderConfigurationResponseElementType> {
+        use GetAudioEncoderConfigurationResponseElementTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::Configuration(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_configuration(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::Configuration(None);
+                    event
+                }
+                (S::Configuration(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"Configuration",
+                        false,
+                    )?;
+                    match self.handle_configuration(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Done__, event) => {
+                    *self.state__ = S::Done__;
+                    break (DeserializerEvent::Continue(event), allow_any_element);
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::GetAudioEncoderConfigurationResponseElementType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            GetAudioEncoderConfigurationResponseElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::GetAudioEncoderConfigurationResponseElementType {
+            configuration: helper.finish_element("Configuration", self.configuration)?,
+        })
+    }
+}
+#[derive(Debug)]
+pub struct GetCompatibleAudioEncoderConfigurationsElementTypeDeserializer {
+    profile_token: ::core::option::Option<::std::string::String>,
+    state__: ::std::boxed::Box<GetCompatibleAudioEncoderConfigurationsElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum GetCompatibleAudioEncoderConfigurationsElementTypeDeserializerState {
+    Init__,
+    ProfileToken(::core::option::Option<<::std::string::String as WithDeserializer>::Deserializer>),
+    Done__,
+    Unknown__,
+}
+impl GetCompatibleAudioEncoderConfigurationsElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            profile_token: None,
+            state__: ::std::boxed::Box::new(
+                GetCompatibleAudioEncoderConfigurationsElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: GetCompatibleAudioEncoderConfigurationsElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use GetCompatibleAudioEncoderConfigurationsElementTypeDeserializerState as S;
+        match state {
+            S::ProfileToken(Some(deserializer)) => {
+                self.store_profile_token(deserializer.finish(helper)?)?
+            }
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_profile_token(
+        &mut self,
+        value: ::std::string::String,
+    ) -> ::core::result::Result<(), Error> {
+        if self.profile_token.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"ProfileToken",
+            )))?;
+        }
+        self.profile_token = Some(value);
+        Ok(())
+    }
+    fn handle_profile_token<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, ::std::string::String>,
+        fallback: &mut ::core::option::Option<
+            GetCompatibleAudioEncoderConfigurationsElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use GetCompatibleAudioEncoderConfigurationsElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::ProfileToken(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_profile_token(data)?;
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::ProfileToken(Some(deserializer)));
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::GetCompatibleAudioEncoderConfigurationsElementType>
+    for GetCompatibleAudioEncoderConfigurationsElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetCompatibleAudioEncoderConfigurationsElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetCompatibleAudioEncoderConfigurationsElementType> {
+        use GetCompatibleAudioEncoderConfigurationsElementTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::ProfileToken(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_profile_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::ProfileToken(None);
+                    event
+                }
+                (S::ProfileToken(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"ProfileToken",
+                        false,
+                    )?;
+                    match self.handle_profile_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Done__, event) => {
+                    *self.state__ = S::Done__;
+                    break (DeserializerEvent::Continue(event), allow_any_element);
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::GetCompatibleAudioEncoderConfigurationsElementType, Error>
+    {
+        let state = replace(
+            &mut *self.state__,
+            GetCompatibleAudioEncoderConfigurationsElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::GetCompatibleAudioEncoderConfigurationsElementType {
+            profile_token: helper.finish_element("ProfileToken", self.profile_token)?,
+        })
+    }
+}
+#[derive(Debug)]
+pub struct GetCompatibleAudioEncoderConfigurationsResponseElementTypeDeserializer {
+    configurations: ::std::vec::Vec<super::super::tt::AudioEncoderConfigurationType>,
+    state__: ::std::boxed::Box<
+        GetCompatibleAudioEncoderConfigurationsResponseElementTypeDeserializerState,
+    >,
+}
+#[derive(Debug)]
+enum GetCompatibleAudioEncoderConfigurationsResponseElementTypeDeserializerState {
+    Init__,
+    Configurations(
+        ::core::option::Option<
+            <super::super::tt::AudioEncoderConfigurationType as WithDeserializer>::Deserializer,
+        >,
+    ),
+    Done__,
+    Unknown__,
+}
+impl GetCompatibleAudioEncoderConfigurationsResponseElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            configurations: ::std::vec::Vec::new(),
+            state__: ::std::boxed::Box::new(
+                GetCompatibleAudioEncoderConfigurationsResponseElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: GetCompatibleAudioEncoderConfigurationsResponseElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use GetCompatibleAudioEncoderConfigurationsResponseElementTypeDeserializerState as S;
+        match state {
+            S::Configurations(Some(deserializer)) => {
+                self.store_configurations(deserializer.finish(helper)?)?
+            }
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_configurations(
+        &mut self,
+        value: super::super::tt::AudioEncoderConfigurationType,
+    ) -> ::core::result::Result<(), Error> {
+        self.configurations.push(value);
+        Ok(())
+    }
+    fn handle_configurations<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, super::super::tt::AudioEncoderConfigurationType>,
+        fallback: &mut ::core::option::Option<
+            GetCompatibleAudioEncoderConfigurationsResponseElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use GetCompatibleAudioEncoderConfigurationsResponseElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            *self.state__ = S::Done__;
+            return Ok(ElementHandlerOutput::from_event(event, allow_any));
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_configurations(data)?;
+                *self.state__ = S::Configurations(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::Configurations(Some(deserializer)));
+                *self.state__ = S::Configurations(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::GetCompatibleAudioEncoderConfigurationsResponseElementType>
+    for GetCompatibleAudioEncoderConfigurationsResponseElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetCompatibleAudioEncoderConfigurationsResponseElementType>
+    {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetCompatibleAudioEncoderConfigurationsResponseElementType>
+    {
+        use GetCompatibleAudioEncoderConfigurationsResponseElementTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::Configurations(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_configurations(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::Configurations(None);
+                    event
+                }
+                (S::Configurations(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"Configurations",
+                        false,
+                    )?;
+                    match self.handle_configurations(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Done__, event) => {
+                    *self.state__ = S::Done__;
+                    break (DeserializerEvent::Continue(event), allow_any_element);
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<
+        super::GetCompatibleAudioEncoderConfigurationsResponseElementType,
+        Error,
+    > {
+        let state = replace(
+            &mut *self.state__,
+            GetCompatibleAudioEncoderConfigurationsResponseElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(
+            super::GetCompatibleAudioEncoderConfigurationsResponseElementType {
+                configurations: self.configurations,
+            },
+        )
+    }
+}
+#[derive(Debug)]
+pub struct GetAudioEncoderConfigurationOptionsElementTypeDeserializer {
+    configuration_token: ::core::option::Option<::std::string::String>,
+    profile_token: ::core::option::Option<::std::string::String>,
+    state__: ::std::boxed::Box<GetAudioEncoderConfigurationOptionsElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum GetAudioEncoderConfigurationOptionsElementTypeDeserializerState {
+    Init__,
+    ConfigurationToken(
+        ::core::option::Option<<::std::string::String as WithDeserializer>::Deserializer>,
+    ),
+    ProfileToken(::core::option::Option<<::std::string::String as WithDeserializer>::Deserializer>),
+    Done__,
+    Unknown__,
+}
+impl GetAudioEncoderConfigurationOptionsElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            configuration_token: None,
+            profile_token: None,
+            state__: ::std::boxed::Box::new(
+                GetAudioEncoderConfigurationOptionsElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: GetAudioEncoderConfigurationOptionsElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use GetAudioEncoderConfigurationOptionsElementTypeDeserializerState as S;
+        match state {
+            S::ConfigurationToken(Some(deserializer)) => {
+                self.store_configuration_token(deserializer.finish(helper)?)?
+            }
+            S::ProfileToken(Some(deserializer)) => {
+                self.store_profile_token(deserializer.finish(helper)?)?
+            }
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_configuration_token(
+        &mut self,
+        value: ::std::string::String,
+    ) -> ::core::result::Result<(), Error> {
+        if self.configuration_token.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"ConfigurationToken",
+            )))?;
+        }
+        self.configuration_token = Some(value);
+        Ok(())
+    }
+    fn store_profile_token(
+        &mut self,
+        value: ::std::string::String,
+    ) -> ::core::result::Result<(), Error> {
+        if self.profile_token.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"ProfileToken",
+            )))?;
+        }
+        self.profile_token = Some(value);
+        Ok(())
+    }
+    fn handle_configuration_token<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, ::std::string::String>,
+        fallback: &mut ::core::option::Option<
+            GetAudioEncoderConfigurationOptionsElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use GetAudioEncoderConfigurationOptionsElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            *self.state__ = S::ProfileToken(None);
+            return Ok(ElementHandlerOutput::from_event(event, allow_any));
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_configuration_token(data)?;
+                *self.state__ = S::ProfileToken(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::ConfigurationToken(Some(deserializer)));
+                *self.state__ = S::ProfileToken(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+    fn handle_profile_token<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, ::std::string::String>,
+        fallback: &mut ::core::option::Option<
+            GetAudioEncoderConfigurationOptionsElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use GetAudioEncoderConfigurationOptionsElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            *self.state__ = S::Done__;
+            return Ok(ElementHandlerOutput::from_event(event, allow_any));
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_profile_token(data)?;
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::ProfileToken(Some(deserializer)));
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::GetAudioEncoderConfigurationOptionsElementType>
+    for GetAudioEncoderConfigurationOptionsElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioEncoderConfigurationOptionsElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioEncoderConfigurationOptionsElementType> {
+        use GetAudioEncoderConfigurationOptionsElementTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::ConfigurationToken(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_configuration_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::ProfileToken(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_profile_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::ConfigurationToken(None);
+                    event
+                }
+                (S::ConfigurationToken(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"ConfigurationToken",
+                        false,
+                    )?;
+                    match self.handle_configuration_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::ProfileToken(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"ProfileToken",
+                        false,
+                    )?;
+                    match self.handle_profile_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Done__, event) => {
+                    *self.state__ = S::Done__;
+                    break (DeserializerEvent::Continue(event), allow_any_element);
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::GetAudioEncoderConfigurationOptionsElementType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            GetAudioEncoderConfigurationOptionsElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::GetAudioEncoderConfigurationOptionsElementType {
+            configuration_token: self.configuration_token,
+            profile_token: self.profile_token,
+        })
+    }
+}
+#[derive(Debug)]
+pub struct GetAudioEncoderConfigurationOptionsResponseElementTypeDeserializer {
+    options: ::core::option::Option<super::super::tt::AudioEncoderConfigurationOptionsType>,
+    state__:
+        ::std::boxed::Box<GetAudioEncoderConfigurationOptionsResponseElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum GetAudioEncoderConfigurationOptionsResponseElementTypeDeserializerState {
+    Init__ , Options (:: core :: option :: Option << super :: super :: tt :: AudioEncoderConfigurationOptionsType as WithDeserializer > :: Deserializer >) , Done__ , Unknown__ , }
+impl GetAudioEncoderConfigurationOptionsResponseElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            options: None,
+            state__: ::std::boxed::Box::new(
+                GetAudioEncoderConfigurationOptionsResponseElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: GetAudioEncoderConfigurationOptionsResponseElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use GetAudioEncoderConfigurationOptionsResponseElementTypeDeserializerState as S;
+        match state {
+            S::Options(Some(deserializer)) => self.store_options(deserializer.finish(helper)?)?,
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_options(
+        &mut self,
+        value: super::super::tt::AudioEncoderConfigurationOptionsType,
+    ) -> ::core::result::Result<(), Error> {
+        if self.options.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"Options",
+            )))?;
+        }
+        self.options = Some(value);
+        Ok(())
+    }
+    fn handle_options<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, super::super::tt::AudioEncoderConfigurationOptionsType>,
+        fallback: &mut ::core::option::Option<
+            GetAudioEncoderConfigurationOptionsResponseElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use GetAudioEncoderConfigurationOptionsResponseElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::Options(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_options(data)?;
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::Options(Some(deserializer)));
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::GetAudioEncoderConfigurationOptionsResponseElementType>
+    for GetAudioEncoderConfigurationOptionsResponseElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioEncoderConfigurationOptionsResponseElementType>
+    {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioEncoderConfigurationOptionsResponseElementType>
+    {
+        use GetAudioEncoderConfigurationOptionsResponseElementTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::Options(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_options(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::Options(None);
+                    event
+                }
+                (S::Options(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"Options",
+                        false,
+                    )?;
+                    match self.handle_options(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Done__, event) => {
+                    *self.state__ = S::Done__;
+                    break (DeserializerEvent::Continue(event), allow_any_element);
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::GetAudioEncoderConfigurationOptionsResponseElementType, Error>
+    {
+        let state = replace(
+            &mut *self.state__,
+            GetAudioEncoderConfigurationOptionsResponseElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(
+            super::GetAudioEncoderConfigurationOptionsResponseElementType {
+                options: helper.finish_element("Options", self.options)?,
+            },
+        )
+    }
+}
+#[derive(Debug)]
+pub struct SetAudioEncoderConfigurationElementTypeDeserializer {
+    configuration: ::core::option::Option<super::super::tt::AudioEncoderConfigurationType>,
+    force_persistence: ::core::option::Option<::core::primitive::bool>,
+    state__: ::std::boxed::Box<SetAudioEncoderConfigurationElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum SetAudioEncoderConfigurationElementTypeDeserializerState {
+    Init__,
+    Configuration(
+        ::core::option::Option<
+            <super::super::tt::AudioEncoderConfigurationType as WithDeserializer>::Deserializer,
+        >,
+    ),
+    ForcePersistence(
+        ::core::option::Option<<::core::primitive::bool as WithDeserializer>::Deserializer>,
+    ),
+    Done__,
+    Unknown__,
+}
+impl SetAudioEncoderConfigurationElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            configuration: None,
+            force_persistence: None,
+            state__: ::std::boxed::Box::new(
+                SetAudioEncoderConfigurationElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: SetAudioEncoderConfigurationElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use SetAudioEncoderConfigurationElementTypeDeserializerState as S;
+        match state {
+            S::Configuration(Some(deserializer)) => {
+                self.store_configuration(deserializer.finish(helper)?)?
+            }
+            S::ForcePersistence(Some(deserializer)) => {
+                self.store_force_persistence(deserializer.finish(helper)?)?
+            }
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_configuration(
+        &mut self,
+        value: super::super::tt::AudioEncoderConfigurationType,
+    ) -> ::core::result::Result<(), Error> {
+        if self.configuration.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"Configuration",
+            )))?;
+        }
+        self.configuration = Some(value);
+        Ok(())
+    }
+    fn store_force_persistence(
+        &mut self,
+        value: ::core::primitive::bool,
+    ) -> ::core::result::Result<(), Error> {
+        if self.force_persistence.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"ForcePersistence",
+            )))?;
+        }
+        self.force_persistence = Some(value);
+        Ok(())
+    }
+    fn handle_configuration<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, super::super::tt::AudioEncoderConfigurationType>,
+        fallback: &mut ::core::option::Option<
+            SetAudioEncoderConfigurationElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use SetAudioEncoderConfigurationElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::Configuration(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_configuration(data)?;
+                *self.state__ = S::ForcePersistence(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::Configuration(Some(deserializer)));
+                *self.state__ = S::ForcePersistence(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+    fn handle_force_persistence<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, ::core::primitive::bool>,
+        fallback: &mut ::core::option::Option<
+            SetAudioEncoderConfigurationElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use SetAudioEncoderConfigurationElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::ForcePersistence(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_force_persistence(data)?;
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::ForcePersistence(Some(deserializer)));
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::SetAudioEncoderConfigurationElementType>
+    for SetAudioEncoderConfigurationElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::SetAudioEncoderConfigurationElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::SetAudioEncoderConfigurationElementType> {
+        use SetAudioEncoderConfigurationElementTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::Configuration(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_configuration(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::ForcePersistence(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_force_persistence(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::Configuration(None);
+                    event
+                }
+                (S::Configuration(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"Configuration",
+                        false,
+                    )?;
+                    match self.handle_configuration(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::ForcePersistence(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"ForcePersistence",
+                        false,
+                    )?;
+                    match self.handle_force_persistence(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Done__, event) => {
+                    *self.state__ = S::Done__;
+                    break (DeserializerEvent::Continue(event), allow_any_element);
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::SetAudioEncoderConfigurationElementType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            SetAudioEncoderConfigurationElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::SetAudioEncoderConfigurationElementType {
+            configuration: helper.finish_element("Configuration", self.configuration)?,
+            force_persistence: helper.finish_element("ForcePersistence", self.force_persistence)?,
+        })
+    }
+}
+#[derive(Debug)]
+pub struct SetAudioEncoderConfigurationResponseElementTypeDeserializer {
+    state__: ::std::boxed::Box<SetAudioEncoderConfigurationResponseElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum SetAudioEncoderConfigurationResponseElementTypeDeserializerState {
+    Init__,
+    Unknown__,
+}
+impl SetAudioEncoderConfigurationResponseElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            state__: ::std::boxed::Box::new(
+                SetAudioEncoderConfigurationResponseElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: SetAudioEncoderConfigurationResponseElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        Ok(())
+    }
+}
+impl<'de> Deserializer<'de, super::SetAudioEncoderConfigurationResponseElementType>
+    for SetAudioEncoderConfigurationResponseElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::SetAudioEncoderConfigurationResponseElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::SetAudioEncoderConfigurationResponseElementType> {
+        if let Event::End(_) = &event {
+            Ok(DeserializerOutput {
+                artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                event: DeserializerEvent::None,
+                allow_any: false,
+            })
+        } else {
+            Ok(DeserializerOutput {
+                artifact: DeserializerArtifact::Deserializer(self),
+                event: DeserializerEvent::Break(event),
+                allow_any: false,
+            })
+        }
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::SetAudioEncoderConfigurationResponseElementType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            SetAudioEncoderConfigurationResponseElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::SetAudioEncoderConfigurationResponseElementType {})
+    }
+}
+#[derive(Debug)]
+pub struct AddAudioEncoderConfigurationElementTypeDeserializer {
+    profile_token: ::core::option::Option<::std::string::String>,
+    configuration_token: ::core::option::Option<::std::string::String>,
+    state__: ::std::boxed::Box<AddAudioEncoderConfigurationElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum AddAudioEncoderConfigurationElementTypeDeserializerState {
+    Init__,
+    ProfileToken(::core::option::Option<<::std::string::String as WithDeserializer>::Deserializer>),
+    ConfigurationToken(
+        ::core::option::Option<<::std::string::String as WithDeserializer>::Deserializer>,
+    ),
+    Done__,
+    Unknown__,
+}
+impl AddAudioEncoderConfigurationElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            profile_token: None,
+            configuration_token: None,
+            state__: ::std::boxed::Box::new(
+                AddAudioEncoderConfigurationElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: AddAudioEncoderConfigurationElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use AddAudioEncoderConfigurationElementTypeDeserializerState as S;
+        match state {
+            S::ProfileToken(Some(deserializer)) => {
+                self.store_profile_token(deserializer.finish(helper)?)?
+            }
+            S::ConfigurationToken(Some(deserializer)) => {
+                self.store_configuration_token(deserializer.finish(helper)?)?
+            }
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_profile_token(
+        &mut self,
+        value: ::std::string::String,
+    ) -> ::core::result::Result<(), Error> {
+        if self.profile_token.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"ProfileToken",
+            )))?;
+        }
+        self.profile_token = Some(value);
+        Ok(())
+    }
+    fn store_configuration_token(
+        &mut self,
+        value: ::std::string::String,
+    ) -> ::core::result::Result<(), Error> {
+        if self.configuration_token.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"ConfigurationToken",
+            )))?;
+        }
+        self.configuration_token = Some(value);
+        Ok(())
+    }
+    fn handle_profile_token<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, ::std::string::String>,
+        fallback: &mut ::core::option::Option<
+            AddAudioEncoderConfigurationElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use AddAudioEncoderConfigurationElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::ProfileToken(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_profile_token(data)?;
+                *self.state__ = S::ConfigurationToken(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::ProfileToken(Some(deserializer)));
+                *self.state__ = S::ConfigurationToken(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+    fn handle_configuration_token<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, ::std::string::String>,
+        fallback: &mut ::core::option::Option<
+            AddAudioEncoderConfigurationElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use AddAudioEncoderConfigurationElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::ConfigurationToken(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_configuration_token(data)?;
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::ConfigurationToken(Some(deserializer)));
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::AddAudioEncoderConfigurationElementType>
+    for AddAudioEncoderConfigurationElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::AddAudioEncoderConfigurationElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::AddAudioEncoderConfigurationElementType> {
+        use AddAudioEncoderConfigurationElementTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::ProfileToken(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_profile_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::ConfigurationToken(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_configuration_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::ProfileToken(None);
+                    event
+                }
+                (S::ProfileToken(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"ProfileToken",
+                        false,
+                    )?;
+                    match self.handle_profile_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::ConfigurationToken(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"ConfigurationToken",
+                        false,
+                    )?;
+                    match self.handle_configuration_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Done__, event) => {
+                    *self.state__ = S::Done__;
+                    break (DeserializerEvent::Continue(event), allow_any_element);
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::AddAudioEncoderConfigurationElementType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            AddAudioEncoderConfigurationElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::AddAudioEncoderConfigurationElementType {
+            profile_token: helper.finish_element("ProfileToken", self.profile_token)?,
+            configuration_token: helper
+                .finish_element("ConfigurationToken", self.configuration_token)?,
+        })
+    }
+}
+#[derive(Debug)]
+pub struct AddAudioEncoderConfigurationResponseElementTypeDeserializer {
+    state__: ::std::boxed::Box<AddAudioEncoderConfigurationResponseElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum AddAudioEncoderConfigurationResponseElementTypeDeserializerState {
+    Init__,
+    Unknown__,
+}
+impl AddAudioEncoderConfigurationResponseElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            state__: ::std::boxed::Box::new(
+                AddAudioEncoderConfigurationResponseElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: AddAudioEncoderConfigurationResponseElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        Ok(())
+    }
+}
+impl<'de> Deserializer<'de, super::AddAudioEncoderConfigurationResponseElementType>
+    for AddAudioEncoderConfigurationResponseElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::AddAudioEncoderConfigurationResponseElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::AddAudioEncoderConfigurationResponseElementType> {
+        if let Event::End(_) = &event {
+            Ok(DeserializerOutput {
+                artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                event: DeserializerEvent::None,
+                allow_any: false,
+            })
+        } else {
+            Ok(DeserializerOutput {
+                artifact: DeserializerArtifact::Deserializer(self),
+                event: DeserializerEvent::Break(event),
+                allow_any: false,
+            })
+        }
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::AddAudioEncoderConfigurationResponseElementType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            AddAudioEncoderConfigurationResponseElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::AddAudioEncoderConfigurationResponseElementType {})
+    }
+}
+#[derive(Debug)]
+pub struct RemoveAudioEncoderConfigurationElementTypeDeserializer {
+    profile_token: ::core::option::Option<::std::string::String>,
+    state__: ::std::boxed::Box<RemoveAudioEncoderConfigurationElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum RemoveAudioEncoderConfigurationElementTypeDeserializerState {
+    Init__,
+    ProfileToken(::core::option::Option<<::std::string::String as WithDeserializer>::Deserializer>),
+    Done__,
+    Unknown__,
+}
+impl RemoveAudioEncoderConfigurationElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            profile_token: None,
+            state__: ::std::boxed::Box::new(
+                RemoveAudioEncoderConfigurationElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: RemoveAudioEncoderConfigurationElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use RemoveAudioEncoderConfigurationElementTypeDeserializerState as S;
+        match state {
+            S::ProfileToken(Some(deserializer)) => {
+                self.store_profile_token(deserializer.finish(helper)?)?
+            }
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_profile_token(
+        &mut self,
+        value: ::std::string::String,
+    ) -> ::core::result::Result<(), Error> {
+        if self.profile_token.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"ProfileToken",
+            )))?;
+        }
+        self.profile_token = Some(value);
+        Ok(())
+    }
+    fn handle_profile_token<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, ::std::string::String>,
+        fallback: &mut ::core::option::Option<
+            RemoveAudioEncoderConfigurationElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use RemoveAudioEncoderConfigurationElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::ProfileToken(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_profile_token(data)?;
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::ProfileToken(Some(deserializer)));
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::RemoveAudioEncoderConfigurationElementType>
+    for RemoveAudioEncoderConfigurationElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::RemoveAudioEncoderConfigurationElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::RemoveAudioEncoderConfigurationElementType> {
+        use RemoveAudioEncoderConfigurationElementTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::ProfileToken(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_profile_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::ProfileToken(None);
+                    event
+                }
+                (S::ProfileToken(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"ProfileToken",
+                        false,
+                    )?;
+                    match self.handle_profile_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Done__, event) => {
+                    *self.state__ = S::Done__;
+                    break (DeserializerEvent::Continue(event), allow_any_element);
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::RemoveAudioEncoderConfigurationElementType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            RemoveAudioEncoderConfigurationElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::RemoveAudioEncoderConfigurationElementType {
+            profile_token: helper.finish_element("ProfileToken", self.profile_token)?,
+        })
+    }
+}
+#[derive(Debug)]
+pub struct RemoveAudioEncoderConfigurationResponseElementTypeDeserializer {
+    state__: ::std::boxed::Box<RemoveAudioEncoderConfigurationResponseElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum RemoveAudioEncoderConfigurationResponseElementTypeDeserializerState {
+    Init__,
+    Unknown__,
+}
+impl RemoveAudioEncoderConfigurationResponseElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            state__: ::std::boxed::Box::new(
+                RemoveAudioEncoderConfigurationResponseElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: RemoveAudioEncoderConfigurationResponseElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        Ok(())
+    }
+}
+impl<'de> Deserializer<'de, super::RemoveAudioEncoderConfigurationResponseElementType>
+    for RemoveAudioEncoderConfigurationResponseElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::RemoveAudioEncoderConfigurationResponseElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::RemoveAudioEncoderConfigurationResponseElementType> {
+        if let Event::End(_) = &event {
+            Ok(DeserializerOutput {
+                artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                event: DeserializerEvent::None,
+                allow_any: false,
+            })
+        } else {
+            Ok(DeserializerOutput {
+                artifact: DeserializerArtifact::Deserializer(self),
+                event: DeserializerEvent::Break(event),
+                allow_any: false,
+            })
+        }
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::RemoveAudioEncoderConfigurationResponseElementType, Error>
+    {
+        let state = replace(
+            &mut *self.state__,
+            RemoveAudioEncoderConfigurationResponseElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::RemoveAudioEncoderConfigurationResponseElementType {})
+    }
+}
+#[derive(Debug)]
+pub struct GetAudioOutputsElementTypeDeserializer {
+    state__: ::std::boxed::Box<GetAudioOutputsElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum GetAudioOutputsElementTypeDeserializerState {
+    Init__,
+    Unknown__,
+}
+impl GetAudioOutputsElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            state__: ::std::boxed::Box::new(GetAudioOutputsElementTypeDeserializerState::Init__),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: GetAudioOutputsElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        Ok(())
+    }
+}
+impl<'de> Deserializer<'de, super::GetAudioOutputsElementType>
+    for GetAudioOutputsElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioOutputsElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioOutputsElementType> {
+        if let Event::End(_) = &event {
+            Ok(DeserializerOutput {
+                artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                event: DeserializerEvent::None,
+                allow_any: false,
+            })
+        } else {
+            Ok(DeserializerOutput {
+                artifact: DeserializerArtifact::Deserializer(self),
+                event: DeserializerEvent::Break(event),
+                allow_any: false,
+            })
+        }
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::GetAudioOutputsElementType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            GetAudioOutputsElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::GetAudioOutputsElementType {})
+    }
+}
+#[derive(Debug)]
+pub struct GetAudioOutputsResponseElementTypeDeserializer {
+    audio_outputs: ::std::vec::Vec<super::super::tt::AudioOutputType>,
+    state__: ::std::boxed::Box<GetAudioOutputsResponseElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum GetAudioOutputsResponseElementTypeDeserializerState {
+    Init__,
+    AudioOutputs(
+        ::core::option::Option<
+            <super::super::tt::AudioOutputType as WithDeserializer>::Deserializer,
+        >,
+    ),
+    Done__,
+    Unknown__,
+}
+impl GetAudioOutputsResponseElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            audio_outputs: ::std::vec::Vec::new(),
+            state__: ::std::boxed::Box::new(
+                GetAudioOutputsResponseElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: GetAudioOutputsResponseElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use GetAudioOutputsResponseElementTypeDeserializerState as S;
+        match state {
+            S::AudioOutputs(Some(deserializer)) => {
+                self.store_audio_outputs(deserializer.finish(helper)?)?
+            }
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_audio_outputs(
+        &mut self,
+        value: super::super::tt::AudioOutputType,
+    ) -> ::core::result::Result<(), Error> {
+        self.audio_outputs.push(value);
+        Ok(())
+    }
+    fn handle_audio_outputs<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, super::super::tt::AudioOutputType>,
+        fallback: &mut ::core::option::Option<GetAudioOutputsResponseElementTypeDeserializerState>,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use GetAudioOutputsResponseElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            *self.state__ = S::Done__;
+            return Ok(ElementHandlerOutput::from_event(event, allow_any));
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_audio_outputs(data)?;
+                *self.state__ = S::AudioOutputs(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::AudioOutputs(Some(deserializer)));
+                *self.state__ = S::AudioOutputs(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::GetAudioOutputsResponseElementType>
+    for GetAudioOutputsResponseElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioOutputsResponseElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioOutputsResponseElementType> {
+        use GetAudioOutputsResponseElementTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::AudioOutputs(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_audio_outputs(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::AudioOutputs(None);
+                    event
+                }
+                (S::AudioOutputs(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"AudioOutputs",
+                        true,
+                    )?;
+                    match self.handle_audio_outputs(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Done__, event) => {
+                    *self.state__ = S::Done__;
+                    break (DeserializerEvent::Continue(event), allow_any_element);
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::GetAudioOutputsResponseElementType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            GetAudioOutputsResponseElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::GetAudioOutputsResponseElementType {
+            audio_outputs: self.audio_outputs,
+        })
+    }
+}
+#[derive(Debug)]
+pub struct GetAudioOutputConfigurationsElementTypeDeserializer {
+    state__: ::std::boxed::Box<GetAudioOutputConfigurationsElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum GetAudioOutputConfigurationsElementTypeDeserializerState {
+    Init__,
+    Unknown__,
+}
+impl GetAudioOutputConfigurationsElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            state__: ::std::boxed::Box::new(
+                GetAudioOutputConfigurationsElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: GetAudioOutputConfigurationsElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        Ok(())
+    }
+}
+impl<'de> Deserializer<'de, super::GetAudioOutputConfigurationsElementType>
+    for GetAudioOutputConfigurationsElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioOutputConfigurationsElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioOutputConfigurationsElementType> {
+        if let Event::End(_) = &event {
+            Ok(DeserializerOutput {
+                artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                event: DeserializerEvent::None,
+                allow_any: false,
+            })
+        } else {
+            Ok(DeserializerOutput {
+                artifact: DeserializerArtifact::Deserializer(self),
+                event: DeserializerEvent::Break(event),
+                allow_any: false,
+            })
+        }
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::GetAudioOutputConfigurationsElementType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            GetAudioOutputConfigurationsElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::GetAudioOutputConfigurationsElementType {})
+    }
+}
+#[derive(Debug)]
+pub struct GetAudioOutputConfigurationsResponseElementTypeDeserializer {
+    configurations: ::std::vec::Vec<super::super::tt::AudioOutputConfigurationType>,
+    state__: ::std::boxed::Box<GetAudioOutputConfigurationsResponseElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum GetAudioOutputConfigurationsResponseElementTypeDeserializerState {
+    Init__,
+    Configurations(
+        ::core::option::Option<
+            <super::super::tt::AudioOutputConfigurationType as WithDeserializer>::Deserializer,
+        >,
+    ),
+    Done__,
+    Unknown__,
+}
+impl GetAudioOutputConfigurationsResponseElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            configurations: ::std::vec::Vec::new(),
+            state__: ::std::boxed::Box::new(
+                GetAudioOutputConfigurationsResponseElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: GetAudioOutputConfigurationsResponseElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use GetAudioOutputConfigurationsResponseElementTypeDeserializerState as S;
+        match state {
+            S::Configurations(Some(deserializer)) => {
+                self.store_configurations(deserializer.finish(helper)?)?
+            }
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_configurations(
+        &mut self,
+        value: super::super::tt::AudioOutputConfigurationType,
+    ) -> ::core::result::Result<(), Error> {
+        self.configurations.push(value);
+        Ok(())
+    }
+    fn handle_configurations<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, super::super::tt::AudioOutputConfigurationType>,
+        fallback: &mut ::core::option::Option<
+            GetAudioOutputConfigurationsResponseElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use GetAudioOutputConfigurationsResponseElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            *self.state__ = S::Done__;
+            return Ok(ElementHandlerOutput::from_event(event, allow_any));
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_configurations(data)?;
+                *self.state__ = S::Configurations(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::Configurations(Some(deserializer)));
+                *self.state__ = S::Configurations(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::GetAudioOutputConfigurationsResponseElementType>
+    for GetAudioOutputConfigurationsResponseElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioOutputConfigurationsResponseElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioOutputConfigurationsResponseElementType> {
+        use GetAudioOutputConfigurationsResponseElementTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::Configurations(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_configurations(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::Configurations(None);
+                    event
+                }
+                (S::Configurations(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"Configurations",
+                        false,
+                    )?;
+                    match self.handle_configurations(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Done__, event) => {
+                    *self.state__ = S::Done__;
+                    break (DeserializerEvent::Continue(event), allow_any_element);
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::GetAudioOutputConfigurationsResponseElementType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            GetAudioOutputConfigurationsResponseElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::GetAudioOutputConfigurationsResponseElementType {
+            configurations: self.configurations,
+        })
+    }
+}
+#[derive(Debug)]
+pub struct GetAudioOutputConfigurationElementTypeDeserializer {
+    configuration_token: ::core::option::Option<::std::string::String>,
+    state__: ::std::boxed::Box<GetAudioOutputConfigurationElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum GetAudioOutputConfigurationElementTypeDeserializerState {
+    Init__,
+    ConfigurationToken(
+        ::core::option::Option<<::std::string::String as WithDeserializer>::Deserializer>,
+    ),
+    Done__,
+    Unknown__,
+}
+impl GetAudioOutputConfigurationElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            configuration_token: None,
+            state__: ::std::boxed::Box::new(
+                GetAudioOutputConfigurationElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: GetAudioOutputConfigurationElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use GetAudioOutputConfigurationElementTypeDeserializerState as S;
+        match state {
+            S::ConfigurationToken(Some(deserializer)) => {
+                self.store_configuration_token(deserializer.finish(helper)?)?
+            }
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_configuration_token(
+        &mut self,
+        value: ::std::string::String,
+    ) -> ::core::result::Result<(), Error> {
+        if self.configuration_token.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"ConfigurationToken",
+            )))?;
+        }
+        self.configuration_token = Some(value);
+        Ok(())
+    }
+    fn handle_configuration_token<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, ::std::string::String>,
+        fallback: &mut ::core::option::Option<
+            GetAudioOutputConfigurationElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use GetAudioOutputConfigurationElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::ConfigurationToken(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_configuration_token(data)?;
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::ConfigurationToken(Some(deserializer)));
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::GetAudioOutputConfigurationElementType>
+    for GetAudioOutputConfigurationElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioOutputConfigurationElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioOutputConfigurationElementType> {
+        use GetAudioOutputConfigurationElementTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::ConfigurationToken(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_configuration_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::ConfigurationToken(None);
+                    event
+                }
+                (S::ConfigurationToken(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"ConfigurationToken",
+                        false,
+                    )?;
+                    match self.handle_configuration_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Done__, event) => {
+                    *self.state__ = S::Done__;
+                    break (DeserializerEvent::Continue(event), allow_any_element);
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::GetAudioOutputConfigurationElementType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            GetAudioOutputConfigurationElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::GetAudioOutputConfigurationElementType {
+            configuration_token: helper
+                .finish_element("ConfigurationToken", self.configuration_token)?,
+        })
+    }
+}
+#[derive(Debug)]
+pub struct GetAudioOutputConfigurationResponseElementTypeDeserializer {
+    configuration: ::core::option::Option<super::super::tt::AudioOutputConfigurationType>,
+    state__: ::std::boxed::Box<GetAudioOutputConfigurationResponseElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum GetAudioOutputConfigurationResponseElementTypeDeserializerState {
+    Init__,
+    Configuration(
+        ::core::option::Option<
+            <super::super::tt::AudioOutputConfigurationType as WithDeserializer>::Deserializer,
+        >,
+    ),
+    Done__,
+    Unknown__,
+}
+impl GetAudioOutputConfigurationResponseElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            configuration: None,
+            state__: ::std::boxed::Box::new(
+                GetAudioOutputConfigurationResponseElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: GetAudioOutputConfigurationResponseElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use GetAudioOutputConfigurationResponseElementTypeDeserializerState as S;
+        match state {
+            S::Configuration(Some(deserializer)) => {
+                self.store_configuration(deserializer.finish(helper)?)?
+            }
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_configuration(
+        &mut self,
+        value: super::super::tt::AudioOutputConfigurationType,
+    ) -> ::core::result::Result<(), Error> {
+        if self.configuration.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"Configuration",
+            )))?;
+        }
+        self.configuration = Some(value);
+        Ok(())
+    }
+    fn handle_configuration<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, super::super::tt::AudioOutputConfigurationType>,
+        fallback: &mut ::core::option::Option<
+            GetAudioOutputConfigurationResponseElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use GetAudioOutputConfigurationResponseElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::Configuration(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_configuration(data)?;
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::Configuration(Some(deserializer)));
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::GetAudioOutputConfigurationResponseElementType>
+    for GetAudioOutputConfigurationResponseElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioOutputConfigurationResponseElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioOutputConfigurationResponseElementType> {
+        use GetAudioOutputConfigurationResponseElementTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::Configuration(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_configuration(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::Configuration(None);
+                    event
+                }
+                (S::Configuration(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"Configuration",
+                        false,
+                    )?;
+                    match self.handle_configuration(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Done__, event) => {
+                    *self.state__ = S::Done__;
+                    break (DeserializerEvent::Continue(event), allow_any_element);
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::GetAudioOutputConfigurationResponseElementType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            GetAudioOutputConfigurationResponseElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::GetAudioOutputConfigurationResponseElementType {
+            configuration: helper.finish_element("Configuration", self.configuration)?,
+        })
+    }
+}
+#[derive(Debug)]
+pub struct GetCompatibleAudioOutputConfigurationsElementTypeDeserializer {
+    profile_token: ::core::option::Option<::std::string::String>,
+    state__: ::std::boxed::Box<GetCompatibleAudioOutputConfigurationsElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum GetCompatibleAudioOutputConfigurationsElementTypeDeserializerState {
+    Init__,
+    ProfileToken(::core::option::Option<<::std::string::String as WithDeserializer>::Deserializer>),
+    Done__,
+    Unknown__,
+}
+impl GetCompatibleAudioOutputConfigurationsElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            profile_token: None,
+            state__: ::std::boxed::Box::new(
+                GetCompatibleAudioOutputConfigurationsElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: GetCompatibleAudioOutputConfigurationsElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use GetCompatibleAudioOutputConfigurationsElementTypeDeserializerState as S;
+        match state {
+            S::ProfileToken(Some(deserializer)) => {
+                self.store_profile_token(deserializer.finish(helper)?)?
+            }
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_profile_token(
+        &mut self,
+        value: ::std::string::String,
+    ) -> ::core::result::Result<(), Error> {
+        if self.profile_token.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"ProfileToken",
+            )))?;
+        }
+        self.profile_token = Some(value);
+        Ok(())
+    }
+    fn handle_profile_token<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, ::std::string::String>,
+        fallback: &mut ::core::option::Option<
+            GetCompatibleAudioOutputConfigurationsElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use GetCompatibleAudioOutputConfigurationsElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::ProfileToken(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_profile_token(data)?;
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::ProfileToken(Some(deserializer)));
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::GetCompatibleAudioOutputConfigurationsElementType>
+    for GetCompatibleAudioOutputConfigurationsElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetCompatibleAudioOutputConfigurationsElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetCompatibleAudioOutputConfigurationsElementType> {
+        use GetCompatibleAudioOutputConfigurationsElementTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::ProfileToken(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_profile_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::ProfileToken(None);
+                    event
+                }
+                (S::ProfileToken(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"ProfileToken",
+                        false,
+                    )?;
+                    match self.handle_profile_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Done__, event) => {
+                    *self.state__ = S::Done__;
+                    break (DeserializerEvent::Continue(event), allow_any_element);
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::GetCompatibleAudioOutputConfigurationsElementType, Error>
+    {
+        let state = replace(
+            &mut *self.state__,
+            GetCompatibleAudioOutputConfigurationsElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::GetCompatibleAudioOutputConfigurationsElementType {
+            profile_token: helper.finish_element("ProfileToken", self.profile_token)?,
+        })
+    }
+}
+#[derive(Debug)]
+pub struct GetCompatibleAudioOutputConfigurationsResponseElementTypeDeserializer {
+    configurations: ::std::vec::Vec<super::super::tt::AudioOutputConfigurationType>,
+    state__: ::std::boxed::Box<
+        GetCompatibleAudioOutputConfigurationsResponseElementTypeDeserializerState,
+    >,
+}
+#[derive(Debug)]
+enum GetCompatibleAudioOutputConfigurationsResponseElementTypeDeserializerState {
+    Init__,
+    Configurations(
+        ::core::option::Option<
+            <super::super::tt::AudioOutputConfigurationType as WithDeserializer>::Deserializer,
+        >,
+    ),
+    Done__,
+    Unknown__,
+}
+impl GetCompatibleAudioOutputConfigurationsResponseElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            configurations: ::std::vec::Vec::new(),
+            state__: ::std::boxed::Box::new(
+                GetCompatibleAudioOutputConfigurationsResponseElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: GetCompatibleAudioOutputConfigurationsResponseElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use GetCompatibleAudioOutputConfigurationsResponseElementTypeDeserializerState as S;
+        match state {
+            S::Configurations(Some(deserializer)) => {
+                self.store_configurations(deserializer.finish(helper)?)?
+            }
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_configurations(
+        &mut self,
+        value: super::super::tt::AudioOutputConfigurationType,
+    ) -> ::core::result::Result<(), Error> {
+        self.configurations.push(value);
+        Ok(())
+    }
+    fn handle_configurations<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, super::super::tt::AudioOutputConfigurationType>,
+        fallback: &mut ::core::option::Option<
+            GetCompatibleAudioOutputConfigurationsResponseElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use GetCompatibleAudioOutputConfigurationsResponseElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            *self.state__ = S::Done__;
+            return Ok(ElementHandlerOutput::from_event(event, allow_any));
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_configurations(data)?;
+                *self.state__ = S::Configurations(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::Configurations(Some(deserializer)));
+                *self.state__ = S::Configurations(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::GetCompatibleAudioOutputConfigurationsResponseElementType>
+    for GetCompatibleAudioOutputConfigurationsResponseElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetCompatibleAudioOutputConfigurationsResponseElementType>
+    {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetCompatibleAudioOutputConfigurationsResponseElementType>
+    {
+        use GetCompatibleAudioOutputConfigurationsResponseElementTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::Configurations(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_configurations(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::Configurations(None);
+                    event
+                }
+                (S::Configurations(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"Configurations",
+                        false,
+                    )?;
+                    match self.handle_configurations(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Done__, event) => {
+                    *self.state__ = S::Done__;
+                    break (DeserializerEvent::Continue(event), allow_any_element);
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<
+        super::GetCompatibleAudioOutputConfigurationsResponseElementType,
+        Error,
+    > {
+        let state = replace(
+            &mut *self.state__,
+            GetCompatibleAudioOutputConfigurationsResponseElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(
+            super::GetCompatibleAudioOutputConfigurationsResponseElementType {
+                configurations: self.configurations,
+            },
+        )
+    }
+}
+#[derive(Debug)]
+pub struct GetAudioOutputConfigurationOptionsElementTypeDeserializer {
+    configuration_token: ::core::option::Option<::std::string::String>,
+    profile_token: ::core::option::Option<::std::string::String>,
+    state__: ::std::boxed::Box<GetAudioOutputConfigurationOptionsElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum GetAudioOutputConfigurationOptionsElementTypeDeserializerState {
+    Init__,
+    ConfigurationToken(
+        ::core::option::Option<<::std::string::String as WithDeserializer>::Deserializer>,
+    ),
+    ProfileToken(::core::option::Option<<::std::string::String as WithDeserializer>::Deserializer>),
+    Done__,
+    Unknown__,
+}
+impl GetAudioOutputConfigurationOptionsElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            configuration_token: None,
+            profile_token: None,
+            state__: ::std::boxed::Box::new(
+                GetAudioOutputConfigurationOptionsElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: GetAudioOutputConfigurationOptionsElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use GetAudioOutputConfigurationOptionsElementTypeDeserializerState as S;
+        match state {
+            S::ConfigurationToken(Some(deserializer)) => {
+                self.store_configuration_token(deserializer.finish(helper)?)?
+            }
+            S::ProfileToken(Some(deserializer)) => {
+                self.store_profile_token(deserializer.finish(helper)?)?
+            }
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_configuration_token(
+        &mut self,
+        value: ::std::string::String,
+    ) -> ::core::result::Result<(), Error> {
+        if self.configuration_token.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"ConfigurationToken",
+            )))?;
+        }
+        self.configuration_token = Some(value);
+        Ok(())
+    }
+    fn store_profile_token(
+        &mut self,
+        value: ::std::string::String,
+    ) -> ::core::result::Result<(), Error> {
+        if self.profile_token.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"ProfileToken",
+            )))?;
+        }
+        self.profile_token = Some(value);
+        Ok(())
+    }
+    fn handle_configuration_token<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, ::std::string::String>,
+        fallback: &mut ::core::option::Option<
+            GetAudioOutputConfigurationOptionsElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use GetAudioOutputConfigurationOptionsElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            *self.state__ = S::ProfileToken(None);
+            return Ok(ElementHandlerOutput::from_event(event, allow_any));
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_configuration_token(data)?;
+                *self.state__ = S::ProfileToken(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::ConfigurationToken(Some(deserializer)));
+                *self.state__ = S::ProfileToken(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+    fn handle_profile_token<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, ::std::string::String>,
+        fallback: &mut ::core::option::Option<
+            GetAudioOutputConfigurationOptionsElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use GetAudioOutputConfigurationOptionsElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            *self.state__ = S::Done__;
+            return Ok(ElementHandlerOutput::from_event(event, allow_any));
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_profile_token(data)?;
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::ProfileToken(Some(deserializer)));
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::GetAudioOutputConfigurationOptionsElementType>
+    for GetAudioOutputConfigurationOptionsElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioOutputConfigurationOptionsElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioOutputConfigurationOptionsElementType> {
+        use GetAudioOutputConfigurationOptionsElementTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::ConfigurationToken(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_configuration_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::ProfileToken(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_profile_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::ConfigurationToken(None);
+                    event
+                }
+                (S::ConfigurationToken(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"ConfigurationToken",
+                        false,
+                    )?;
+                    match self.handle_configuration_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::ProfileToken(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"ProfileToken",
+                        false,
+                    )?;
+                    match self.handle_profile_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Done__, event) => {
+                    *self.state__ = S::Done__;
+                    break (DeserializerEvent::Continue(event), allow_any_element);
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::GetAudioOutputConfigurationOptionsElementType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            GetAudioOutputConfigurationOptionsElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::GetAudioOutputConfigurationOptionsElementType {
+            configuration_token: self.configuration_token,
+            profile_token: self.profile_token,
+        })
+    }
+}
+#[derive(Debug)]
+pub struct GetAudioOutputConfigurationOptionsResponseElementTypeDeserializer {
+    options: ::core::option::Option<super::super::tt::AudioOutputConfigurationOptionsType>,
+    state__:
+        ::std::boxed::Box<GetAudioOutputConfigurationOptionsResponseElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum GetAudioOutputConfigurationOptionsResponseElementTypeDeserializerState {
+    Init__ , Options (:: core :: option :: Option << super :: super :: tt :: AudioOutputConfigurationOptionsType as WithDeserializer > :: Deserializer >) , Done__ , Unknown__ , }
+impl GetAudioOutputConfigurationOptionsResponseElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            options: None,
+            state__: ::std::boxed::Box::new(
+                GetAudioOutputConfigurationOptionsResponseElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: GetAudioOutputConfigurationOptionsResponseElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use GetAudioOutputConfigurationOptionsResponseElementTypeDeserializerState as S;
+        match state {
+            S::Options(Some(deserializer)) => self.store_options(deserializer.finish(helper)?)?,
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_options(
+        &mut self,
+        value: super::super::tt::AudioOutputConfigurationOptionsType,
+    ) -> ::core::result::Result<(), Error> {
+        if self.options.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"Options",
+            )))?;
+        }
+        self.options = Some(value);
+        Ok(())
+    }
+    fn handle_options<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, super::super::tt::AudioOutputConfigurationOptionsType>,
+        fallback: &mut ::core::option::Option<
+            GetAudioOutputConfigurationOptionsResponseElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use GetAudioOutputConfigurationOptionsResponseElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::Options(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_options(data)?;
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::Options(Some(deserializer)));
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::GetAudioOutputConfigurationOptionsResponseElementType>
+    for GetAudioOutputConfigurationOptionsResponseElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioOutputConfigurationOptionsResponseElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioOutputConfigurationOptionsResponseElementType> {
+        use GetAudioOutputConfigurationOptionsResponseElementTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::Options(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_options(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::Options(None);
+                    event
+                }
+                (S::Options(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"Options",
+                        false,
+                    )?;
+                    match self.handle_options(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Done__, event) => {
+                    *self.state__ = S::Done__;
+                    break (DeserializerEvent::Continue(event), allow_any_element);
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::GetAudioOutputConfigurationOptionsResponseElementType, Error>
+    {
+        let state = replace(
+            &mut *self.state__,
+            GetAudioOutputConfigurationOptionsResponseElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(
+            super::GetAudioOutputConfigurationOptionsResponseElementType {
+                options: helper.finish_element("Options", self.options)?,
+            },
+        )
+    }
+}
+#[derive(Debug)]
+pub struct SetAudioOutputConfigurationElementTypeDeserializer {
+    configuration: ::core::option::Option<super::super::tt::AudioOutputConfigurationType>,
+    force_persistence: ::core::option::Option<::core::primitive::bool>,
+    state__: ::std::boxed::Box<SetAudioOutputConfigurationElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum SetAudioOutputConfigurationElementTypeDeserializerState {
+    Init__,
+    Configuration(
+        ::core::option::Option<
+            <super::super::tt::AudioOutputConfigurationType as WithDeserializer>::Deserializer,
+        >,
+    ),
+    ForcePersistence(
+        ::core::option::Option<<::core::primitive::bool as WithDeserializer>::Deserializer>,
+    ),
+    Done__,
+    Unknown__,
+}
+impl SetAudioOutputConfigurationElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            configuration: None,
+            force_persistence: None,
+            state__: ::std::boxed::Box::new(
+                SetAudioOutputConfigurationElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: SetAudioOutputConfigurationElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use SetAudioOutputConfigurationElementTypeDeserializerState as S;
+        match state {
+            S::Configuration(Some(deserializer)) => {
+                self.store_configuration(deserializer.finish(helper)?)?
+            }
+            S::ForcePersistence(Some(deserializer)) => {
+                self.store_force_persistence(deserializer.finish(helper)?)?
+            }
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_configuration(
+        &mut self,
+        value: super::super::tt::AudioOutputConfigurationType,
+    ) -> ::core::result::Result<(), Error> {
+        if self.configuration.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"Configuration",
+            )))?;
+        }
+        self.configuration = Some(value);
+        Ok(())
+    }
+    fn store_force_persistence(
+        &mut self,
+        value: ::core::primitive::bool,
+    ) -> ::core::result::Result<(), Error> {
+        if self.force_persistence.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"ForcePersistence",
+            )))?;
+        }
+        self.force_persistence = Some(value);
+        Ok(())
+    }
+    fn handle_configuration<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, super::super::tt::AudioOutputConfigurationType>,
+        fallback: &mut ::core::option::Option<
+            SetAudioOutputConfigurationElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use SetAudioOutputConfigurationElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::Configuration(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_configuration(data)?;
+                *self.state__ = S::ForcePersistence(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::Configuration(Some(deserializer)));
+                *self.state__ = S::ForcePersistence(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+    fn handle_force_persistence<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, ::core::primitive::bool>,
+        fallback: &mut ::core::option::Option<
+            SetAudioOutputConfigurationElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use SetAudioOutputConfigurationElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::ForcePersistence(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_force_persistence(data)?;
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::ForcePersistence(Some(deserializer)));
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::SetAudioOutputConfigurationElementType>
+    for SetAudioOutputConfigurationElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::SetAudioOutputConfigurationElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::SetAudioOutputConfigurationElementType> {
+        use SetAudioOutputConfigurationElementTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::Configuration(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_configuration(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::ForcePersistence(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_force_persistence(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::Configuration(None);
+                    event
+                }
+                (S::Configuration(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"Configuration",
+                        false,
+                    )?;
+                    match self.handle_configuration(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::ForcePersistence(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"ForcePersistence",
+                        false,
+                    )?;
+                    match self.handle_force_persistence(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Done__, event) => {
+                    *self.state__ = S::Done__;
+                    break (DeserializerEvent::Continue(event), allow_any_element);
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::SetAudioOutputConfigurationElementType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            SetAudioOutputConfigurationElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::SetAudioOutputConfigurationElementType {
+            configuration: helper.finish_element("Configuration", self.configuration)?,
+            force_persistence: helper.finish_element("ForcePersistence", self.force_persistence)?,
+        })
+    }
+}
+#[derive(Debug)]
+pub struct SetAudioOutputConfigurationResponseElementTypeDeserializer {
+    state__: ::std::boxed::Box<SetAudioOutputConfigurationResponseElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum SetAudioOutputConfigurationResponseElementTypeDeserializerState {
+    Init__,
+    Unknown__,
+}
+impl SetAudioOutputConfigurationResponseElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            state__: ::std::boxed::Box::new(
+                SetAudioOutputConfigurationResponseElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: SetAudioOutputConfigurationResponseElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        Ok(())
+    }
+}
+impl<'de> Deserializer<'de, super::SetAudioOutputConfigurationResponseElementType>
+    for SetAudioOutputConfigurationResponseElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::SetAudioOutputConfigurationResponseElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::SetAudioOutputConfigurationResponseElementType> {
+        if let Event::End(_) = &event {
+            Ok(DeserializerOutput {
+                artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                event: DeserializerEvent::None,
+                allow_any: false,
+            })
+        } else {
+            Ok(DeserializerOutput {
+                artifact: DeserializerArtifact::Deserializer(self),
+                event: DeserializerEvent::Break(event),
+                allow_any: false,
+            })
+        }
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::SetAudioOutputConfigurationResponseElementType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            SetAudioOutputConfigurationResponseElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::SetAudioOutputConfigurationResponseElementType {})
+    }
+}
+#[derive(Debug)]
+pub struct AddAudioOutputConfigurationElementTypeDeserializer {
+    profile_token: ::core::option::Option<::std::string::String>,
+    configuration_token: ::core::option::Option<::std::string::String>,
+    state__: ::std::boxed::Box<AddAudioOutputConfigurationElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum AddAudioOutputConfigurationElementTypeDeserializerState {
+    Init__,
+    ProfileToken(::core::option::Option<<::std::string::String as WithDeserializer>::Deserializer>),
+    ConfigurationToken(
+        ::core::option::Option<<::std::string::String as WithDeserializer>::Deserializer>,
+    ),
+    Done__,
+    Unknown__,
+}
+impl AddAudioOutputConfigurationElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            profile_token: None,
+            configuration_token: None,
+            state__: ::std::boxed::Box::new(
+                AddAudioOutputConfigurationElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: AddAudioOutputConfigurationElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use AddAudioOutputConfigurationElementTypeDeserializerState as S;
+        match state {
+            S::ProfileToken(Some(deserializer)) => {
+                self.store_profile_token(deserializer.finish(helper)?)?
+            }
+            S::ConfigurationToken(Some(deserializer)) => {
+                self.store_configuration_token(deserializer.finish(helper)?)?
+            }
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_profile_token(
+        &mut self,
+        value: ::std::string::String,
+    ) -> ::core::result::Result<(), Error> {
+        if self.profile_token.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"ProfileToken",
+            )))?;
+        }
+        self.profile_token = Some(value);
+        Ok(())
+    }
+    fn store_configuration_token(
+        &mut self,
+        value: ::std::string::String,
+    ) -> ::core::result::Result<(), Error> {
+        if self.configuration_token.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"ConfigurationToken",
+            )))?;
+        }
+        self.configuration_token = Some(value);
+        Ok(())
+    }
+    fn handle_profile_token<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, ::std::string::String>,
+        fallback: &mut ::core::option::Option<
+            AddAudioOutputConfigurationElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use AddAudioOutputConfigurationElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::ProfileToken(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_profile_token(data)?;
+                *self.state__ = S::ConfigurationToken(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::ProfileToken(Some(deserializer)));
+                *self.state__ = S::ConfigurationToken(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+    fn handle_configuration_token<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, ::std::string::String>,
+        fallback: &mut ::core::option::Option<
+            AddAudioOutputConfigurationElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use AddAudioOutputConfigurationElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::ConfigurationToken(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_configuration_token(data)?;
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::ConfigurationToken(Some(deserializer)));
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::AddAudioOutputConfigurationElementType>
+    for AddAudioOutputConfigurationElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::AddAudioOutputConfigurationElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::AddAudioOutputConfigurationElementType> {
+        use AddAudioOutputConfigurationElementTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::ProfileToken(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_profile_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::ConfigurationToken(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_configuration_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::ProfileToken(None);
+                    event
+                }
+                (S::ProfileToken(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"ProfileToken",
+                        false,
+                    )?;
+                    match self.handle_profile_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::ConfigurationToken(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"ConfigurationToken",
+                        false,
+                    )?;
+                    match self.handle_configuration_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Done__, event) => {
+                    *self.state__ = S::Done__;
+                    break (DeserializerEvent::Continue(event), allow_any_element);
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::AddAudioOutputConfigurationElementType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            AddAudioOutputConfigurationElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::AddAudioOutputConfigurationElementType {
+            profile_token: helper.finish_element("ProfileToken", self.profile_token)?,
+            configuration_token: helper
+                .finish_element("ConfigurationToken", self.configuration_token)?,
+        })
+    }
+}
+#[derive(Debug)]
+pub struct AddAudioOutputConfigurationResponseElementTypeDeserializer {
+    state__: ::std::boxed::Box<AddAudioOutputConfigurationResponseElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum AddAudioOutputConfigurationResponseElementTypeDeserializerState {
+    Init__,
+    Unknown__,
+}
+impl AddAudioOutputConfigurationResponseElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            state__: ::std::boxed::Box::new(
+                AddAudioOutputConfigurationResponseElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: AddAudioOutputConfigurationResponseElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        Ok(())
+    }
+}
+impl<'de> Deserializer<'de, super::AddAudioOutputConfigurationResponseElementType>
+    for AddAudioOutputConfigurationResponseElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::AddAudioOutputConfigurationResponseElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::AddAudioOutputConfigurationResponseElementType> {
+        if let Event::End(_) = &event {
+            Ok(DeserializerOutput {
+                artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                event: DeserializerEvent::None,
+                allow_any: false,
+            })
+        } else {
+            Ok(DeserializerOutput {
+                artifact: DeserializerArtifact::Deserializer(self),
+                event: DeserializerEvent::Break(event),
+                allow_any: false,
+            })
+        }
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::AddAudioOutputConfigurationResponseElementType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            AddAudioOutputConfigurationResponseElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::AddAudioOutputConfigurationResponseElementType {})
+    }
+}
+#[derive(Debug)]
+pub struct RemoveAudioOutputConfigurationElementTypeDeserializer {
+    profile_token: ::core::option::Option<::std::string::String>,
+    state__: ::std::boxed::Box<RemoveAudioOutputConfigurationElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum RemoveAudioOutputConfigurationElementTypeDeserializerState {
+    Init__,
+    ProfileToken(::core::option::Option<<::std::string::String as WithDeserializer>::Deserializer>),
+    Done__,
+    Unknown__,
+}
+impl RemoveAudioOutputConfigurationElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            profile_token: None,
+            state__: ::std::boxed::Box::new(
+                RemoveAudioOutputConfigurationElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: RemoveAudioOutputConfigurationElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use RemoveAudioOutputConfigurationElementTypeDeserializerState as S;
+        match state {
+            S::ProfileToken(Some(deserializer)) => {
+                self.store_profile_token(deserializer.finish(helper)?)?
+            }
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_profile_token(
+        &mut self,
+        value: ::std::string::String,
+    ) -> ::core::result::Result<(), Error> {
+        if self.profile_token.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"ProfileToken",
+            )))?;
+        }
+        self.profile_token = Some(value);
+        Ok(())
+    }
+    fn handle_profile_token<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, ::std::string::String>,
+        fallback: &mut ::core::option::Option<
+            RemoveAudioOutputConfigurationElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use RemoveAudioOutputConfigurationElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::ProfileToken(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_profile_token(data)?;
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::ProfileToken(Some(deserializer)));
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::RemoveAudioOutputConfigurationElementType>
+    for RemoveAudioOutputConfigurationElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::RemoveAudioOutputConfigurationElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::RemoveAudioOutputConfigurationElementType> {
+        use RemoveAudioOutputConfigurationElementTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::ProfileToken(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_profile_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::ProfileToken(None);
+                    event
+                }
+                (S::ProfileToken(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"ProfileToken",
+                        false,
+                    )?;
+                    match self.handle_profile_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Done__, event) => {
+                    *self.state__ = S::Done__;
+                    break (DeserializerEvent::Continue(event), allow_any_element);
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::RemoveAudioOutputConfigurationElementType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            RemoveAudioOutputConfigurationElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::RemoveAudioOutputConfigurationElementType {
+            profile_token: helper.finish_element("ProfileToken", self.profile_token)?,
+        })
+    }
+}
+#[derive(Debug)]
+pub struct RemoveAudioOutputConfigurationResponseElementTypeDeserializer {
+    state__: ::std::boxed::Box<RemoveAudioOutputConfigurationResponseElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum RemoveAudioOutputConfigurationResponseElementTypeDeserializerState {
+    Init__,
+    Unknown__,
+}
+impl RemoveAudioOutputConfigurationResponseElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            state__: ::std::boxed::Box::new(
+                RemoveAudioOutputConfigurationResponseElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: RemoveAudioOutputConfigurationResponseElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        Ok(())
+    }
+}
+impl<'de> Deserializer<'de, super::RemoveAudioOutputConfigurationResponseElementType>
+    for RemoveAudioOutputConfigurationResponseElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::RemoveAudioOutputConfigurationResponseElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::RemoveAudioOutputConfigurationResponseElementType> {
+        if let Event::End(_) = &event {
+            Ok(DeserializerOutput {
+                artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                event: DeserializerEvent::None,
+                allow_any: false,
+            })
+        } else {
+            Ok(DeserializerOutput {
+                artifact: DeserializerArtifact::Deserializer(self),
+                event: DeserializerEvent::Break(event),
+                allow_any: false,
+            })
+        }
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::RemoveAudioOutputConfigurationResponseElementType, Error>
+    {
+        let state = replace(
+            &mut *self.state__,
+            RemoveAudioOutputConfigurationResponseElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::RemoveAudioOutputConfigurationResponseElementType {})
+    }
+}
+#[derive(Debug)]
+pub struct GetAudioDecoderConfigurationsElementTypeDeserializer {
+    state__: ::std::boxed::Box<GetAudioDecoderConfigurationsElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum GetAudioDecoderConfigurationsElementTypeDeserializerState {
+    Init__,
+    Unknown__,
+}
+impl GetAudioDecoderConfigurationsElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            state__: ::std::boxed::Box::new(
+                GetAudioDecoderConfigurationsElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: GetAudioDecoderConfigurationsElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        Ok(())
+    }
+}
+impl<'de> Deserializer<'de, super::GetAudioDecoderConfigurationsElementType>
+    for GetAudioDecoderConfigurationsElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioDecoderConfigurationsElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioDecoderConfigurationsElementType> {
+        if let Event::End(_) = &event {
+            Ok(DeserializerOutput {
+                artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                event: DeserializerEvent::None,
+                allow_any: false,
+            })
+        } else {
+            Ok(DeserializerOutput {
+                artifact: DeserializerArtifact::Deserializer(self),
+                event: DeserializerEvent::Break(event),
+                allow_any: false,
+            })
+        }
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::GetAudioDecoderConfigurationsElementType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            GetAudioDecoderConfigurationsElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::GetAudioDecoderConfigurationsElementType {})
+    }
+}
+#[derive(Debug)]
+pub struct GetAudioDecoderConfigurationsResponseElementTypeDeserializer {
+    configurations: ::std::vec::Vec<super::super::tt::AudioDecoderConfigurationType>,
+    state__: ::std::boxed::Box<GetAudioDecoderConfigurationsResponseElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum GetAudioDecoderConfigurationsResponseElementTypeDeserializerState {
+    Init__,
+    Configurations(
+        ::core::option::Option<
+            <super::super::tt::AudioDecoderConfigurationType as WithDeserializer>::Deserializer,
+        >,
+    ),
+    Done__,
+    Unknown__,
+}
+impl GetAudioDecoderConfigurationsResponseElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            configurations: ::std::vec::Vec::new(),
+            state__: ::std::boxed::Box::new(
+                GetAudioDecoderConfigurationsResponseElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: GetAudioDecoderConfigurationsResponseElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use GetAudioDecoderConfigurationsResponseElementTypeDeserializerState as S;
+        match state {
+            S::Configurations(Some(deserializer)) => {
+                self.store_configurations(deserializer.finish(helper)?)?
+            }
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_configurations(
+        &mut self,
+        value: super::super::tt::AudioDecoderConfigurationType,
+    ) -> ::core::result::Result<(), Error> {
+        self.configurations.push(value);
+        Ok(())
+    }
+    fn handle_configurations<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, super::super::tt::AudioDecoderConfigurationType>,
+        fallback: &mut ::core::option::Option<
+            GetAudioDecoderConfigurationsResponseElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use GetAudioDecoderConfigurationsResponseElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            *self.state__ = S::Done__;
+            return Ok(ElementHandlerOutput::from_event(event, allow_any));
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_configurations(data)?;
+                *self.state__ = S::Configurations(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::Configurations(Some(deserializer)));
+                *self.state__ = S::Configurations(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::GetAudioDecoderConfigurationsResponseElementType>
+    for GetAudioDecoderConfigurationsResponseElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioDecoderConfigurationsResponseElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioDecoderConfigurationsResponseElementType> {
+        use GetAudioDecoderConfigurationsResponseElementTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::Configurations(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_configurations(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::Configurations(None);
+                    event
+                }
+                (S::Configurations(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"Configurations",
+                        false,
+                    )?;
+                    match self.handle_configurations(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Done__, event) => {
+                    *self.state__ = S::Done__;
+                    break (DeserializerEvent::Continue(event), allow_any_element);
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::GetAudioDecoderConfigurationsResponseElementType, Error>
+    {
+        let state = replace(
+            &mut *self.state__,
+            GetAudioDecoderConfigurationsResponseElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::GetAudioDecoderConfigurationsResponseElementType {
+            configurations: self.configurations,
+        })
+    }
+}
+#[derive(Debug)]
+pub struct GetAudioDecoderConfigurationElementTypeDeserializer {
+    configuration_token: ::core::option::Option<::std::string::String>,
+    state__: ::std::boxed::Box<GetAudioDecoderConfigurationElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum GetAudioDecoderConfigurationElementTypeDeserializerState {
+    Init__,
+    ConfigurationToken(
+        ::core::option::Option<<::std::string::String as WithDeserializer>::Deserializer>,
+    ),
+    Done__,
+    Unknown__,
+}
+impl GetAudioDecoderConfigurationElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            configuration_token: None,
+            state__: ::std::boxed::Box::new(
+                GetAudioDecoderConfigurationElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: GetAudioDecoderConfigurationElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use GetAudioDecoderConfigurationElementTypeDeserializerState as S;
+        match state {
+            S::ConfigurationToken(Some(deserializer)) => {
+                self.store_configuration_token(deserializer.finish(helper)?)?
+            }
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_configuration_token(
+        &mut self,
+        value: ::std::string::String,
+    ) -> ::core::result::Result<(), Error> {
+        if self.configuration_token.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"ConfigurationToken",
+            )))?;
+        }
+        self.configuration_token = Some(value);
+        Ok(())
+    }
+    fn handle_configuration_token<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, ::std::string::String>,
+        fallback: &mut ::core::option::Option<
+            GetAudioDecoderConfigurationElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use GetAudioDecoderConfigurationElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::ConfigurationToken(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_configuration_token(data)?;
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::ConfigurationToken(Some(deserializer)));
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::GetAudioDecoderConfigurationElementType>
+    for GetAudioDecoderConfigurationElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioDecoderConfigurationElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioDecoderConfigurationElementType> {
+        use GetAudioDecoderConfigurationElementTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::ConfigurationToken(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_configuration_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::ConfigurationToken(None);
+                    event
+                }
+                (S::ConfigurationToken(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"ConfigurationToken",
+                        false,
+                    )?;
+                    match self.handle_configuration_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Done__, event) => {
+                    *self.state__ = S::Done__;
+                    break (DeserializerEvent::Continue(event), allow_any_element);
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::GetAudioDecoderConfigurationElementType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            GetAudioDecoderConfigurationElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::GetAudioDecoderConfigurationElementType {
+            configuration_token: helper
+                .finish_element("ConfigurationToken", self.configuration_token)?,
+        })
+    }
+}
+#[derive(Debug)]
+pub struct GetAudioDecoderConfigurationResponseElementTypeDeserializer {
+    configuration: ::core::option::Option<super::super::tt::AudioDecoderConfigurationType>,
+    state__: ::std::boxed::Box<GetAudioDecoderConfigurationResponseElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum GetAudioDecoderConfigurationResponseElementTypeDeserializerState {
+    Init__,
+    Configuration(
+        ::core::option::Option<
+            <super::super::tt::AudioDecoderConfigurationType as WithDeserializer>::Deserializer,
+        >,
+    ),
+    Done__,
+    Unknown__,
+}
+impl GetAudioDecoderConfigurationResponseElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            configuration: None,
+            state__: ::std::boxed::Box::new(
+                GetAudioDecoderConfigurationResponseElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: GetAudioDecoderConfigurationResponseElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use GetAudioDecoderConfigurationResponseElementTypeDeserializerState as S;
+        match state {
+            S::Configuration(Some(deserializer)) => {
+                self.store_configuration(deserializer.finish(helper)?)?
+            }
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_configuration(
+        &mut self,
+        value: super::super::tt::AudioDecoderConfigurationType,
+    ) -> ::core::result::Result<(), Error> {
+        if self.configuration.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"Configuration",
+            )))?;
+        }
+        self.configuration = Some(value);
+        Ok(())
+    }
+    fn handle_configuration<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, super::super::tt::AudioDecoderConfigurationType>,
+        fallback: &mut ::core::option::Option<
+            GetAudioDecoderConfigurationResponseElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use GetAudioDecoderConfigurationResponseElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::Configuration(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_configuration(data)?;
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::Configuration(Some(deserializer)));
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::GetAudioDecoderConfigurationResponseElementType>
+    for GetAudioDecoderConfigurationResponseElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioDecoderConfigurationResponseElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioDecoderConfigurationResponseElementType> {
+        use GetAudioDecoderConfigurationResponseElementTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::Configuration(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_configuration(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::Configuration(None);
+                    event
+                }
+                (S::Configuration(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"Configuration",
+                        false,
+                    )?;
+                    match self.handle_configuration(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Done__, event) => {
+                    *self.state__ = S::Done__;
+                    break (DeserializerEvent::Continue(event), allow_any_element);
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::GetAudioDecoderConfigurationResponseElementType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            GetAudioDecoderConfigurationResponseElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::GetAudioDecoderConfigurationResponseElementType {
+            configuration: helper.finish_element("Configuration", self.configuration)?,
+        })
+    }
+}
+#[derive(Debug)]
+pub struct GetCompatibleAudioDecoderConfigurationsElementTypeDeserializer {
+    profile_token: ::core::option::Option<::std::string::String>,
+    state__: ::std::boxed::Box<GetCompatibleAudioDecoderConfigurationsElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum GetCompatibleAudioDecoderConfigurationsElementTypeDeserializerState {
+    Init__,
+    ProfileToken(::core::option::Option<<::std::string::String as WithDeserializer>::Deserializer>),
+    Done__,
+    Unknown__,
+}
+impl GetCompatibleAudioDecoderConfigurationsElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            profile_token: None,
+            state__: ::std::boxed::Box::new(
+                GetCompatibleAudioDecoderConfigurationsElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: GetCompatibleAudioDecoderConfigurationsElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use GetCompatibleAudioDecoderConfigurationsElementTypeDeserializerState as S;
+        match state {
+            S::ProfileToken(Some(deserializer)) => {
+                self.store_profile_token(deserializer.finish(helper)?)?
+            }
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_profile_token(
+        &mut self,
+        value: ::std::string::String,
+    ) -> ::core::result::Result<(), Error> {
+        if self.profile_token.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"ProfileToken",
+            )))?;
+        }
+        self.profile_token = Some(value);
+        Ok(())
+    }
+    fn handle_profile_token<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, ::std::string::String>,
+        fallback: &mut ::core::option::Option<
+            GetCompatibleAudioDecoderConfigurationsElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use GetCompatibleAudioDecoderConfigurationsElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::ProfileToken(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_profile_token(data)?;
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::ProfileToken(Some(deserializer)));
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::GetCompatibleAudioDecoderConfigurationsElementType>
+    for GetCompatibleAudioDecoderConfigurationsElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetCompatibleAudioDecoderConfigurationsElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetCompatibleAudioDecoderConfigurationsElementType> {
+        use GetCompatibleAudioDecoderConfigurationsElementTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::ProfileToken(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_profile_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::ProfileToken(None);
+                    event
+                }
+                (S::ProfileToken(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"ProfileToken",
+                        false,
+                    )?;
+                    match self.handle_profile_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Done__, event) => {
+                    *self.state__ = S::Done__;
+                    break (DeserializerEvent::Continue(event), allow_any_element);
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::GetCompatibleAudioDecoderConfigurationsElementType, Error>
+    {
+        let state = replace(
+            &mut *self.state__,
+            GetCompatibleAudioDecoderConfigurationsElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::GetCompatibleAudioDecoderConfigurationsElementType {
+            profile_token: helper.finish_element("ProfileToken", self.profile_token)?,
+        })
+    }
+}
+#[derive(Debug)]
+pub struct GetCompatibleAudioDecoderConfigurationsResponseElementTypeDeserializer {
+    configurations: ::std::vec::Vec<super::super::tt::AudioDecoderConfigurationType>,
+    state__: ::std::boxed::Box<
+        GetCompatibleAudioDecoderConfigurationsResponseElementTypeDeserializerState,
+    >,
+}
+#[derive(Debug)]
+enum GetCompatibleAudioDecoderConfigurationsResponseElementTypeDeserializerState {
+    Init__,
+    Configurations(
+        ::core::option::Option<
+            <super::super::tt::AudioDecoderConfigurationType as WithDeserializer>::Deserializer,
+        >,
+    ),
+    Done__,
+    Unknown__,
+}
+impl GetCompatibleAudioDecoderConfigurationsResponseElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            configurations: ::std::vec::Vec::new(),
+            state__: ::std::boxed::Box::new(
+                GetCompatibleAudioDecoderConfigurationsResponseElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: GetCompatibleAudioDecoderConfigurationsResponseElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use GetCompatibleAudioDecoderConfigurationsResponseElementTypeDeserializerState as S;
+        match state {
+            S::Configurations(Some(deserializer)) => {
+                self.store_configurations(deserializer.finish(helper)?)?
+            }
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_configurations(
+        &mut self,
+        value: super::super::tt::AudioDecoderConfigurationType,
+    ) -> ::core::result::Result<(), Error> {
+        self.configurations.push(value);
+        Ok(())
+    }
+    fn handle_configurations<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, super::super::tt::AudioDecoderConfigurationType>,
+        fallback: &mut ::core::option::Option<
+            GetCompatibleAudioDecoderConfigurationsResponseElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use GetCompatibleAudioDecoderConfigurationsResponseElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            *self.state__ = S::Done__;
+            return Ok(ElementHandlerOutput::from_event(event, allow_any));
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_configurations(data)?;
+                *self.state__ = S::Configurations(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::Configurations(Some(deserializer)));
+                *self.state__ = S::Configurations(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::GetCompatibleAudioDecoderConfigurationsResponseElementType>
+    for GetCompatibleAudioDecoderConfigurationsResponseElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetCompatibleAudioDecoderConfigurationsResponseElementType>
+    {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetCompatibleAudioDecoderConfigurationsResponseElementType>
+    {
+        use GetCompatibleAudioDecoderConfigurationsResponseElementTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::Configurations(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_configurations(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::Configurations(None);
+                    event
+                }
+                (S::Configurations(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"Configurations",
+                        false,
+                    )?;
+                    match self.handle_configurations(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Done__, event) => {
+                    *self.state__ = S::Done__;
+                    break (DeserializerEvent::Continue(event), allow_any_element);
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<
+        super::GetCompatibleAudioDecoderConfigurationsResponseElementType,
+        Error,
+    > {
+        let state = replace(
+            &mut *self.state__,
+            GetCompatibleAudioDecoderConfigurationsResponseElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(
+            super::GetCompatibleAudioDecoderConfigurationsResponseElementType {
+                configurations: self.configurations,
+            },
+        )
+    }
+}
+#[derive(Debug)]
+pub struct GetAudioDecoderConfigurationOptionsElementTypeDeserializer {
+    configuration_token: ::core::option::Option<::std::string::String>,
+    profile_token: ::core::option::Option<::std::string::String>,
+    state__: ::std::boxed::Box<GetAudioDecoderConfigurationOptionsElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum GetAudioDecoderConfigurationOptionsElementTypeDeserializerState {
+    Init__,
+    ConfigurationToken(
+        ::core::option::Option<<::std::string::String as WithDeserializer>::Deserializer>,
+    ),
+    ProfileToken(::core::option::Option<<::std::string::String as WithDeserializer>::Deserializer>),
+    Done__,
+    Unknown__,
+}
+impl GetAudioDecoderConfigurationOptionsElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            configuration_token: None,
+            profile_token: None,
+            state__: ::std::boxed::Box::new(
+                GetAudioDecoderConfigurationOptionsElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: GetAudioDecoderConfigurationOptionsElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use GetAudioDecoderConfigurationOptionsElementTypeDeserializerState as S;
+        match state {
+            S::ConfigurationToken(Some(deserializer)) => {
+                self.store_configuration_token(deserializer.finish(helper)?)?
+            }
+            S::ProfileToken(Some(deserializer)) => {
+                self.store_profile_token(deserializer.finish(helper)?)?
+            }
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_configuration_token(
+        &mut self,
+        value: ::std::string::String,
+    ) -> ::core::result::Result<(), Error> {
+        if self.configuration_token.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"ConfigurationToken",
+            )))?;
+        }
+        self.configuration_token = Some(value);
+        Ok(())
+    }
+    fn store_profile_token(
+        &mut self,
+        value: ::std::string::String,
+    ) -> ::core::result::Result<(), Error> {
+        if self.profile_token.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"ProfileToken",
+            )))?;
+        }
+        self.profile_token = Some(value);
+        Ok(())
+    }
+    fn handle_configuration_token<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, ::std::string::String>,
+        fallback: &mut ::core::option::Option<
+            GetAudioDecoderConfigurationOptionsElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use GetAudioDecoderConfigurationOptionsElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            *self.state__ = S::ProfileToken(None);
+            return Ok(ElementHandlerOutput::from_event(event, allow_any));
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_configuration_token(data)?;
+                *self.state__ = S::ProfileToken(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::ConfigurationToken(Some(deserializer)));
+                *self.state__ = S::ProfileToken(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+    fn handle_profile_token<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, ::std::string::String>,
+        fallback: &mut ::core::option::Option<
+            GetAudioDecoderConfigurationOptionsElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use GetAudioDecoderConfigurationOptionsElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            *self.state__ = S::Done__;
+            return Ok(ElementHandlerOutput::from_event(event, allow_any));
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_profile_token(data)?;
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::ProfileToken(Some(deserializer)));
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::GetAudioDecoderConfigurationOptionsElementType>
+    for GetAudioDecoderConfigurationOptionsElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioDecoderConfigurationOptionsElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioDecoderConfigurationOptionsElementType> {
+        use GetAudioDecoderConfigurationOptionsElementTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::ConfigurationToken(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_configuration_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::ProfileToken(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_profile_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::ConfigurationToken(None);
+                    event
+                }
+                (S::ConfigurationToken(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"ConfigurationToken",
+                        false,
+                    )?;
+                    match self.handle_configuration_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::ProfileToken(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"ProfileToken",
+                        false,
+                    )?;
+                    match self.handle_profile_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Done__, event) => {
+                    *self.state__ = S::Done__;
+                    break (DeserializerEvent::Continue(event), allow_any_element);
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::GetAudioDecoderConfigurationOptionsElementType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            GetAudioDecoderConfigurationOptionsElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::GetAudioDecoderConfigurationOptionsElementType {
+            configuration_token: self.configuration_token,
+            profile_token: self.profile_token,
+        })
+    }
+}
+#[derive(Debug)]
+pub struct GetAudioDecoderConfigurationOptionsResponseElementTypeDeserializer {
+    options: ::core::option::Option<super::super::tt::AudioDecoderConfigurationOptionsType>,
+    state__:
+        ::std::boxed::Box<GetAudioDecoderConfigurationOptionsResponseElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum GetAudioDecoderConfigurationOptionsResponseElementTypeDeserializerState {
+    Init__ , Options (:: core :: option :: Option << super :: super :: tt :: AudioDecoderConfigurationOptionsType as WithDeserializer > :: Deserializer >) , Done__ , Unknown__ , }
+impl GetAudioDecoderConfigurationOptionsResponseElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            options: None,
+            state__: ::std::boxed::Box::new(
+                GetAudioDecoderConfigurationOptionsResponseElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: GetAudioDecoderConfigurationOptionsResponseElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use GetAudioDecoderConfigurationOptionsResponseElementTypeDeserializerState as S;
+        match state {
+            S::Options(Some(deserializer)) => self.store_options(deserializer.finish(helper)?)?,
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_options(
+        &mut self,
+        value: super::super::tt::AudioDecoderConfigurationOptionsType,
+    ) -> ::core::result::Result<(), Error> {
+        if self.options.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"Options",
+            )))?;
+        }
+        self.options = Some(value);
+        Ok(())
+    }
+    fn handle_options<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, super::super::tt::AudioDecoderConfigurationOptionsType>,
+        fallback: &mut ::core::option::Option<
+            GetAudioDecoderConfigurationOptionsResponseElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use GetAudioDecoderConfigurationOptionsResponseElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::Options(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_options(data)?;
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::Options(Some(deserializer)));
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::GetAudioDecoderConfigurationOptionsResponseElementType>
+    for GetAudioDecoderConfigurationOptionsResponseElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioDecoderConfigurationOptionsResponseElementType>
+    {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::GetAudioDecoderConfigurationOptionsResponseElementType>
+    {
+        use GetAudioDecoderConfigurationOptionsResponseElementTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::Options(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_options(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::Options(None);
+                    event
+                }
+                (S::Options(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"Options",
+                        false,
+                    )?;
+                    match self.handle_options(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Done__, event) => {
+                    *self.state__ = S::Done__;
+                    break (DeserializerEvent::Continue(event), allow_any_element);
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::GetAudioDecoderConfigurationOptionsResponseElementType, Error>
+    {
+        let state = replace(
+            &mut *self.state__,
+            GetAudioDecoderConfigurationOptionsResponseElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(
+            super::GetAudioDecoderConfigurationOptionsResponseElementType {
+                options: helper.finish_element("Options", self.options)?,
+            },
+        )
+    }
+}
+#[derive(Debug)]
+pub struct SetAudioDecoderConfigurationElementTypeDeserializer {
+    configuration: ::core::option::Option<super::super::tt::AudioDecoderConfigurationType>,
+    force_persistence: ::core::option::Option<::core::primitive::bool>,
+    state__: ::std::boxed::Box<SetAudioDecoderConfigurationElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum SetAudioDecoderConfigurationElementTypeDeserializerState {
+    Init__,
+    Configuration(
+        ::core::option::Option<
+            <super::super::tt::AudioDecoderConfigurationType as WithDeserializer>::Deserializer,
+        >,
+    ),
+    ForcePersistence(
+        ::core::option::Option<<::core::primitive::bool as WithDeserializer>::Deserializer>,
+    ),
+    Done__,
+    Unknown__,
+}
+impl SetAudioDecoderConfigurationElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            configuration: None,
+            force_persistence: None,
+            state__: ::std::boxed::Box::new(
+                SetAudioDecoderConfigurationElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: SetAudioDecoderConfigurationElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use SetAudioDecoderConfigurationElementTypeDeserializerState as S;
+        match state {
+            S::Configuration(Some(deserializer)) => {
+                self.store_configuration(deserializer.finish(helper)?)?
+            }
+            S::ForcePersistence(Some(deserializer)) => {
+                self.store_force_persistence(deserializer.finish(helper)?)?
+            }
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_configuration(
+        &mut self,
+        value: super::super::tt::AudioDecoderConfigurationType,
+    ) -> ::core::result::Result<(), Error> {
+        if self.configuration.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"Configuration",
+            )))?;
+        }
+        self.configuration = Some(value);
+        Ok(())
+    }
+    fn store_force_persistence(
+        &mut self,
+        value: ::core::primitive::bool,
+    ) -> ::core::result::Result<(), Error> {
+        if self.force_persistence.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"ForcePersistence",
+            )))?;
+        }
+        self.force_persistence = Some(value);
+        Ok(())
+    }
+    fn handle_configuration<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, super::super::tt::AudioDecoderConfigurationType>,
+        fallback: &mut ::core::option::Option<
+            SetAudioDecoderConfigurationElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use SetAudioDecoderConfigurationElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::Configuration(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_configuration(data)?;
+                *self.state__ = S::ForcePersistence(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::Configuration(Some(deserializer)));
+                *self.state__ = S::ForcePersistence(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+    fn handle_force_persistence<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, ::core::primitive::bool>,
+        fallback: &mut ::core::option::Option<
+            SetAudioDecoderConfigurationElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use SetAudioDecoderConfigurationElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::ForcePersistence(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_force_persistence(data)?;
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::ForcePersistence(Some(deserializer)));
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::SetAudioDecoderConfigurationElementType>
+    for SetAudioDecoderConfigurationElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::SetAudioDecoderConfigurationElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::SetAudioDecoderConfigurationElementType> {
+        use SetAudioDecoderConfigurationElementTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::Configuration(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_configuration(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::ForcePersistence(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_force_persistence(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::Configuration(None);
+                    event
+                }
+                (S::Configuration(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"Configuration",
+                        false,
+                    )?;
+                    match self.handle_configuration(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::ForcePersistence(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"ForcePersistence",
+                        false,
+                    )?;
+                    match self.handle_force_persistence(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Done__, event) => {
+                    *self.state__ = S::Done__;
+                    break (DeserializerEvent::Continue(event), allow_any_element);
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::SetAudioDecoderConfigurationElementType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            SetAudioDecoderConfigurationElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::SetAudioDecoderConfigurationElementType {
+            configuration: helper.finish_element("Configuration", self.configuration)?,
+            force_persistence: helper.finish_element("ForcePersistence", self.force_persistence)?,
+        })
+    }
+}
+#[derive(Debug)]
+pub struct SetAudioDecoderConfigurationResponseElementTypeDeserializer {
+    state__: ::std::boxed::Box<SetAudioDecoderConfigurationResponseElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum SetAudioDecoderConfigurationResponseElementTypeDeserializerState {
+    Init__,
+    Unknown__,
+}
+impl SetAudioDecoderConfigurationResponseElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            state__: ::std::boxed::Box::new(
+                SetAudioDecoderConfigurationResponseElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: SetAudioDecoderConfigurationResponseElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        Ok(())
+    }
+}
+impl<'de> Deserializer<'de, super::SetAudioDecoderConfigurationResponseElementType>
+    for SetAudioDecoderConfigurationResponseElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::SetAudioDecoderConfigurationResponseElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::SetAudioDecoderConfigurationResponseElementType> {
+        if let Event::End(_) = &event {
+            Ok(DeserializerOutput {
+                artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                event: DeserializerEvent::None,
+                allow_any: false,
+            })
+        } else {
+            Ok(DeserializerOutput {
+                artifact: DeserializerArtifact::Deserializer(self),
+                event: DeserializerEvent::Break(event),
+                allow_any: false,
+            })
+        }
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::SetAudioDecoderConfigurationResponseElementType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            SetAudioDecoderConfigurationResponseElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::SetAudioDecoderConfigurationResponseElementType {})
+    }
+}
+#[derive(Debug)]
+pub struct AddAudioDecoderConfigurationElementTypeDeserializer {
+    profile_token: ::core::option::Option<::std::string::String>,
+    configuration_token: ::core::option::Option<::std::string::String>,
+    state__: ::std::boxed::Box<AddAudioDecoderConfigurationElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum AddAudioDecoderConfigurationElementTypeDeserializerState {
+    Init__,
+    ProfileToken(::core::option::Option<<::std::string::String as WithDeserializer>::Deserializer>),
+    ConfigurationToken(
+        ::core::option::Option<<::std::string::String as WithDeserializer>::Deserializer>,
+    ),
+    Done__,
+    Unknown__,
+}
+impl AddAudioDecoderConfigurationElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            profile_token: None,
+            configuration_token: None,
+            state__: ::std::boxed::Box::new(
+                AddAudioDecoderConfigurationElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: AddAudioDecoderConfigurationElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use AddAudioDecoderConfigurationElementTypeDeserializerState as S;
+        match state {
+            S::ProfileToken(Some(deserializer)) => {
+                self.store_profile_token(deserializer.finish(helper)?)?
+            }
+            S::ConfigurationToken(Some(deserializer)) => {
+                self.store_configuration_token(deserializer.finish(helper)?)?
+            }
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_profile_token(
+        &mut self,
+        value: ::std::string::String,
+    ) -> ::core::result::Result<(), Error> {
+        if self.profile_token.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"ProfileToken",
+            )))?;
+        }
+        self.profile_token = Some(value);
+        Ok(())
+    }
+    fn store_configuration_token(
+        &mut self,
+        value: ::std::string::String,
+    ) -> ::core::result::Result<(), Error> {
+        if self.configuration_token.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"ConfigurationToken",
+            )))?;
+        }
+        self.configuration_token = Some(value);
+        Ok(())
+    }
+    fn handle_profile_token<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, ::std::string::String>,
+        fallback: &mut ::core::option::Option<
+            AddAudioDecoderConfigurationElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use AddAudioDecoderConfigurationElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::ProfileToken(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_profile_token(data)?;
+                *self.state__ = S::ConfigurationToken(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::ProfileToken(Some(deserializer)));
+                *self.state__ = S::ConfigurationToken(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+    fn handle_configuration_token<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, ::std::string::String>,
+        fallback: &mut ::core::option::Option<
+            AddAudioDecoderConfigurationElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use AddAudioDecoderConfigurationElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::ConfigurationToken(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_configuration_token(data)?;
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::ConfigurationToken(Some(deserializer)));
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::AddAudioDecoderConfigurationElementType>
+    for AddAudioDecoderConfigurationElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::AddAudioDecoderConfigurationElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::AddAudioDecoderConfigurationElementType> {
+        use AddAudioDecoderConfigurationElementTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::ProfileToken(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_profile_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::ConfigurationToken(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_configuration_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::ProfileToken(None);
+                    event
+                }
+                (S::ProfileToken(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"ProfileToken",
+                        false,
+                    )?;
+                    match self.handle_profile_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::ConfigurationToken(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"ConfigurationToken",
+                        false,
+                    )?;
+                    match self.handle_configuration_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Done__, event) => {
+                    *self.state__ = S::Done__;
+                    break (DeserializerEvent::Continue(event), allow_any_element);
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::AddAudioDecoderConfigurationElementType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            AddAudioDecoderConfigurationElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::AddAudioDecoderConfigurationElementType {
+            profile_token: helper.finish_element("ProfileToken", self.profile_token)?,
+            configuration_token: helper
+                .finish_element("ConfigurationToken", self.configuration_token)?,
+        })
+    }
+}
+#[derive(Debug)]
+pub struct AddAudioDecoderConfigurationResponseElementTypeDeserializer {
+    state__: ::std::boxed::Box<AddAudioDecoderConfigurationResponseElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum AddAudioDecoderConfigurationResponseElementTypeDeserializerState {
+    Init__,
+    Unknown__,
+}
+impl AddAudioDecoderConfigurationResponseElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            state__: ::std::boxed::Box::new(
+                AddAudioDecoderConfigurationResponseElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: AddAudioDecoderConfigurationResponseElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        Ok(())
+    }
+}
+impl<'de> Deserializer<'de, super::AddAudioDecoderConfigurationResponseElementType>
+    for AddAudioDecoderConfigurationResponseElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::AddAudioDecoderConfigurationResponseElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::AddAudioDecoderConfigurationResponseElementType> {
+        if let Event::End(_) = &event {
+            Ok(DeserializerOutput {
+                artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                event: DeserializerEvent::None,
+                allow_any: false,
+            })
+        } else {
+            Ok(DeserializerOutput {
+                artifact: DeserializerArtifact::Deserializer(self),
+                event: DeserializerEvent::Break(event),
+                allow_any: false,
+            })
+        }
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::AddAudioDecoderConfigurationResponseElementType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            AddAudioDecoderConfigurationResponseElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::AddAudioDecoderConfigurationResponseElementType {})
+    }
+}
+#[derive(Debug)]
+pub struct RemoveAudioDecoderConfigurationElementTypeDeserializer {
+    profile_token: ::core::option::Option<::std::string::String>,
+    state__: ::std::boxed::Box<RemoveAudioDecoderConfigurationElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum RemoveAudioDecoderConfigurationElementTypeDeserializerState {
+    Init__,
+    ProfileToken(::core::option::Option<<::std::string::String as WithDeserializer>::Deserializer>),
+    Done__,
+    Unknown__,
+}
+impl RemoveAudioDecoderConfigurationElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            profile_token: None,
+            state__: ::std::boxed::Box::new(
+                RemoveAudioDecoderConfigurationElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: RemoveAudioDecoderConfigurationElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use RemoveAudioDecoderConfigurationElementTypeDeserializerState as S;
+        match state {
+            S::ProfileToken(Some(deserializer)) => {
+                self.store_profile_token(deserializer.finish(helper)?)?
+            }
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_profile_token(
+        &mut self,
+        value: ::std::string::String,
+    ) -> ::core::result::Result<(), Error> {
+        if self.profile_token.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"ProfileToken",
+            )))?;
+        }
+        self.profile_token = Some(value);
+        Ok(())
+    }
+    fn handle_profile_token<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, ::std::string::String>,
+        fallback: &mut ::core::option::Option<
+            RemoveAudioDecoderConfigurationElementTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use RemoveAudioDecoderConfigurationElementTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::ProfileToken(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_profile_token(data)?;
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::ProfileToken(Some(deserializer)));
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::RemoveAudioDecoderConfigurationElementType>
+    for RemoveAudioDecoderConfigurationElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::RemoveAudioDecoderConfigurationElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::RemoveAudioDecoderConfigurationElementType> {
+        use RemoveAudioDecoderConfigurationElementTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::ProfileToken(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_profile_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::ProfileToken(None);
+                    event
+                }
+                (S::ProfileToken(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TRT),
+                        b"ProfileToken",
+                        false,
+                    )?;
+                    match self.handle_profile_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Done__, event) => {
+                    *self.state__ = S::Done__;
+                    break (DeserializerEvent::Continue(event), allow_any_element);
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::RemoveAudioDecoderConfigurationElementType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            RemoveAudioDecoderConfigurationElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::RemoveAudioDecoderConfigurationElementType {
+            profile_token: helper.finish_element("ProfileToken", self.profile_token)?,
+        })
+    }
+}
+#[derive(Debug)]
+pub struct RemoveAudioDecoderConfigurationResponseElementTypeDeserializer {
+    state__: ::std::boxed::Box<RemoveAudioDecoderConfigurationResponseElementTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum RemoveAudioDecoderConfigurationResponseElementTypeDeserializerState {
+    Init__,
+    Unknown__,
+}
+impl RemoveAudioDecoderConfigurationResponseElementTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            state__: ::std::boxed::Box::new(
+                RemoveAudioDecoderConfigurationResponseElementTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: RemoveAudioDecoderConfigurationResponseElementTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        Ok(())
+    }
+}
+impl<'de> Deserializer<'de, super::RemoveAudioDecoderConfigurationResponseElementType>
+    for RemoveAudioDecoderConfigurationResponseElementTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::RemoveAudioDecoderConfigurationResponseElementType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::RemoveAudioDecoderConfigurationResponseElementType> {
+        if let Event::End(_) = &event {
+            Ok(DeserializerOutput {
+                artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                event: DeserializerEvent::None,
+                allow_any: false,
+            })
+        } else {
+            Ok(DeserializerOutput {
+                artifact: DeserializerArtifact::Deserializer(self),
+                event: DeserializerEvent::Break(event),
+                allow_any: false,
+            })
+        }
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::RemoveAudioDecoderConfigurationResponseElementType, Error>
+    {
+        let state = replace(
+            &mut *self.state__,
+            RemoveAudioDecoderConfigurationResponseElementTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::RemoveAudioDecoderConfigurationResponseElementType {})
+    }
+}

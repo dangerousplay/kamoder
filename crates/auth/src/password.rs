@@ -6,7 +6,6 @@
 //! ARM926EJ-S, which has no crypto acceleration) wherever it is used, and a
 //! hash produced by one tool is valid in the other file.
 
-use crate::hex;
 use ring::pbkdf2;
 use std::num::NonZeroU32;
 
@@ -53,8 +52,8 @@ impl PasswordHash {
             .map_err(|_| "iteration count is not a number".to_string())?;
         let iterations =
             NonZeroU32::new(iterations).ok_or_else(|| "iteration count must be > 0".to_string())?;
-        let salt = hex::decode(salt).map_err(|e| format!("salt: {e}"))?;
-        let digest = hex::decode(digest).map_err(|e| format!("digest: {e}"))?;
+        let salt = base16ct::mixed::decode_vec(salt).map_err(|e| format!("salt: {e}"))?;
+        let digest = base16ct::mixed::decode_vec(digest).map_err(|e| format!("digest: {e}"))?;
         if salt.len() < 8 {
             return Err("salt is shorter than 8 bytes".into());
         }
@@ -129,8 +128,8 @@ impl std::fmt::Display for PasswordHash {
             f,
             "{ALGORITHM}:{}:{}:{}",
             self.iterations,
-            hex::encode(&self.salt),
-            hex::encode(&self.digest)
+            base16ct::lower::encode_string(&self.salt),
+            base16ct::lower::encode_string(&self.digest)
         )
     }
 }

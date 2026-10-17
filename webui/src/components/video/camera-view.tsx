@@ -1,6 +1,7 @@
 import * as React from "react"
 import { RadioIcon } from "lucide-react"
 
+import { CameraListenButton } from "@/components/audio/listen-button"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -73,6 +74,7 @@ export function CameraView({ cameras, logFile }: CameraViewProps) {
           <span />
         )}
         <div className="flex items-center gap-2">
+          <CameraListenButton />
           <Switch id="live-view" checked={live} onCheckedChange={setLive} />
           <Label htmlFor="live-view" className="flex items-center gap-1">
             <RadioIcon className="size-3.5" />

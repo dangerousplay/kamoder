@@ -62,6 +62,11 @@ pub(crate) fn state_with(
         supervisor_socket: dir.join("sup.sock"),
         ptz_socket: dir.join("ptz.sock"),
         lights_socket: dir.join("lights.sock"),
+        follow_socket: dir.join("follow.sock"),
+        audio_socket: dir.join("audio.sock"),
+        update_socket: dir.join("update.sock"),
+        data_root: dir.join("data"),
+        https_port: None,
         rtsp_port: video_proto::DEFAULT_RTSP_PORT,
         board: None,
         snapshot_url: "http://127.0.0.1:9/snapshot.jpg".into(),
@@ -88,6 +93,8 @@ pub(crate) fn state_with(
         snapshot_timeout: Duration::from_secs(2),
         reboot_delay: Duration::ZERO,
         reboot: crate::api_tests::record_reboot,
+        // Small enough to overrun cheaply, above the app-wide 64 KiB limit.
+        update_upload_limit: 256 * 1024,
     };
     let mut config = config;
     adjust(&mut config);

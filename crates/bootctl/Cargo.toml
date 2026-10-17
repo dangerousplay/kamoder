@@ -1,0 +1,16 @@
+[package]
+name = "bootctl"
+description = "A/B boot control: redundant selector records, slot choice, U-Boot env codec"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+# Dependency-light on purpose: the tiny `kboot` boot binary links this crate
+# (no tokio, no tracing; decisions are returned as values for the caller to log).
+[dependencies]
+# Record and U-Boot environment checksums (IEEE CRC-32, same polynomial as
+# U-Boot's `crc32()`). Pinned here rather than in the workspace table because
+# only this crate needs it so far.
+crc32fast = "1.5"
+snafu.workspace = true

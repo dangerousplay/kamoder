@@ -55578,6 +55578,4798 @@ impl<'de> Deserializer<'de, super::AudioSourceType> for AudioSourceTypeDeseriali
     }
 }
 #[derive(Debug)]
+pub struct AudioSourceConfigurationOptionsTypeDeserializer {
+    any_attribute: AnyAttributes,
+    input_tokens_available: ::std::vec::Vec<::std::string::String>,
+    extension: ::core::option::Option<super::AudioSourceOptionsExtensionType>,
+    state__: ::std::boxed::Box<AudioSourceConfigurationOptionsTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum AudioSourceConfigurationOptionsTypeDeserializerState {
+    Init__,
+    InputTokensAvailable(
+        ::core::option::Option<<::std::string::String as WithDeserializer>::Deserializer>,
+    ),
+    Extension(
+        ::core::option::Option<
+            <super::AudioSourceOptionsExtensionType as WithDeserializer>::Deserializer,
+        >,
+    ),
+    Done__,
+    Unknown__,
+}
+impl AudioSourceConfigurationOptionsTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        let mut any_attribute = AnyAttributes::default();
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            any_attribute.push(attrib)?;
+        }
+        Ok(Self {
+            any_attribute: any_attribute,
+            input_tokens_available: ::std::vec::Vec::new(),
+            extension: None,
+            state__: ::std::boxed::Box::new(
+                AudioSourceConfigurationOptionsTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: AudioSourceConfigurationOptionsTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use AudioSourceConfigurationOptionsTypeDeserializerState as S;
+        match state {
+            S::InputTokensAvailable(Some(deserializer)) => {
+                self.store_input_tokens_available(deserializer.finish(helper)?)?
+            }
+            S::Extension(Some(deserializer)) => {
+                self.store_extension(deserializer.finish(helper)?)?
+            }
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_input_tokens_available(
+        &mut self,
+        value: ::std::string::String,
+    ) -> ::core::result::Result<(), Error> {
+        self.input_tokens_available.push(value);
+        Ok(())
+    }
+    fn store_extension(
+        &mut self,
+        value: super::AudioSourceOptionsExtensionType,
+    ) -> ::core::result::Result<(), Error> {
+        if self.extension.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"Extension",
+            )))?;
+        }
+        self.extension = Some(value);
+        Ok(())
+    }
+    fn handle_input_tokens_available<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, ::std::string::String>,
+        fallback: &mut ::core::option::Option<AudioSourceConfigurationOptionsTypeDeserializerState>,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use AudioSourceConfigurationOptionsTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            }
+            if let Some(fallback) = fallback.take() {
+                self.finish_state(helper, fallback)?;
+            }
+            if self.input_tokens_available.len() < 1usize {
+                fallback.get_or_insert(S::InputTokensAvailable(None));
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            } else {
+                *self.state__ = S::Extension(None);
+                return Ok(ElementHandlerOutput::from_event(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_input_tokens_available(data)?;
+                *self.state__ = S::InputTokensAvailable(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::InputTokensAvailable(Some(deserializer)));
+                *self.state__ = S::InputTokensAvailable(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+    fn handle_extension<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, super::AudioSourceOptionsExtensionType>,
+        fallback: &mut ::core::option::Option<AudioSourceConfigurationOptionsTypeDeserializerState>,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use AudioSourceConfigurationOptionsTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            *self.state__ = S::Done__;
+            return Ok(ElementHandlerOutput::from_event(event, allow_any));
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_extension(data)?;
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::Extension(Some(deserializer)));
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::AudioSourceConfigurationOptionsType>
+    for AudioSourceConfigurationOptionsTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::AudioSourceConfigurationOptionsType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::AudioSourceConfigurationOptionsType> {
+        use AudioSourceConfigurationOptionsTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::InputTokensAvailable(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_input_tokens_available(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Extension(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_extension(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::InputTokensAvailable(None);
+                    event
+                }
+                (S::InputTokensAvailable(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TT),
+                        b"InputTokensAvailable",
+                        false,
+                    )?;
+                    match self.handle_input_tokens_available(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Extension(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TT),
+                        b"Extension",
+                        true,
+                    )?;
+                    match self.handle_extension(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Done__, event) => {
+                    *self.state__ = S::Done__;
+                    break (DeserializerEvent::Continue(event), allow_any_element);
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::AudioSourceConfigurationOptionsType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            AudioSourceConfigurationOptionsTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::AudioSourceConfigurationOptionsType {
+            any_attribute: self.any_attribute,
+            input_tokens_available: helper.finish_vec(1usize, None, self.input_tokens_available)?,
+            extension: self.extension,
+        })
+    }
+}
+#[derive(Debug)]
+pub struct AudioSourceOptionsExtensionTypeDeserializer {
+    any: ::std::vec::Vec<AnyElement>,
+    state__: ::std::boxed::Box<AudioSourceOptionsExtensionTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum AudioSourceOptionsExtensionTypeDeserializerState {
+    Init__,
+    Any(::core::option::Option<<AnyElement as WithDeserializer>::Deserializer>),
+    Done__,
+    Unknown__,
+}
+impl AudioSourceOptionsExtensionTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            any: ::std::vec::Vec::new(),
+            state__: ::std::boxed::Box::new(
+                AudioSourceOptionsExtensionTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: AudioSourceOptionsExtensionTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use AudioSourceOptionsExtensionTypeDeserializerState as S;
+        match state {
+            S::Any(Some(deserializer)) => self.store_any(deserializer.finish(helper)?)?,
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_any(&mut self, value: AnyElement) -> ::core::result::Result<(), Error> {
+        self.any.push(value);
+        Ok(())
+    }
+    fn handle_any<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, AnyElement>,
+        fallback: &mut ::core::option::Option<AudioSourceOptionsExtensionTypeDeserializerState>,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use AudioSourceOptionsExtensionTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            *self.state__ = S::Done__;
+            return Ok(ElementHandlerOutput::from_event(event, allow_any));
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_any(data)?;
+                *self.state__ = S::Any(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::Any(Some(deserializer)));
+                *self.state__ = S::Any(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::AudioSourceOptionsExtensionType>
+    for AudioSourceOptionsExtensionTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::AudioSourceOptionsExtensionType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::AudioSourceOptionsExtensionType> {
+        use AudioSourceOptionsExtensionTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let mut is_any_retry = false;
+        let mut any_fallback = None;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::Any(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_any(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::Any(None);
+                    event
+                }
+                (S::Any(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    if is_any_retry {
+                        let output = <AnyElement as WithDeserializer>::init(helper, event)?;
+                        match self.handle_any(helper, output, &mut fallback)? {
+                            ElementHandlerOutput::Continue { event, allow_any } => {
+                                allow_any_element = allow_any_element || allow_any;
+                                event
+                            }
+                            ElementHandlerOutput::Break { event, allow_any } => {
+                                break (event, allow_any)
+                            }
+                        }
+                    } else {
+                        any_fallback.get_or_insert(S::Any(None));
+                        *self.state__ = S::Done__;
+                        event
+                    }
+                }
+                (S::Done__, event) => {
+                    if let Some(state) = any_fallback.take() {
+                        is_any_retry = true;
+                        *self.state__ = state;
+                        event
+                    } else {
+                        *self.state__ = S::Done__;
+                        break (DeserializerEvent::Continue(event), allow_any_element);
+                    }
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::AudioSourceOptionsExtensionType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            AudioSourceOptionsExtensionTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::AudioSourceOptionsExtensionType { any: self.any })
+    }
+}
+#[derive(Debug)]
+pub struct AudioEncoderConfigurationOptionsTypeDeserializer {
+    any_attribute: AnyAttributes,
+    options: ::std::vec::Vec<super::AudioEncoderConfigurationOptionType>,
+    state__: ::std::boxed::Box<AudioEncoderConfigurationOptionsTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum AudioEncoderConfigurationOptionsTypeDeserializerState {
+    Init__,
+    Options(
+        ::core::option::Option<
+            <super::AudioEncoderConfigurationOptionType as WithDeserializer>::Deserializer,
+        >,
+    ),
+    Done__,
+    Unknown__,
+}
+impl AudioEncoderConfigurationOptionsTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        let mut any_attribute = AnyAttributes::default();
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            any_attribute.push(attrib)?;
+        }
+        Ok(Self {
+            any_attribute: any_attribute,
+            options: ::std::vec::Vec::new(),
+            state__: ::std::boxed::Box::new(
+                AudioEncoderConfigurationOptionsTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: AudioEncoderConfigurationOptionsTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use AudioEncoderConfigurationOptionsTypeDeserializerState as S;
+        match state {
+            S::Options(Some(deserializer)) => self.store_options(deserializer.finish(helper)?)?,
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_options(
+        &mut self,
+        value: super::AudioEncoderConfigurationOptionType,
+    ) -> ::core::result::Result<(), Error> {
+        self.options.push(value);
+        Ok(())
+    }
+    fn handle_options<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, super::AudioEncoderConfigurationOptionType>,
+        fallback: &mut ::core::option::Option<
+            AudioEncoderConfigurationOptionsTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use AudioEncoderConfigurationOptionsTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            *self.state__ = S::Done__;
+            return Ok(ElementHandlerOutput::from_event(event, allow_any));
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_options(data)?;
+                *self.state__ = S::Options(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::Options(Some(deserializer)));
+                *self.state__ = S::Options(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::AudioEncoderConfigurationOptionsType>
+    for AudioEncoderConfigurationOptionsTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::AudioEncoderConfigurationOptionsType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::AudioEncoderConfigurationOptionsType> {
+        use AudioEncoderConfigurationOptionsTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::Options(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_options(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::Options(None);
+                    event
+                }
+                (S::Options(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TT),
+                        b"Options",
+                        false,
+                    )?;
+                    match self.handle_options(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Done__, event) => {
+                    *self.state__ = S::Done__;
+                    break (DeserializerEvent::Continue(event), allow_any_element);
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::AudioEncoderConfigurationOptionsType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            AudioEncoderConfigurationOptionsTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::AudioEncoderConfigurationOptionsType {
+            any_attribute: self.any_attribute,
+            options: self.options,
+        })
+    }
+}
+#[derive(Debug)]
+pub struct AudioEncoderConfigurationOptionTypeDeserializer {
+    any_attribute: AnyAttributes,
+    encoding: ::core::option::Option<super::AudioEncodingType>,
+    bitrate_list: ::core::option::Option<super::IntItemsType>,
+    sample_rate_list: ::core::option::Option<super::IntItemsType>,
+    any: ::std::vec::Vec<AnyElement>,
+    state__: ::std::boxed::Box<AudioEncoderConfigurationOptionTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum AudioEncoderConfigurationOptionTypeDeserializerState {
+    Init__,
+    Encoding(::core::option::Option<<super::AudioEncodingType as WithDeserializer>::Deserializer>),
+    BitrateList(::core::option::Option<<super::IntItemsType as WithDeserializer>::Deserializer>),
+    SampleRateList(::core::option::Option<<super::IntItemsType as WithDeserializer>::Deserializer>),
+    Any(::core::option::Option<<AnyElement as WithDeserializer>::Deserializer>),
+    Done__,
+    Unknown__,
+}
+impl AudioEncoderConfigurationOptionTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        let mut any_attribute = AnyAttributes::default();
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            any_attribute.push(attrib)?;
+        }
+        Ok(Self {
+            any_attribute: any_attribute,
+            encoding: None,
+            bitrate_list: None,
+            sample_rate_list: None,
+            any: ::std::vec::Vec::new(),
+            state__: ::std::boxed::Box::new(
+                AudioEncoderConfigurationOptionTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: AudioEncoderConfigurationOptionTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use AudioEncoderConfigurationOptionTypeDeserializerState as S;
+        match state {
+            S::Encoding(Some(deserializer)) => self.store_encoding(deserializer.finish(helper)?)?,
+            S::BitrateList(Some(deserializer)) => {
+                self.store_bitrate_list(deserializer.finish(helper)?)?
+            }
+            S::SampleRateList(Some(deserializer)) => {
+                self.store_sample_rate_list(deserializer.finish(helper)?)?
+            }
+            S::Any(Some(deserializer)) => self.store_any(deserializer.finish(helper)?)?,
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_encoding(
+        &mut self,
+        value: super::AudioEncodingType,
+    ) -> ::core::result::Result<(), Error> {
+        if self.encoding.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"Encoding",
+            )))?;
+        }
+        self.encoding = Some(value);
+        Ok(())
+    }
+    fn store_bitrate_list(
+        &mut self,
+        value: super::IntItemsType,
+    ) -> ::core::result::Result<(), Error> {
+        if self.bitrate_list.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"BitrateList",
+            )))?;
+        }
+        self.bitrate_list = Some(value);
+        Ok(())
+    }
+    fn store_sample_rate_list(
+        &mut self,
+        value: super::IntItemsType,
+    ) -> ::core::result::Result<(), Error> {
+        if self.sample_rate_list.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"SampleRateList",
+            )))?;
+        }
+        self.sample_rate_list = Some(value);
+        Ok(())
+    }
+    fn store_any(&mut self, value: AnyElement) -> ::core::result::Result<(), Error> {
+        self.any.push(value);
+        Ok(())
+    }
+    fn handle_encoding<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, super::AudioEncodingType>,
+        fallback: &mut ::core::option::Option<AudioEncoderConfigurationOptionTypeDeserializerState>,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use AudioEncoderConfigurationOptionTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::Encoding(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_encoding(data)?;
+                *self.state__ = S::BitrateList(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::Encoding(Some(deserializer)));
+                *self.state__ = S::BitrateList(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+    fn handle_bitrate_list<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, super::IntItemsType>,
+        fallback: &mut ::core::option::Option<AudioEncoderConfigurationOptionTypeDeserializerState>,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use AudioEncoderConfigurationOptionTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::BitrateList(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_bitrate_list(data)?;
+                *self.state__ = S::SampleRateList(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::BitrateList(Some(deserializer)));
+                *self.state__ = S::SampleRateList(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+    fn handle_sample_rate_list<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, super::IntItemsType>,
+        fallback: &mut ::core::option::Option<AudioEncoderConfigurationOptionTypeDeserializerState>,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use AudioEncoderConfigurationOptionTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::SampleRateList(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_sample_rate_list(data)?;
+                *self.state__ = S::Any(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::SampleRateList(Some(deserializer)));
+                *self.state__ = S::Any(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+    fn handle_any<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, AnyElement>,
+        fallback: &mut ::core::option::Option<AudioEncoderConfigurationOptionTypeDeserializerState>,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use AudioEncoderConfigurationOptionTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            *self.state__ = S::Done__;
+            return Ok(ElementHandlerOutput::from_event(event, allow_any));
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_any(data)?;
+                *self.state__ = S::Any(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::Any(Some(deserializer)));
+                *self.state__ = S::Any(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::AudioEncoderConfigurationOptionType>
+    for AudioEncoderConfigurationOptionTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::AudioEncoderConfigurationOptionType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::AudioEncoderConfigurationOptionType> {
+        use AudioEncoderConfigurationOptionTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let mut is_any_retry = false;
+        let mut any_fallback = None;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::Encoding(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_encoding(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::BitrateList(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_bitrate_list(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::SampleRateList(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_sample_rate_list(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Any(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_any(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::Encoding(None);
+                    event
+                }
+                (S::Encoding(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TT),
+                        b"Encoding",
+                        false,
+                    )?;
+                    match self.handle_encoding(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::BitrateList(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TT),
+                        b"BitrateList",
+                        false,
+                    )?;
+                    match self.handle_bitrate_list(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::SampleRateList(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TT),
+                        b"SampleRateList",
+                        false,
+                    )?;
+                    match self.handle_sample_rate_list(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Any(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    if is_any_retry {
+                        let output = <AnyElement as WithDeserializer>::init(helper, event)?;
+                        match self.handle_any(helper, output, &mut fallback)? {
+                            ElementHandlerOutput::Continue { event, allow_any } => {
+                                allow_any_element = allow_any_element || allow_any;
+                                event
+                            }
+                            ElementHandlerOutput::Break { event, allow_any } => {
+                                break (event, allow_any)
+                            }
+                        }
+                    } else {
+                        any_fallback.get_or_insert(S::Any(None));
+                        *self.state__ = S::Done__;
+                        event
+                    }
+                }
+                (S::Done__, event) => {
+                    if let Some(state) = any_fallback.take() {
+                        is_any_retry = true;
+                        *self.state__ = state;
+                        event
+                    } else {
+                        *self.state__ = S::Done__;
+                        break (DeserializerEvent::Continue(event), allow_any_element);
+                    }
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::AudioEncoderConfigurationOptionType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            AudioEncoderConfigurationOptionTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::AudioEncoderConfigurationOptionType {
+            any_attribute: self.any_attribute,
+            encoding: helper.finish_element("Encoding", self.encoding)?,
+            bitrate_list: helper.finish_element("BitrateList", self.bitrate_list)?,
+            sample_rate_list: helper.finish_element("SampleRateList", self.sample_rate_list)?,
+            any: self.any,
+        })
+    }
+}
+#[derive(Debug)]
+pub struct IntItemsTypeDeserializer {
+    items: ::std::vec::Vec<::core::primitive::i32>,
+    state__: ::std::boxed::Box<IntItemsTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum IntItemsTypeDeserializerState {
+    Init__,
+    Items(::core::option::Option<<::core::primitive::i32 as WithDeserializer>::Deserializer>),
+    Done__,
+    Unknown__,
+}
+impl IntItemsTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            items: ::std::vec::Vec::new(),
+            state__: ::std::boxed::Box::new(IntItemsTypeDeserializerState::Init__),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: IntItemsTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use IntItemsTypeDeserializerState as S;
+        match state {
+            S::Items(Some(deserializer)) => self.store_items(deserializer.finish(helper)?)?,
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_items(&mut self, value: ::core::primitive::i32) -> ::core::result::Result<(), Error> {
+        self.items.push(value);
+        Ok(())
+    }
+    fn handle_items<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, ::core::primitive::i32>,
+        fallback: &mut ::core::option::Option<IntItemsTypeDeserializerState>,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use IntItemsTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            *self.state__ = S::Done__;
+            return Ok(ElementHandlerOutput::from_event(event, allow_any));
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_items(data)?;
+                *self.state__ = S::Items(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::Items(Some(deserializer)));
+                *self.state__ = S::Items(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::IntItemsType> for IntItemsTypeDeserializer {
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::IntItemsType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::IntItemsType> {
+        use IntItemsTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::Items(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_items(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::Items(None);
+                    event
+                }
+                (S::Items(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TT),
+                        b"Items",
+                        false,
+                    )?;
+                    match self.handle_items(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Done__, event) => {
+                    *self.state__ = S::Done__;
+                    break (DeserializerEvent::Continue(event), allow_any_element);
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::IntItemsType, Error> {
+        let state = replace(&mut *self.state__, IntItemsTypeDeserializerState::Unknown__);
+        self.finish_state(helper, state)?;
+        Ok(super::IntItemsType { items: self.items })
+    }
+}
+#[derive(Debug)]
+pub struct AudioOutputTypeDeserializer {
+    token: ::std::string::String,
+    any_attribute: AnyAttributes,
+    any: ::std::vec::Vec<AnyElement>,
+    state__: ::std::boxed::Box<AudioOutputTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum AudioOutputTypeDeserializerState {
+    Init__,
+    Any(::core::option::Option<<AnyElement as WithDeserializer>::Deserializer>),
+    Done__,
+    Unknown__,
+}
+impl AudioOutputTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        let mut token: ::core::option::Option<::std::string::String> = None;
+        let mut any_attribute = AnyAttributes::default();
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            if matches!(
+                helper.resolve_local_name(attrib.key, &super::super::NS_TT),
+                Some(b"token")
+            ) {
+                helper.read_attrib(&mut token, b"token", &attrib.value)?;
+            } else {
+                any_attribute.push(attrib)?;
+            }
+        }
+        Ok(Self {
+            token: token.ok_or_else(|| ErrorKind::MissingAttribute("token".into()))?,
+            any_attribute: any_attribute,
+            any: ::std::vec::Vec::new(),
+            state__: ::std::boxed::Box::new(AudioOutputTypeDeserializerState::Init__),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: AudioOutputTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use AudioOutputTypeDeserializerState as S;
+        match state {
+            S::Any(Some(deserializer)) => self.store_any(deserializer.finish(helper)?)?,
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_any(&mut self, value: AnyElement) -> ::core::result::Result<(), Error> {
+        self.any.push(value);
+        Ok(())
+    }
+    fn handle_any<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, AnyElement>,
+        fallback: &mut ::core::option::Option<AudioOutputTypeDeserializerState>,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use AudioOutputTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            *self.state__ = S::Done__;
+            return Ok(ElementHandlerOutput::from_event(event, allow_any));
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_any(data)?;
+                *self.state__ = S::Any(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::Any(Some(deserializer)));
+                *self.state__ = S::Any(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::AudioOutputType> for AudioOutputTypeDeserializer {
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::AudioOutputType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::AudioOutputType> {
+        use AudioOutputTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let mut is_any_retry = false;
+        let mut any_fallback = None;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::Any(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_any(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::Any(None);
+                    event
+                }
+                (S::Any(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    if is_any_retry {
+                        let output = <AnyElement as WithDeserializer>::init(helper, event)?;
+                        match self.handle_any(helper, output, &mut fallback)? {
+                            ElementHandlerOutput::Continue { event, allow_any } => {
+                                allow_any_element = allow_any_element || allow_any;
+                                event
+                            }
+                            ElementHandlerOutput::Break { event, allow_any } => {
+                                break (event, allow_any)
+                            }
+                        }
+                    } else {
+                        any_fallback.get_or_insert(S::Any(None));
+                        *self.state__ = S::Done__;
+                        event
+                    }
+                }
+                (S::Done__, event) => {
+                    if let Some(state) = any_fallback.take() {
+                        is_any_retry = true;
+                        *self.state__ = state;
+                        event
+                    } else {
+                        *self.state__ = S::Done__;
+                        break (DeserializerEvent::Continue(event), allow_any_element);
+                    }
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::AudioOutputType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            AudioOutputTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::AudioOutputType {
+            token: self.token,
+            any_attribute: self.any_attribute,
+            any: self.any,
+        })
+    }
+}
+#[derive(Debug)]
+pub struct AudioOutputConfigurationOptionsTypeDeserializer {
+    any_attribute: AnyAttributes,
+    output_tokens_available: ::std::vec::Vec<::std::string::String>,
+    send_primacy_options: ::std::vec::Vec<::std::string::String>,
+    output_level_range: ::core::option::Option<super::IntRangeType>,
+    eq_preset_schedule_support: ::core::option::Option<::core::primitive::bool>,
+    eq_presets: ::std::vec::Vec<super::EqPresetType>,
+    any: ::std::vec::Vec<AnyElement>,
+    state__: ::std::boxed::Box<AudioOutputConfigurationOptionsTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum AudioOutputConfigurationOptionsTypeDeserializerState {
+    Init__,
+    OutputTokensAvailable(
+        ::core::option::Option<<::std::string::String as WithDeserializer>::Deserializer>,
+    ),
+    SendPrimacyOptions(
+        ::core::option::Option<<::std::string::String as WithDeserializer>::Deserializer>,
+    ),
+    OutputLevelRange(
+        ::core::option::Option<<super::IntRangeType as WithDeserializer>::Deserializer>,
+    ),
+    EqPresetScheduleSupport(
+        ::core::option::Option<<::core::primitive::bool as WithDeserializer>::Deserializer>,
+    ),
+    EqPresets(::core::option::Option<<super::EqPresetType as WithDeserializer>::Deserializer>),
+    Any(::core::option::Option<<AnyElement as WithDeserializer>::Deserializer>),
+    Done__,
+    Unknown__,
+}
+impl AudioOutputConfigurationOptionsTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        let mut any_attribute = AnyAttributes::default();
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            any_attribute.push(attrib)?;
+        }
+        Ok(Self {
+            any_attribute: any_attribute,
+            output_tokens_available: ::std::vec::Vec::new(),
+            send_primacy_options: ::std::vec::Vec::new(),
+            output_level_range: None,
+            eq_preset_schedule_support: None,
+            eq_presets: ::std::vec::Vec::new(),
+            any: ::std::vec::Vec::new(),
+            state__: ::std::boxed::Box::new(
+                AudioOutputConfigurationOptionsTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: AudioOutputConfigurationOptionsTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use AudioOutputConfigurationOptionsTypeDeserializerState as S;
+        match state {
+            S::OutputTokensAvailable(Some(deserializer)) => {
+                self.store_output_tokens_available(deserializer.finish(helper)?)?
+            }
+            S::SendPrimacyOptions(Some(deserializer)) => {
+                self.store_send_primacy_options(deserializer.finish(helper)?)?
+            }
+            S::OutputLevelRange(Some(deserializer)) => {
+                self.store_output_level_range(deserializer.finish(helper)?)?
+            }
+            S::EqPresetScheduleSupport(Some(deserializer)) => {
+                self.store_eq_preset_schedule_support(deserializer.finish(helper)?)?
+            }
+            S::EqPresets(Some(deserializer)) => {
+                self.store_eq_presets(deserializer.finish(helper)?)?
+            }
+            S::Any(Some(deserializer)) => self.store_any(deserializer.finish(helper)?)?,
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_output_tokens_available(
+        &mut self,
+        value: ::std::string::String,
+    ) -> ::core::result::Result<(), Error> {
+        self.output_tokens_available.push(value);
+        Ok(())
+    }
+    fn store_send_primacy_options(
+        &mut self,
+        value: ::std::string::String,
+    ) -> ::core::result::Result<(), Error> {
+        self.send_primacy_options.push(value);
+        Ok(())
+    }
+    fn store_output_level_range(
+        &mut self,
+        value: super::IntRangeType,
+    ) -> ::core::result::Result<(), Error> {
+        if self.output_level_range.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"OutputLevelRange",
+            )))?;
+        }
+        self.output_level_range = Some(value);
+        Ok(())
+    }
+    fn store_eq_preset_schedule_support(
+        &mut self,
+        value: ::core::primitive::bool,
+    ) -> ::core::result::Result<(), Error> {
+        if self.eq_preset_schedule_support.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"EQPresetScheduleSupport",
+            )))?;
+        }
+        self.eq_preset_schedule_support = Some(value);
+        Ok(())
+    }
+    fn store_eq_presets(
+        &mut self,
+        value: super::EqPresetType,
+    ) -> ::core::result::Result<(), Error> {
+        self.eq_presets.push(value);
+        Ok(())
+    }
+    fn store_any(&mut self, value: AnyElement) -> ::core::result::Result<(), Error> {
+        self.any.push(value);
+        Ok(())
+    }
+    fn handle_output_tokens_available<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, ::std::string::String>,
+        fallback: &mut ::core::option::Option<AudioOutputConfigurationOptionsTypeDeserializerState>,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use AudioOutputConfigurationOptionsTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            }
+            if let Some(fallback) = fallback.take() {
+                self.finish_state(helper, fallback)?;
+            }
+            if self.output_tokens_available.len() < 1usize {
+                fallback.get_or_insert(S::OutputTokensAvailable(None));
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            } else {
+                *self.state__ = S::SendPrimacyOptions(None);
+                return Ok(ElementHandlerOutput::from_event(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_output_tokens_available(data)?;
+                *self.state__ = S::OutputTokensAvailable(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::OutputTokensAvailable(Some(deserializer)));
+                *self.state__ = S::OutputTokensAvailable(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+    fn handle_send_primacy_options<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, ::std::string::String>,
+        fallback: &mut ::core::option::Option<AudioOutputConfigurationOptionsTypeDeserializerState>,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use AudioOutputConfigurationOptionsTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            *self.state__ = S::OutputLevelRange(None);
+            return Ok(ElementHandlerOutput::from_event(event, allow_any));
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_send_primacy_options(data)?;
+                *self.state__ = S::SendPrimacyOptions(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::SendPrimacyOptions(Some(deserializer)));
+                *self.state__ = S::SendPrimacyOptions(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+    fn handle_output_level_range<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, super::IntRangeType>,
+        fallback: &mut ::core::option::Option<AudioOutputConfigurationOptionsTypeDeserializerState>,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use AudioOutputConfigurationOptionsTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::OutputLevelRange(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_output_level_range(data)?;
+                *self.state__ = S::EqPresetScheduleSupport(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::OutputLevelRange(Some(deserializer)));
+                *self.state__ = S::EqPresetScheduleSupport(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+    fn handle_eq_preset_schedule_support<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, ::core::primitive::bool>,
+        fallback: &mut ::core::option::Option<AudioOutputConfigurationOptionsTypeDeserializerState>,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use AudioOutputConfigurationOptionsTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            *self.state__ = S::EqPresets(None);
+            return Ok(ElementHandlerOutput::from_event(event, allow_any));
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_eq_preset_schedule_support(data)?;
+                *self.state__ = S::EqPresets(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::EqPresetScheduleSupport(Some(deserializer)));
+                *self.state__ = S::EqPresets(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+    fn handle_eq_presets<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, super::EqPresetType>,
+        fallback: &mut ::core::option::Option<AudioOutputConfigurationOptionsTypeDeserializerState>,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use AudioOutputConfigurationOptionsTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            *self.state__ = S::Any(None);
+            return Ok(ElementHandlerOutput::from_event(event, allow_any));
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_eq_presets(data)?;
+                *self.state__ = S::EqPresets(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::EqPresets(Some(deserializer)));
+                *self.state__ = S::EqPresets(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+    fn handle_any<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, AnyElement>,
+        fallback: &mut ::core::option::Option<AudioOutputConfigurationOptionsTypeDeserializerState>,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use AudioOutputConfigurationOptionsTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            *self.state__ = S::Done__;
+            return Ok(ElementHandlerOutput::from_event(event, allow_any));
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_any(data)?;
+                *self.state__ = S::Any(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::Any(Some(deserializer)));
+                *self.state__ = S::Any(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::AudioOutputConfigurationOptionsType>
+    for AudioOutputConfigurationOptionsTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::AudioOutputConfigurationOptionsType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::AudioOutputConfigurationOptionsType> {
+        use AudioOutputConfigurationOptionsTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let mut is_any_retry = false;
+        let mut any_fallback = None;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::OutputTokensAvailable(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_output_tokens_available(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::SendPrimacyOptions(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_send_primacy_options(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::OutputLevelRange(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_output_level_range(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::EqPresetScheduleSupport(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_eq_preset_schedule_support(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::EqPresets(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_eq_presets(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Any(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_any(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::OutputTokensAvailable(None);
+                    event
+                }
+                (S::OutputTokensAvailable(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TT),
+                        b"OutputTokensAvailable",
+                        false,
+                    )?;
+                    match self.handle_output_tokens_available(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::SendPrimacyOptions(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TT),
+                        b"SendPrimacyOptions",
+                        false,
+                    )?;
+                    match self.handle_send_primacy_options(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::OutputLevelRange(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TT),
+                        b"OutputLevelRange",
+                        false,
+                    )?;
+                    match self.handle_output_level_range(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::EqPresetScheduleSupport(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TT),
+                        b"EQPresetScheduleSupport",
+                        false,
+                    )?;
+                    match self.handle_eq_preset_schedule_support(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::EqPresets(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TT),
+                        b"EQPresets",
+                        false,
+                    )?;
+                    match self.handle_eq_presets(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Any(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    if is_any_retry {
+                        let output = <AnyElement as WithDeserializer>::init(helper, event)?;
+                        match self.handle_any(helper, output, &mut fallback)? {
+                            ElementHandlerOutput::Continue { event, allow_any } => {
+                                allow_any_element = allow_any_element || allow_any;
+                                event
+                            }
+                            ElementHandlerOutput::Break { event, allow_any } => {
+                                break (event, allow_any)
+                            }
+                        }
+                    } else {
+                        any_fallback.get_or_insert(S::Any(None));
+                        *self.state__ = S::Done__;
+                        event
+                    }
+                }
+                (S::Done__, event) => {
+                    if let Some(state) = any_fallback.take() {
+                        is_any_retry = true;
+                        *self.state__ = state;
+                        event
+                    } else {
+                        *self.state__ = S::Done__;
+                        break (DeserializerEvent::Continue(event), allow_any_element);
+                    }
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::AudioOutputConfigurationOptionsType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            AudioOutputConfigurationOptionsTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::AudioOutputConfigurationOptionsType {
+            any_attribute: self.any_attribute,
+            output_tokens_available: helper.finish_vec(
+                1usize,
+                None,
+                self.output_tokens_available,
+            )?,
+            send_primacy_options: self.send_primacy_options,
+            output_level_range: helper
+                .finish_element("OutputLevelRange", self.output_level_range)?,
+            eq_preset_schedule_support: self.eq_preset_schedule_support,
+            eq_presets: self.eq_presets,
+            any: self.any,
+        })
+    }
+}
+#[derive(Debug)]
+pub struct EqPresetTypeDeserializer {
+    token: ::core::option::Option<::std::string::String>,
+    name: ::core::option::Option<::std::string::String>,
+    is_default: ::core::option::Option<::core::primitive::bool>,
+    schedule_token: ::core::option::Option<::std::string::String>,
+    is_frequency_decibel_editable: ::core::option::Option<::core::primitive::bool>,
+    frequency_decibel_pair: ::std::vec::Vec<super::FrequencyDecibelPairType>,
+    any: ::std::vec::Vec<AnyElement>,
+    state__: ::std::boxed::Box<EqPresetTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum EqPresetTypeDeserializerState {
+    Init__,
+    Token(::core::option::Option<<::std::string::String as WithDeserializer>::Deserializer>),
+    Name(::core::option::Option<<::std::string::String as WithDeserializer>::Deserializer>),
+    IsDefault(::core::option::Option<<::core::primitive::bool as WithDeserializer>::Deserializer>),
+    ScheduleToken(
+        ::core::option::Option<<::std::string::String as WithDeserializer>::Deserializer>,
+    ),
+    IsFrequencyDecibelEditable(
+        ::core::option::Option<<::core::primitive::bool as WithDeserializer>::Deserializer>,
+    ),
+    FrequencyDecibelPair(
+        ::core::option::Option<<super::FrequencyDecibelPairType as WithDeserializer>::Deserializer>,
+    ),
+    Any(::core::option::Option<<AnyElement as WithDeserializer>::Deserializer>),
+    Done__,
+    Unknown__,
+}
+impl EqPresetTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            token: None,
+            name: None,
+            is_default: None,
+            schedule_token: None,
+            is_frequency_decibel_editable: None,
+            frequency_decibel_pair: ::std::vec::Vec::new(),
+            any: ::std::vec::Vec::new(),
+            state__: ::std::boxed::Box::new(EqPresetTypeDeserializerState::Init__),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: EqPresetTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use EqPresetTypeDeserializerState as S;
+        match state {
+            S::Token(Some(deserializer)) => self.store_token(deserializer.finish(helper)?)?,
+            S::Name(Some(deserializer)) => self.store_name(deserializer.finish(helper)?)?,
+            S::IsDefault(Some(deserializer)) => {
+                self.store_is_default(deserializer.finish(helper)?)?
+            }
+            S::ScheduleToken(Some(deserializer)) => {
+                self.store_schedule_token(deserializer.finish(helper)?)?
+            }
+            S::IsFrequencyDecibelEditable(Some(deserializer)) => {
+                self.store_is_frequency_decibel_editable(deserializer.finish(helper)?)?
+            }
+            S::FrequencyDecibelPair(Some(deserializer)) => {
+                self.store_frequency_decibel_pair(deserializer.finish(helper)?)?
+            }
+            S::Any(Some(deserializer)) => self.store_any(deserializer.finish(helper)?)?,
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_token(&mut self, value: ::std::string::String) -> ::core::result::Result<(), Error> {
+        if self.token.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"Token",
+            )))?;
+        }
+        self.token = Some(value);
+        Ok(())
+    }
+    fn store_name(&mut self, value: ::std::string::String) -> ::core::result::Result<(), Error> {
+        if self.name.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(b"Name")))?;
+        }
+        self.name = Some(value);
+        Ok(())
+    }
+    fn store_is_default(
+        &mut self,
+        value: ::core::primitive::bool,
+    ) -> ::core::result::Result<(), Error> {
+        if self.is_default.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"isDefault",
+            )))?;
+        }
+        self.is_default = Some(value);
+        Ok(())
+    }
+    fn store_schedule_token(
+        &mut self,
+        value: ::std::string::String,
+    ) -> ::core::result::Result<(), Error> {
+        if self.schedule_token.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"ScheduleToken",
+            )))?;
+        }
+        self.schedule_token = Some(value);
+        Ok(())
+    }
+    fn store_is_frequency_decibel_editable(
+        &mut self,
+        value: ::core::primitive::bool,
+    ) -> ::core::result::Result<(), Error> {
+        if self.is_frequency_decibel_editable.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"isFrequencyDecibelEditable",
+            )))?;
+        }
+        self.is_frequency_decibel_editable = Some(value);
+        Ok(())
+    }
+    fn store_frequency_decibel_pair(
+        &mut self,
+        value: super::FrequencyDecibelPairType,
+    ) -> ::core::result::Result<(), Error> {
+        self.frequency_decibel_pair.push(value);
+        Ok(())
+    }
+    fn store_any(&mut self, value: AnyElement) -> ::core::result::Result<(), Error> {
+        self.any.push(value);
+        Ok(())
+    }
+    fn handle_token<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, ::std::string::String>,
+        fallback: &mut ::core::option::Option<EqPresetTypeDeserializerState>,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use EqPresetTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::Token(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_token(data)?;
+                *self.state__ = S::Name(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::Token(Some(deserializer)));
+                *self.state__ = S::Name(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+    fn handle_name<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, ::std::string::String>,
+        fallback: &mut ::core::option::Option<EqPresetTypeDeserializerState>,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use EqPresetTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::Name(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_name(data)?;
+                *self.state__ = S::IsDefault(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::Name(Some(deserializer)));
+                *self.state__ = S::IsDefault(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+    fn handle_is_default<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, ::core::primitive::bool>,
+        fallback: &mut ::core::option::Option<EqPresetTypeDeserializerState>,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use EqPresetTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::IsDefault(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_is_default(data)?;
+                *self.state__ = S::ScheduleToken(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::IsDefault(Some(deserializer)));
+                *self.state__ = S::ScheduleToken(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+    fn handle_schedule_token<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, ::std::string::String>,
+        fallback: &mut ::core::option::Option<EqPresetTypeDeserializerState>,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use EqPresetTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            *self.state__ = S::IsFrequencyDecibelEditable(None);
+            return Ok(ElementHandlerOutput::from_event(event, allow_any));
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_schedule_token(data)?;
+                *self.state__ = S::IsFrequencyDecibelEditable(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::ScheduleToken(Some(deserializer)));
+                *self.state__ = S::IsFrequencyDecibelEditable(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+    fn handle_is_frequency_decibel_editable<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, ::core::primitive::bool>,
+        fallback: &mut ::core::option::Option<EqPresetTypeDeserializerState>,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use EqPresetTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::IsFrequencyDecibelEditable(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_is_frequency_decibel_editable(data)?;
+                *self.state__ = S::FrequencyDecibelPair(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::IsFrequencyDecibelEditable(Some(deserializer)));
+                *self.state__ = S::FrequencyDecibelPair(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+    fn handle_frequency_decibel_pair<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, super::FrequencyDecibelPairType>,
+        fallback: &mut ::core::option::Option<EqPresetTypeDeserializerState>,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use EqPresetTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            *self.state__ = S::Any(None);
+            return Ok(ElementHandlerOutput::from_event(event, allow_any));
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_frequency_decibel_pair(data)?;
+                *self.state__ = S::FrequencyDecibelPair(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::FrequencyDecibelPair(Some(deserializer)));
+                *self.state__ = S::FrequencyDecibelPair(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+    fn handle_any<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, AnyElement>,
+        fallback: &mut ::core::option::Option<EqPresetTypeDeserializerState>,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use EqPresetTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            *self.state__ = S::Done__;
+            return Ok(ElementHandlerOutput::from_event(event, allow_any));
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_any(data)?;
+                *self.state__ = S::Any(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::Any(Some(deserializer)));
+                *self.state__ = S::Any(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::EqPresetType> for EqPresetTypeDeserializer {
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::EqPresetType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::EqPresetType> {
+        use EqPresetTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let mut is_any_retry = false;
+        let mut any_fallback = None;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::Token(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Name(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_name(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::IsDefault(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_is_default(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::ScheduleToken(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_schedule_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::IsFrequencyDecibelEditable(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_is_frequency_decibel_editable(
+                        helper,
+                        output,
+                        &mut fallback,
+                    )? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::FrequencyDecibelPair(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_frequency_decibel_pair(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Any(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_any(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::Token(None);
+                    event
+                }
+                (S::Token(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TT),
+                        b"Token",
+                        false,
+                    )?;
+                    match self.handle_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Name(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TT),
+                        b"Name",
+                        false,
+                    )?;
+                    match self.handle_name(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::IsDefault(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TT),
+                        b"isDefault",
+                        false,
+                    )?;
+                    match self.handle_is_default(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::ScheduleToken(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TT),
+                        b"ScheduleToken",
+                        false,
+                    )?;
+                    match self.handle_schedule_token(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (
+                    S::IsFrequencyDecibelEditable(None),
+                    event @ (Event::Start(_) | Event::Empty(_)),
+                ) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TT),
+                        b"isFrequencyDecibelEditable",
+                        false,
+                    )?;
+                    match self.handle_is_frequency_decibel_editable(
+                        helper,
+                        output,
+                        &mut fallback,
+                    )? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::FrequencyDecibelPair(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TT),
+                        b"FrequencyDecibelPair",
+                        false,
+                    )?;
+                    match self.handle_frequency_decibel_pair(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Any(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    if is_any_retry {
+                        let output = <AnyElement as WithDeserializer>::init(helper, event)?;
+                        match self.handle_any(helper, output, &mut fallback)? {
+                            ElementHandlerOutput::Continue { event, allow_any } => {
+                                allow_any_element = allow_any_element || allow_any;
+                                event
+                            }
+                            ElementHandlerOutput::Break { event, allow_any } => {
+                                break (event, allow_any)
+                            }
+                        }
+                    } else {
+                        any_fallback.get_or_insert(S::Any(None));
+                        *self.state__ = S::Done__;
+                        event
+                    }
+                }
+                (S::Done__, event) => {
+                    if let Some(state) = any_fallback.take() {
+                        is_any_retry = true;
+                        *self.state__ = state;
+                        event
+                    } else {
+                        *self.state__ = S::Done__;
+                        break (DeserializerEvent::Continue(event), allow_any_element);
+                    }
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::EqPresetType, Error> {
+        let state = replace(&mut *self.state__, EqPresetTypeDeserializerState::Unknown__);
+        self.finish_state(helper, state)?;
+        Ok(super::EqPresetType {
+            token: helper.finish_element("Token", self.token)?,
+            name: helper.finish_element("Name", self.name)?,
+            is_default: helper.finish_element("isDefault", self.is_default)?,
+            schedule_token: self.schedule_token,
+            is_frequency_decibel_editable: helper.finish_element(
+                "isFrequencyDecibelEditable",
+                self.is_frequency_decibel_editable,
+            )?,
+            frequency_decibel_pair: self.frequency_decibel_pair,
+            any: self.any,
+        })
+    }
+}
+#[derive(Debug)]
+pub struct FrequencyDecibelPairTypeDeserializer {
+    center_frequency: ::core::option::Option<::core::primitive::i32>,
+    decibel: ::core::option::Option<::core::primitive::f32>,
+    any: ::std::vec::Vec<AnyElement>,
+    state__: ::std::boxed::Box<FrequencyDecibelPairTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum FrequencyDecibelPairTypeDeserializerState {
+    Init__,
+    CenterFrequency(
+        ::core::option::Option<<::core::primitive::i32 as WithDeserializer>::Deserializer>,
+    ),
+    Decibel(::core::option::Option<<::core::primitive::f32 as WithDeserializer>::Deserializer>),
+    Any(::core::option::Option<<AnyElement as WithDeserializer>::Deserializer>),
+    Done__,
+    Unknown__,
+}
+impl FrequencyDecibelPairTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            center_frequency: None,
+            decibel: None,
+            any: ::std::vec::Vec::new(),
+            state__: ::std::boxed::Box::new(FrequencyDecibelPairTypeDeserializerState::Init__),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: FrequencyDecibelPairTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use FrequencyDecibelPairTypeDeserializerState as S;
+        match state {
+            S::CenterFrequency(Some(deserializer)) => {
+                self.store_center_frequency(deserializer.finish(helper)?)?
+            }
+            S::Decibel(Some(deserializer)) => self.store_decibel(deserializer.finish(helper)?)?,
+            S::Any(Some(deserializer)) => self.store_any(deserializer.finish(helper)?)?,
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_center_frequency(
+        &mut self,
+        value: ::core::primitive::i32,
+    ) -> ::core::result::Result<(), Error> {
+        if self.center_frequency.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"CenterFrequency",
+            )))?;
+        }
+        self.center_frequency = Some(value);
+        Ok(())
+    }
+    fn store_decibel(
+        &mut self,
+        value: ::core::primitive::f32,
+    ) -> ::core::result::Result<(), Error> {
+        if self.decibel.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"Decibel",
+            )))?;
+        }
+        self.decibel = Some(value);
+        Ok(())
+    }
+    fn store_any(&mut self, value: AnyElement) -> ::core::result::Result<(), Error> {
+        self.any.push(value);
+        Ok(())
+    }
+    fn handle_center_frequency<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, ::core::primitive::i32>,
+        fallback: &mut ::core::option::Option<FrequencyDecibelPairTypeDeserializerState>,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use FrequencyDecibelPairTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::CenterFrequency(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_center_frequency(data)?;
+                *self.state__ = S::Decibel(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::CenterFrequency(Some(deserializer)));
+                *self.state__ = S::Decibel(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+    fn handle_decibel<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, ::core::primitive::f32>,
+        fallback: &mut ::core::option::Option<FrequencyDecibelPairTypeDeserializerState>,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use FrequencyDecibelPairTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::Decibel(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_decibel(data)?;
+                *self.state__ = S::Any(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::Decibel(Some(deserializer)));
+                *self.state__ = S::Any(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+    fn handle_any<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, AnyElement>,
+        fallback: &mut ::core::option::Option<FrequencyDecibelPairTypeDeserializerState>,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use FrequencyDecibelPairTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            *self.state__ = S::Done__;
+            return Ok(ElementHandlerOutput::from_event(event, allow_any));
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_any(data)?;
+                *self.state__ = S::Any(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::Any(Some(deserializer)));
+                *self.state__ = S::Any(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::FrequencyDecibelPairType>
+    for FrequencyDecibelPairTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::FrequencyDecibelPairType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::FrequencyDecibelPairType> {
+        use FrequencyDecibelPairTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let mut is_any_retry = false;
+        let mut any_fallback = None;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::CenterFrequency(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_center_frequency(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Decibel(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_decibel(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Any(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_any(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::CenterFrequency(None);
+                    event
+                }
+                (S::CenterFrequency(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TT),
+                        b"CenterFrequency",
+                        false,
+                    )?;
+                    match self.handle_center_frequency(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Decibel(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TT),
+                        b"Decibel",
+                        false,
+                    )?;
+                    match self.handle_decibel(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Any(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    if is_any_retry {
+                        let output = <AnyElement as WithDeserializer>::init(helper, event)?;
+                        match self.handle_any(helper, output, &mut fallback)? {
+                            ElementHandlerOutput::Continue { event, allow_any } => {
+                                allow_any_element = allow_any_element || allow_any;
+                                event
+                            }
+                            ElementHandlerOutput::Break { event, allow_any } => {
+                                break (event, allow_any)
+                            }
+                        }
+                    } else {
+                        any_fallback.get_or_insert(S::Any(None));
+                        *self.state__ = S::Done__;
+                        event
+                    }
+                }
+                (S::Done__, event) => {
+                    if let Some(state) = any_fallback.take() {
+                        is_any_retry = true;
+                        *self.state__ = state;
+                        event
+                    } else {
+                        *self.state__ = S::Done__;
+                        break (DeserializerEvent::Continue(event), allow_any_element);
+                    }
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::FrequencyDecibelPairType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            FrequencyDecibelPairTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::FrequencyDecibelPairType {
+            center_frequency: helper.finish_element("CenterFrequency", self.center_frequency)?,
+            decibel: helper.finish_element("Decibel", self.decibel)?,
+            any: self.any,
+        })
+    }
+}
+#[derive(Debug)]
+pub struct AudioDecoderConfigurationOptionsTypeDeserializer {
+    any_attribute: AnyAttributes,
+    aac_dec_options: ::core::option::Option<super::AacDecOptionsType>,
+    g711_dec_options: ::core::option::Option<super::G711DecOptionsType>,
+    g726_dec_options: ::core::option::Option<super::G726DecOptionsType>,
+    extension: ::core::option::Option<super::AudioDecoderConfigurationOptionsExtensionType>,
+    state__: ::std::boxed::Box<AudioDecoderConfigurationOptionsTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum AudioDecoderConfigurationOptionsTypeDeserializerState {
+    Init__ , AacDecOptions (:: core :: option :: Option << super :: AacDecOptionsType as WithDeserializer > :: Deserializer >) , G711DecOptions (:: core :: option :: Option << super :: G711DecOptionsType as WithDeserializer > :: Deserializer >) , G726DecOptions (:: core :: option :: Option << super :: G726DecOptionsType as WithDeserializer > :: Deserializer >) , Extension (:: core :: option :: Option << super :: AudioDecoderConfigurationOptionsExtensionType as WithDeserializer > :: Deserializer >) , Done__ , Unknown__ , }
+impl AudioDecoderConfigurationOptionsTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        let mut any_attribute = AnyAttributes::default();
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            any_attribute.push(attrib)?;
+        }
+        Ok(Self {
+            any_attribute: any_attribute,
+            aac_dec_options: None,
+            g711_dec_options: None,
+            g726_dec_options: None,
+            extension: None,
+            state__: ::std::boxed::Box::new(
+                AudioDecoderConfigurationOptionsTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: AudioDecoderConfigurationOptionsTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use AudioDecoderConfigurationOptionsTypeDeserializerState as S;
+        match state {
+            S::AacDecOptions(Some(deserializer)) => {
+                self.store_aac_dec_options(deserializer.finish(helper)?)?
+            }
+            S::G711DecOptions(Some(deserializer)) => {
+                self.store_g711_dec_options(deserializer.finish(helper)?)?
+            }
+            S::G726DecOptions(Some(deserializer)) => {
+                self.store_g726_dec_options(deserializer.finish(helper)?)?
+            }
+            S::Extension(Some(deserializer)) => {
+                self.store_extension(deserializer.finish(helper)?)?
+            }
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_aac_dec_options(
+        &mut self,
+        value: super::AacDecOptionsType,
+    ) -> ::core::result::Result<(), Error> {
+        if self.aac_dec_options.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"AACDecOptions",
+            )))?;
+        }
+        self.aac_dec_options = Some(value);
+        Ok(())
+    }
+    fn store_g711_dec_options(
+        &mut self,
+        value: super::G711DecOptionsType,
+    ) -> ::core::result::Result<(), Error> {
+        if self.g711_dec_options.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"G711DecOptions",
+            )))?;
+        }
+        self.g711_dec_options = Some(value);
+        Ok(())
+    }
+    fn store_g726_dec_options(
+        &mut self,
+        value: super::G726DecOptionsType,
+    ) -> ::core::result::Result<(), Error> {
+        if self.g726_dec_options.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"G726DecOptions",
+            )))?;
+        }
+        self.g726_dec_options = Some(value);
+        Ok(())
+    }
+    fn store_extension(
+        &mut self,
+        value: super::AudioDecoderConfigurationOptionsExtensionType,
+    ) -> ::core::result::Result<(), Error> {
+        if self.extension.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"Extension",
+            )))?;
+        }
+        self.extension = Some(value);
+        Ok(())
+    }
+    fn handle_aac_dec_options<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, super::AacDecOptionsType>,
+        fallback: &mut ::core::option::Option<
+            AudioDecoderConfigurationOptionsTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use AudioDecoderConfigurationOptionsTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            *self.state__ = S::G711DecOptions(None);
+            return Ok(ElementHandlerOutput::from_event(event, allow_any));
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_aac_dec_options(data)?;
+                *self.state__ = S::G711DecOptions(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::AacDecOptions(Some(deserializer)));
+                *self.state__ = S::G711DecOptions(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+    fn handle_g711_dec_options<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, super::G711DecOptionsType>,
+        fallback: &mut ::core::option::Option<
+            AudioDecoderConfigurationOptionsTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use AudioDecoderConfigurationOptionsTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            *self.state__ = S::G726DecOptions(None);
+            return Ok(ElementHandlerOutput::from_event(event, allow_any));
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_g711_dec_options(data)?;
+                *self.state__ = S::G726DecOptions(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::G711DecOptions(Some(deserializer)));
+                *self.state__ = S::G726DecOptions(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+    fn handle_g726_dec_options<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, super::G726DecOptionsType>,
+        fallback: &mut ::core::option::Option<
+            AudioDecoderConfigurationOptionsTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use AudioDecoderConfigurationOptionsTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            *self.state__ = S::Extension(None);
+            return Ok(ElementHandlerOutput::from_event(event, allow_any));
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_g726_dec_options(data)?;
+                *self.state__ = S::Extension(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::G726DecOptions(Some(deserializer)));
+                *self.state__ = S::Extension(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+    fn handle_extension<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, super::AudioDecoderConfigurationOptionsExtensionType>,
+        fallback: &mut ::core::option::Option<
+            AudioDecoderConfigurationOptionsTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use AudioDecoderConfigurationOptionsTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            *self.state__ = S::Done__;
+            return Ok(ElementHandlerOutput::from_event(event, allow_any));
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_extension(data)?;
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::Extension(Some(deserializer)));
+                *self.state__ = S::Done__;
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::AudioDecoderConfigurationOptionsType>
+    for AudioDecoderConfigurationOptionsTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::AudioDecoderConfigurationOptionsType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::AudioDecoderConfigurationOptionsType> {
+        use AudioDecoderConfigurationOptionsTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::AacDecOptions(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_aac_dec_options(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::G711DecOptions(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_g711_dec_options(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::G726DecOptions(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_g726_dec_options(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Extension(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_extension(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::AacDecOptions(None);
+                    event
+                }
+                (S::AacDecOptions(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TT),
+                        b"AACDecOptions",
+                        false,
+                    )?;
+                    match self.handle_aac_dec_options(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::G711DecOptions(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TT),
+                        b"G711DecOptions",
+                        false,
+                    )?;
+                    match self.handle_g711_dec_options(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::G726DecOptions(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TT),
+                        b"G726DecOptions",
+                        false,
+                    )?;
+                    match self.handle_g726_dec_options(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Extension(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TT),
+                        b"Extension",
+                        true,
+                    )?;
+                    match self.handle_extension(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Done__, event) => {
+                    *self.state__ = S::Done__;
+                    break (DeserializerEvent::Continue(event), allow_any_element);
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::AudioDecoderConfigurationOptionsType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            AudioDecoderConfigurationOptionsTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::AudioDecoderConfigurationOptionsType {
+            any_attribute: self.any_attribute,
+            aac_dec_options: self.aac_dec_options,
+            g711_dec_options: self.g711_dec_options,
+            g726_dec_options: self.g726_dec_options,
+            extension: self.extension,
+        })
+    }
+}
+#[derive(Debug)]
+pub struct AacDecOptionsTypeDeserializer {
+    any_attribute: AnyAttributes,
+    bitrate: ::core::option::Option<super::IntItemsType>,
+    sample_rate_range: ::core::option::Option<super::IntItemsType>,
+    any: ::std::vec::Vec<AnyElement>,
+    state__: ::std::boxed::Box<AacDecOptionsTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum AacDecOptionsTypeDeserializerState {
+    Init__,
+    Bitrate(::core::option::Option<<super::IntItemsType as WithDeserializer>::Deserializer>),
+    SampleRateRange(
+        ::core::option::Option<<super::IntItemsType as WithDeserializer>::Deserializer>,
+    ),
+    Any(::core::option::Option<<AnyElement as WithDeserializer>::Deserializer>),
+    Done__,
+    Unknown__,
+}
+impl AacDecOptionsTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        let mut any_attribute = AnyAttributes::default();
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            any_attribute.push(attrib)?;
+        }
+        Ok(Self {
+            any_attribute: any_attribute,
+            bitrate: None,
+            sample_rate_range: None,
+            any: ::std::vec::Vec::new(),
+            state__: ::std::boxed::Box::new(AacDecOptionsTypeDeserializerState::Init__),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: AacDecOptionsTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use AacDecOptionsTypeDeserializerState as S;
+        match state {
+            S::Bitrate(Some(deserializer)) => self.store_bitrate(deserializer.finish(helper)?)?,
+            S::SampleRateRange(Some(deserializer)) => {
+                self.store_sample_rate_range(deserializer.finish(helper)?)?
+            }
+            S::Any(Some(deserializer)) => self.store_any(deserializer.finish(helper)?)?,
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_bitrate(&mut self, value: super::IntItemsType) -> ::core::result::Result<(), Error> {
+        if self.bitrate.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"Bitrate",
+            )))?;
+        }
+        self.bitrate = Some(value);
+        Ok(())
+    }
+    fn store_sample_rate_range(
+        &mut self,
+        value: super::IntItemsType,
+    ) -> ::core::result::Result<(), Error> {
+        if self.sample_rate_range.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"SampleRateRange",
+            )))?;
+        }
+        self.sample_rate_range = Some(value);
+        Ok(())
+    }
+    fn store_any(&mut self, value: AnyElement) -> ::core::result::Result<(), Error> {
+        self.any.push(value);
+        Ok(())
+    }
+    fn handle_bitrate<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, super::IntItemsType>,
+        fallback: &mut ::core::option::Option<AacDecOptionsTypeDeserializerState>,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use AacDecOptionsTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::Bitrate(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_bitrate(data)?;
+                *self.state__ = S::SampleRateRange(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::Bitrate(Some(deserializer)));
+                *self.state__ = S::SampleRateRange(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+    fn handle_sample_rate_range<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, super::IntItemsType>,
+        fallback: &mut ::core::option::Option<AacDecOptionsTypeDeserializerState>,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use AacDecOptionsTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::SampleRateRange(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_sample_rate_range(data)?;
+                *self.state__ = S::Any(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::SampleRateRange(Some(deserializer)));
+                *self.state__ = S::Any(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+    fn handle_any<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, AnyElement>,
+        fallback: &mut ::core::option::Option<AacDecOptionsTypeDeserializerState>,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use AacDecOptionsTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            *self.state__ = S::Done__;
+            return Ok(ElementHandlerOutput::from_event(event, allow_any));
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_any(data)?;
+                *self.state__ = S::Any(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::Any(Some(deserializer)));
+                *self.state__ = S::Any(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::AacDecOptionsType> for AacDecOptionsTypeDeserializer {
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::AacDecOptionsType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::AacDecOptionsType> {
+        use AacDecOptionsTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let mut is_any_retry = false;
+        let mut any_fallback = None;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::Bitrate(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_bitrate(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::SampleRateRange(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_sample_rate_range(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Any(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_any(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::Bitrate(None);
+                    event
+                }
+                (S::Bitrate(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TT),
+                        b"Bitrate",
+                        false,
+                    )?;
+                    match self.handle_bitrate(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::SampleRateRange(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TT),
+                        b"SampleRateRange",
+                        false,
+                    )?;
+                    match self.handle_sample_rate_range(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Any(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    if is_any_retry {
+                        let output = <AnyElement as WithDeserializer>::init(helper, event)?;
+                        match self.handle_any(helper, output, &mut fallback)? {
+                            ElementHandlerOutput::Continue { event, allow_any } => {
+                                allow_any_element = allow_any_element || allow_any;
+                                event
+                            }
+                            ElementHandlerOutput::Break { event, allow_any } => {
+                                break (event, allow_any)
+                            }
+                        }
+                    } else {
+                        any_fallback.get_or_insert(S::Any(None));
+                        *self.state__ = S::Done__;
+                        event
+                    }
+                }
+                (S::Done__, event) => {
+                    if let Some(state) = any_fallback.take() {
+                        is_any_retry = true;
+                        *self.state__ = state;
+                        event
+                    } else {
+                        *self.state__ = S::Done__;
+                        break (DeserializerEvent::Continue(event), allow_any_element);
+                    }
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::AacDecOptionsType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            AacDecOptionsTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::AacDecOptionsType {
+            any_attribute: self.any_attribute,
+            bitrate: helper.finish_element("Bitrate", self.bitrate)?,
+            sample_rate_range: helper.finish_element("SampleRateRange", self.sample_rate_range)?,
+            any: self.any,
+        })
+    }
+}
+#[derive(Debug)]
+pub struct G711DecOptionsTypeDeserializer {
+    any_attribute: AnyAttributes,
+    bitrate: ::core::option::Option<super::IntItemsType>,
+    sample_rate_range: ::core::option::Option<super::IntItemsType>,
+    any: ::std::vec::Vec<AnyElement>,
+    state__: ::std::boxed::Box<G711DecOptionsTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum G711DecOptionsTypeDeserializerState {
+    Init__,
+    Bitrate(::core::option::Option<<super::IntItemsType as WithDeserializer>::Deserializer>),
+    SampleRateRange(
+        ::core::option::Option<<super::IntItemsType as WithDeserializer>::Deserializer>,
+    ),
+    Any(::core::option::Option<<AnyElement as WithDeserializer>::Deserializer>),
+    Done__,
+    Unknown__,
+}
+impl G711DecOptionsTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        let mut any_attribute = AnyAttributes::default();
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            any_attribute.push(attrib)?;
+        }
+        Ok(Self {
+            any_attribute: any_attribute,
+            bitrate: None,
+            sample_rate_range: None,
+            any: ::std::vec::Vec::new(),
+            state__: ::std::boxed::Box::new(G711DecOptionsTypeDeserializerState::Init__),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: G711DecOptionsTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use G711DecOptionsTypeDeserializerState as S;
+        match state {
+            S::Bitrate(Some(deserializer)) => self.store_bitrate(deserializer.finish(helper)?)?,
+            S::SampleRateRange(Some(deserializer)) => {
+                self.store_sample_rate_range(deserializer.finish(helper)?)?
+            }
+            S::Any(Some(deserializer)) => self.store_any(deserializer.finish(helper)?)?,
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_bitrate(&mut self, value: super::IntItemsType) -> ::core::result::Result<(), Error> {
+        if self.bitrate.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"Bitrate",
+            )))?;
+        }
+        self.bitrate = Some(value);
+        Ok(())
+    }
+    fn store_sample_rate_range(
+        &mut self,
+        value: super::IntItemsType,
+    ) -> ::core::result::Result<(), Error> {
+        if self.sample_rate_range.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"SampleRateRange",
+            )))?;
+        }
+        self.sample_rate_range = Some(value);
+        Ok(())
+    }
+    fn store_any(&mut self, value: AnyElement) -> ::core::result::Result<(), Error> {
+        self.any.push(value);
+        Ok(())
+    }
+    fn handle_bitrate<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, super::IntItemsType>,
+        fallback: &mut ::core::option::Option<G711DecOptionsTypeDeserializerState>,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use G711DecOptionsTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::Bitrate(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_bitrate(data)?;
+                *self.state__ = S::SampleRateRange(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::Bitrate(Some(deserializer)));
+                *self.state__ = S::SampleRateRange(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+    fn handle_sample_rate_range<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, super::IntItemsType>,
+        fallback: &mut ::core::option::Option<G711DecOptionsTypeDeserializerState>,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use G711DecOptionsTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::SampleRateRange(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_sample_rate_range(data)?;
+                *self.state__ = S::Any(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::SampleRateRange(Some(deserializer)));
+                *self.state__ = S::Any(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+    fn handle_any<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, AnyElement>,
+        fallback: &mut ::core::option::Option<G711DecOptionsTypeDeserializerState>,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use G711DecOptionsTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            *self.state__ = S::Done__;
+            return Ok(ElementHandlerOutput::from_event(event, allow_any));
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_any(data)?;
+                *self.state__ = S::Any(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::Any(Some(deserializer)));
+                *self.state__ = S::Any(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::G711DecOptionsType> for G711DecOptionsTypeDeserializer {
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::G711DecOptionsType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::G711DecOptionsType> {
+        use G711DecOptionsTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let mut is_any_retry = false;
+        let mut any_fallback = None;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::Bitrate(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_bitrate(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::SampleRateRange(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_sample_rate_range(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Any(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_any(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::Bitrate(None);
+                    event
+                }
+                (S::Bitrate(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TT),
+                        b"Bitrate",
+                        false,
+                    )?;
+                    match self.handle_bitrate(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::SampleRateRange(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TT),
+                        b"SampleRateRange",
+                        false,
+                    )?;
+                    match self.handle_sample_rate_range(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Any(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    if is_any_retry {
+                        let output = <AnyElement as WithDeserializer>::init(helper, event)?;
+                        match self.handle_any(helper, output, &mut fallback)? {
+                            ElementHandlerOutput::Continue { event, allow_any } => {
+                                allow_any_element = allow_any_element || allow_any;
+                                event
+                            }
+                            ElementHandlerOutput::Break { event, allow_any } => {
+                                break (event, allow_any)
+                            }
+                        }
+                    } else {
+                        any_fallback.get_or_insert(S::Any(None));
+                        *self.state__ = S::Done__;
+                        event
+                    }
+                }
+                (S::Done__, event) => {
+                    if let Some(state) = any_fallback.take() {
+                        is_any_retry = true;
+                        *self.state__ = state;
+                        event
+                    } else {
+                        *self.state__ = S::Done__;
+                        break (DeserializerEvent::Continue(event), allow_any_element);
+                    }
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::G711DecOptionsType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            G711DecOptionsTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::G711DecOptionsType {
+            any_attribute: self.any_attribute,
+            bitrate: helper.finish_element("Bitrate", self.bitrate)?,
+            sample_rate_range: helper.finish_element("SampleRateRange", self.sample_rate_range)?,
+            any: self.any,
+        })
+    }
+}
+#[derive(Debug)]
+pub struct G726DecOptionsTypeDeserializer {
+    any_attribute: AnyAttributes,
+    bitrate: ::core::option::Option<super::IntItemsType>,
+    sample_rate_range: ::core::option::Option<super::IntItemsType>,
+    any: ::std::vec::Vec<AnyElement>,
+    state__: ::std::boxed::Box<G726DecOptionsTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum G726DecOptionsTypeDeserializerState {
+    Init__,
+    Bitrate(::core::option::Option<<super::IntItemsType as WithDeserializer>::Deserializer>),
+    SampleRateRange(
+        ::core::option::Option<<super::IntItemsType as WithDeserializer>::Deserializer>,
+    ),
+    Any(::core::option::Option<<AnyElement as WithDeserializer>::Deserializer>),
+    Done__,
+    Unknown__,
+}
+impl G726DecOptionsTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        let mut any_attribute = AnyAttributes::default();
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            any_attribute.push(attrib)?;
+        }
+        Ok(Self {
+            any_attribute: any_attribute,
+            bitrate: None,
+            sample_rate_range: None,
+            any: ::std::vec::Vec::new(),
+            state__: ::std::boxed::Box::new(G726DecOptionsTypeDeserializerState::Init__),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: G726DecOptionsTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use G726DecOptionsTypeDeserializerState as S;
+        match state {
+            S::Bitrate(Some(deserializer)) => self.store_bitrate(deserializer.finish(helper)?)?,
+            S::SampleRateRange(Some(deserializer)) => {
+                self.store_sample_rate_range(deserializer.finish(helper)?)?
+            }
+            S::Any(Some(deserializer)) => self.store_any(deserializer.finish(helper)?)?,
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_bitrate(&mut self, value: super::IntItemsType) -> ::core::result::Result<(), Error> {
+        if self.bitrate.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"Bitrate",
+            )))?;
+        }
+        self.bitrate = Some(value);
+        Ok(())
+    }
+    fn store_sample_rate_range(
+        &mut self,
+        value: super::IntItemsType,
+    ) -> ::core::result::Result<(), Error> {
+        if self.sample_rate_range.is_some() {
+            Err(ErrorKind::DuplicateElement(RawByteStr::from_slice(
+                b"SampleRateRange",
+            )))?;
+        }
+        self.sample_rate_range = Some(value);
+        Ok(())
+    }
+    fn store_any(&mut self, value: AnyElement) -> ::core::result::Result<(), Error> {
+        self.any.push(value);
+        Ok(())
+    }
+    fn handle_bitrate<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, super::IntItemsType>,
+        fallback: &mut ::core::option::Option<G726DecOptionsTypeDeserializerState>,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use G726DecOptionsTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::Bitrate(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_bitrate(data)?;
+                *self.state__ = S::SampleRateRange(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::Bitrate(Some(deserializer)));
+                *self.state__ = S::SampleRateRange(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+    fn handle_sample_rate_range<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, super::IntItemsType>,
+        fallback: &mut ::core::option::Option<G726DecOptionsTypeDeserializerState>,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use G726DecOptionsTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            fallback.get_or_insert(S::SampleRateRange(None));
+            if matches!(&fallback, Some(S::Init__)) {
+                return Ok(ElementHandlerOutput::break_(event, allow_any));
+            } else {
+                return Ok(ElementHandlerOutput::return_to_root(event, allow_any));
+            }
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_sample_rate_range(data)?;
+                *self.state__ = S::Any(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::SampleRateRange(Some(deserializer)));
+                *self.state__ = S::Any(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+    fn handle_any<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, AnyElement>,
+        fallback: &mut ::core::option::Option<G726DecOptionsTypeDeserializerState>,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use G726DecOptionsTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            *self.state__ = S::Done__;
+            return Ok(ElementHandlerOutput::from_event(event, allow_any));
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_any(data)?;
+                *self.state__ = S::Any(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::Any(Some(deserializer)));
+                *self.state__ = S::Any(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::G726DecOptionsType> for G726DecOptionsTypeDeserializer {
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::G726DecOptionsType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::G726DecOptionsType> {
+        use G726DecOptionsTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let mut is_any_retry = false;
+        let mut any_fallback = None;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::Bitrate(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_bitrate(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::SampleRateRange(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_sample_rate_range(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Any(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_any(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::Bitrate(None);
+                    event
+                }
+                (S::Bitrate(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TT),
+                        b"Bitrate",
+                        false,
+                    )?;
+                    match self.handle_bitrate(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::SampleRateRange(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    let output = helper.init_start_tag_deserializer(
+                        event,
+                        Some(&super::super::NS_TT),
+                        b"SampleRateRange",
+                        false,
+                    )?;
+                    match self.handle_sample_rate_range(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (S::Any(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    if is_any_retry {
+                        let output = <AnyElement as WithDeserializer>::init(helper, event)?;
+                        match self.handle_any(helper, output, &mut fallback)? {
+                            ElementHandlerOutput::Continue { event, allow_any } => {
+                                allow_any_element = allow_any_element || allow_any;
+                                event
+                            }
+                            ElementHandlerOutput::Break { event, allow_any } => {
+                                break (event, allow_any)
+                            }
+                        }
+                    } else {
+                        any_fallback.get_or_insert(S::Any(None));
+                        *self.state__ = S::Done__;
+                        event
+                    }
+                }
+                (S::Done__, event) => {
+                    if let Some(state) = any_fallback.take() {
+                        is_any_retry = true;
+                        *self.state__ = state;
+                        event
+                    } else {
+                        *self.state__ = S::Done__;
+                        break (DeserializerEvent::Continue(event), allow_any_element);
+                    }
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::G726DecOptionsType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            G726DecOptionsTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::G726DecOptionsType {
+            any_attribute: self.any_attribute,
+            bitrate: helper.finish_element("Bitrate", self.bitrate)?,
+            sample_rate_range: helper.finish_element("SampleRateRange", self.sample_rate_range)?,
+            any: self.any,
+        })
+    }
+}
+#[derive(Debug)]
+pub struct AudioDecoderConfigurationOptionsExtensionTypeDeserializer {
+    any: ::std::vec::Vec<AnyElement>,
+    state__: ::std::boxed::Box<AudioDecoderConfigurationOptionsExtensionTypeDeserializerState>,
+}
+#[derive(Debug)]
+enum AudioDecoderConfigurationOptionsExtensionTypeDeserializerState {
+    Init__,
+    Any(::core::option::Option<<AnyElement as WithDeserializer>::Deserializer>),
+    Done__,
+    Unknown__,
+}
+impl AudioDecoderConfigurationOptionsExtensionTypeDeserializer {
+    fn from_bytes_start(
+        helper: &mut DeserializeHelper,
+        bytes_start: &BytesStart<'_>,
+    ) -> ::core::result::Result<Self, Error> {
+        for attrib in helper.filter_xmlns_attributes(bytes_start) {
+            let attrib = attrib?;
+            helper.raise_unexpected_attrib_checked(&attrib)?;
+        }
+        Ok(Self {
+            any: ::std::vec::Vec::new(),
+            state__: ::std::boxed::Box::new(
+                AudioDecoderConfigurationOptionsExtensionTypeDeserializerState::Init__,
+            ),
+        })
+    }
+    fn finish_state(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        state: AudioDecoderConfigurationOptionsExtensionTypeDeserializerState,
+    ) -> ::core::result::Result<(), Error> {
+        use AudioDecoderConfigurationOptionsExtensionTypeDeserializerState as S;
+        match state {
+            S::Any(Some(deserializer)) => self.store_any(deserializer.finish(helper)?)?,
+            _ => (),
+        }
+        Ok(())
+    }
+    fn store_any(&mut self, value: AnyElement) -> ::core::result::Result<(), Error> {
+        self.any.push(value);
+        Ok(())
+    }
+    fn handle_any<'de>(
+        &mut self,
+        helper: &mut DeserializeHelper,
+        output: DeserializerOutput<'de, AnyElement>,
+        fallback: &mut ::core::option::Option<
+            AudioDecoderConfigurationOptionsExtensionTypeDeserializerState,
+        >,
+    ) -> ::core::result::Result<ElementHandlerOutput<'de>, Error> {
+        use AudioDecoderConfigurationOptionsExtensionTypeDeserializerState as S;
+        let DeserializerOutput {
+            artifact,
+            event,
+            allow_any,
+        } = output;
+        if artifact.is_none() {
+            *self.state__ = S::Done__;
+            return Ok(ElementHandlerOutput::from_event(event, allow_any));
+        }
+        if let Some(fallback) = fallback.take() {
+            self.finish_state(helper, fallback)?;
+        }
+        match artifact {
+            DeserializerArtifact::None => unreachable!(),
+            DeserializerArtifact::Data(data) => {
+                self.store_any(data)?;
+                *self.state__ = S::Any(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+            DeserializerArtifact::Deserializer(deserializer) => {
+                fallback.get_or_insert(S::Any(Some(deserializer)));
+                *self.state__ = S::Any(None);
+                Ok(ElementHandlerOutput::from_event(event, allow_any))
+            }
+        }
+    }
+}
+impl<'de> Deserializer<'de, super::AudioDecoderConfigurationOptionsExtensionType>
+    for AudioDecoderConfigurationOptionsExtensionTypeDeserializer
+{
+    fn init(
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::AudioDecoderConfigurationOptionsExtensionType> {
+        helper.init_deserializer_from_start_event(event, Self::from_bytes_start)
+    }
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, super::AudioDecoderConfigurationOptionsExtensionType> {
+        use AudioDecoderConfigurationOptionsExtensionTypeDeserializerState as S;
+        let mut event = event;
+        let mut fallback = None;
+        let mut allow_any_element = false;
+        let mut is_any_retry = false;
+        let mut any_fallback = None;
+        let (event, allow_any) = loop {
+            let state = replace(&mut *self.state__, S::Unknown__);
+            event = match (state, event) {
+                (S::Unknown__, _) => unreachable!(),
+                (S::Any(Some(deserializer)), event) => {
+                    let output = deserializer.next(helper, event)?;
+                    match self.handle_any(helper, output, &mut fallback)? {
+                        ElementHandlerOutput::Continue { event, allow_any } => {
+                            allow_any_element = allow_any_element || allow_any;
+                            event
+                        }
+                        ElementHandlerOutput::Break { event, allow_any } => {
+                            break (event, allow_any)
+                        }
+                    }
+                }
+                (_, Event::End(_)) => {
+                    if let Some(fallback) = fallback.take() {
+                        self.finish_state(helper, fallback)?;
+                    }
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(self.finish(helper)?),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                (S::Init__, event) => {
+                    fallback.get_or_insert(S::Init__);
+                    *self.state__ = S::Any(None);
+                    event
+                }
+                (S::Any(None), event @ (Event::Start(_) | Event::Empty(_))) => {
+                    if is_any_retry {
+                        let output = <AnyElement as WithDeserializer>::init(helper, event)?;
+                        match self.handle_any(helper, output, &mut fallback)? {
+                            ElementHandlerOutput::Continue { event, allow_any } => {
+                                allow_any_element = allow_any_element || allow_any;
+                                event
+                            }
+                            ElementHandlerOutput::Break { event, allow_any } => {
+                                break (event, allow_any)
+                            }
+                        }
+                    } else {
+                        any_fallback.get_or_insert(S::Any(None));
+                        *self.state__ = S::Done__;
+                        event
+                    }
+                }
+                (S::Done__, event) => {
+                    if let Some(state) = any_fallback.take() {
+                        is_any_retry = true;
+                        *self.state__ = state;
+                        event
+                    } else {
+                        *self.state__ = S::Done__;
+                        break (DeserializerEvent::Continue(event), allow_any_element);
+                    }
+                }
+                (state, event) => {
+                    *self.state__ = state;
+                    break (DeserializerEvent::Break(event), false);
+                }
+            }
+        };
+        if let Some(fallback) = fallback {
+            *self.state__ = fallback;
+        }
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(self),
+            event,
+            allow_any,
+        })
+    }
+    fn finish(
+        mut self,
+        helper: &mut DeserializeHelper,
+    ) -> ::core::result::Result<super::AudioDecoderConfigurationOptionsExtensionType, Error> {
+        let state = replace(
+            &mut *self.state__,
+            AudioDecoderConfigurationOptionsExtensionTypeDeserializerState::Unknown__,
+        );
+        self.finish_state(helper, state)?;
+        Ok(super::AudioDecoderConfigurationOptionsExtensionType { any: self.any })
+    }
+}
+#[derive(Debug)]
 pub struct PtzNodeTypeDeserializer {
     token: ::std::string::String,
     fixed_home_position: ::core::option::Option<::core::primitive::bool>,

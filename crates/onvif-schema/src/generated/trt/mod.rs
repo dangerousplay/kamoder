@@ -493,3 +493,1147 @@ impl WithSerializer for GetAudioSourcesResponseElementType {
 impl WithDeserializer for GetAudioSourcesResponseElementType {
     type Deserializer = quick_xml_deserialize::GetAudioSourcesResponseElementTypeDeserializer;
 }
+pub type GetAudioSourceConfigurations = GetAudioSourceConfigurationsElementType;
+#[derive(Debug)]
+pub struct GetAudioSourceConfigurationsElementType;
+impl WithSerializer for GetAudioSourceConfigurationsElementType {
+    type Serializer<'x> =
+        quick_xml_serialize::GetAudioSourceConfigurationsElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: GetAudioSourceConfigurationsElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: GetAudioSourceConfigurationsElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:GetAudioSourceConfigurations") , is_root , })
+    }
+}
+impl WithDeserializer for GetAudioSourceConfigurationsElementType {
+    type Deserializer = quick_xml_deserialize::GetAudioSourceConfigurationsElementTypeDeserializer;
+}
+pub type GetAudioSourceConfigurationsResponse = GetAudioSourceConfigurationsResponseElementType;
+#[derive(Debug)]
+pub struct GetAudioSourceConfigurationsResponseElementType {
+    pub configurations: ::std::vec::Vec<super::tt::AudioSourceConfigurationType>,
+}
+impl WithSerializer for GetAudioSourceConfigurationsResponseElementType {
+    type Serializer<'x> =
+        quick_xml_serialize::GetAudioSourceConfigurationsResponseElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: GetAudioSourceConfigurationsResponseElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: GetAudioSourceConfigurationsResponseElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:GetAudioSourceConfigurationsResponse") , is_root , })
+    }
+}
+impl WithDeserializer for GetAudioSourceConfigurationsResponseElementType {
+    type Deserializer =
+        quick_xml_deserialize::GetAudioSourceConfigurationsResponseElementTypeDeserializer;
+}
+pub type GetAudioSourceConfiguration = GetAudioSourceConfigurationElementType;
+#[derive(Debug)]
+pub struct GetAudioSourceConfigurationElementType {
+    pub configuration_token: ::std::string::String,
+}
+impl WithSerializer for GetAudioSourceConfigurationElementType {
+    type Serializer<'x> = quick_xml_serialize::GetAudioSourceConfigurationElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: GetAudioSourceConfigurationElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: GetAudioSourceConfigurationElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:GetAudioSourceConfiguration") , is_root , })
+    }
+}
+impl WithDeserializer for GetAudioSourceConfigurationElementType {
+    type Deserializer = quick_xml_deserialize::GetAudioSourceConfigurationElementTypeDeserializer;
+}
+pub type GetAudioSourceConfigurationResponse = GetAudioSourceConfigurationResponseElementType;
+#[derive(Debug)]
+pub struct GetAudioSourceConfigurationResponseElementType {
+    pub configuration: super::tt::AudioSourceConfigurationType,
+}
+impl WithSerializer for GetAudioSourceConfigurationResponseElementType {
+    type Serializer<'x> =
+        quick_xml_serialize::GetAudioSourceConfigurationResponseElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: GetAudioSourceConfigurationResponseElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: GetAudioSourceConfigurationResponseElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:GetAudioSourceConfigurationResponse") , is_root , })
+    }
+}
+impl WithDeserializer for GetAudioSourceConfigurationResponseElementType {
+    type Deserializer =
+        quick_xml_deserialize::GetAudioSourceConfigurationResponseElementTypeDeserializer;
+}
+pub type GetCompatibleAudioSourceConfigurations = GetCompatibleAudioSourceConfigurationsElementType;
+#[derive(Debug)]
+pub struct GetCompatibleAudioSourceConfigurationsElementType {
+    pub profile_token: ::std::string::String,
+}
+impl WithSerializer for GetCompatibleAudioSourceConfigurationsElementType {
+    type Serializer<'x> =
+        quick_xml_serialize::GetCompatibleAudioSourceConfigurationsElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: GetCompatibleAudioSourceConfigurationsElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: GetCompatibleAudioSourceConfigurationsElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:GetCompatibleAudioSourceConfigurations") , is_root , })
+    }
+}
+impl WithDeserializer for GetCompatibleAudioSourceConfigurationsElementType {
+    type Deserializer =
+        quick_xml_deserialize::GetCompatibleAudioSourceConfigurationsElementTypeDeserializer;
+}
+pub type GetCompatibleAudioSourceConfigurationsResponse =
+    GetCompatibleAudioSourceConfigurationsResponseElementType;
+#[derive(Debug)]
+pub struct GetCompatibleAudioSourceConfigurationsResponseElementType {
+    pub configurations: ::std::vec::Vec<super::tt::AudioSourceConfigurationType>,
+}
+impl WithSerializer for GetCompatibleAudioSourceConfigurationsResponseElementType {
+    type Serializer<'x> =
+        quick_xml_serialize::GetCompatibleAudioSourceConfigurationsResponseElementTypeSerializer<
+            'x,
+        >;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: GetCompatibleAudioSourceConfigurationsResponseElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: GetCompatibleAudioSourceConfigurationsResponseElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:GetCompatibleAudioSourceConfigurationsResponse") , is_root , })
+    }
+}
+impl WithDeserializer for GetCompatibleAudioSourceConfigurationsResponseElementType {
+    type Deserializer = quick_xml_deserialize :: GetCompatibleAudioSourceConfigurationsResponseElementTypeDeserializer ;
+}
+pub type GetAudioSourceConfigurationOptions = GetAudioSourceConfigurationOptionsElementType;
+#[derive(Debug)]
+pub struct GetAudioSourceConfigurationOptionsElementType {
+    pub configuration_token: ::core::option::Option<::std::string::String>,
+    pub profile_token: ::core::option::Option<::std::string::String>,
+}
+impl WithSerializer for GetAudioSourceConfigurationOptionsElementType {
+    type Serializer<'x> =
+        quick_xml_serialize::GetAudioSourceConfigurationOptionsElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: GetAudioSourceConfigurationOptionsElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: GetAudioSourceConfigurationOptionsElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:GetAudioSourceConfigurationOptions") , is_root , })
+    }
+}
+impl WithDeserializer for GetAudioSourceConfigurationOptionsElementType {
+    type Deserializer =
+        quick_xml_deserialize::GetAudioSourceConfigurationOptionsElementTypeDeserializer;
+}
+pub type GetAudioSourceConfigurationOptionsResponse =
+    GetAudioSourceConfigurationOptionsResponseElementType;
+#[derive(Debug)]
+pub struct GetAudioSourceConfigurationOptionsResponseElementType {
+    pub options: super::tt::AudioSourceConfigurationOptionsType,
+}
+impl WithSerializer for GetAudioSourceConfigurationOptionsResponseElementType {
+    type Serializer<'x> =
+        quick_xml_serialize::GetAudioSourceConfigurationOptionsResponseElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: GetAudioSourceConfigurationOptionsResponseElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: GetAudioSourceConfigurationOptionsResponseElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:GetAudioSourceConfigurationOptionsResponse") , is_root , })
+    }
+}
+impl WithDeserializer for GetAudioSourceConfigurationOptionsResponseElementType {
+    type Deserializer =
+        quick_xml_deserialize::GetAudioSourceConfigurationOptionsResponseElementTypeDeserializer;
+}
+pub type SetAudioSourceConfiguration = SetAudioSourceConfigurationElementType;
+#[derive(Debug)]
+pub struct SetAudioSourceConfigurationElementType {
+    pub configuration: super::tt::AudioSourceConfigurationType,
+    pub force_persistence: ::core::primitive::bool,
+}
+impl WithSerializer for SetAudioSourceConfigurationElementType {
+    type Serializer<'x> = quick_xml_serialize::SetAudioSourceConfigurationElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: SetAudioSourceConfigurationElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: SetAudioSourceConfigurationElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:SetAudioSourceConfiguration") , is_root , })
+    }
+}
+impl WithDeserializer for SetAudioSourceConfigurationElementType {
+    type Deserializer = quick_xml_deserialize::SetAudioSourceConfigurationElementTypeDeserializer;
+}
+pub type SetAudioSourceConfigurationResponse = SetAudioSourceConfigurationResponseElementType;
+#[derive(Debug)]
+pub struct SetAudioSourceConfigurationResponseElementType;
+impl WithSerializer for SetAudioSourceConfigurationResponseElementType {
+    type Serializer<'x> =
+        quick_xml_serialize::SetAudioSourceConfigurationResponseElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: SetAudioSourceConfigurationResponseElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: SetAudioSourceConfigurationResponseElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:SetAudioSourceConfigurationResponse") , is_root , })
+    }
+}
+impl WithDeserializer for SetAudioSourceConfigurationResponseElementType {
+    type Deserializer =
+        quick_xml_deserialize::SetAudioSourceConfigurationResponseElementTypeDeserializer;
+}
+pub type AddAudioSourceConfiguration = AddAudioSourceConfigurationElementType;
+#[derive(Debug)]
+pub struct AddAudioSourceConfigurationElementType {
+    pub profile_token: ::std::string::String,
+    pub configuration_token: ::std::string::String,
+}
+impl WithSerializer for AddAudioSourceConfigurationElementType {
+    type Serializer<'x> = quick_xml_serialize::AddAudioSourceConfigurationElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: AddAudioSourceConfigurationElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: AddAudioSourceConfigurationElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:AddAudioSourceConfiguration") , is_root , })
+    }
+}
+impl WithDeserializer for AddAudioSourceConfigurationElementType {
+    type Deserializer = quick_xml_deserialize::AddAudioSourceConfigurationElementTypeDeserializer;
+}
+pub type AddAudioSourceConfigurationResponse = AddAudioSourceConfigurationResponseElementType;
+#[derive(Debug)]
+pub struct AddAudioSourceConfigurationResponseElementType;
+impl WithSerializer for AddAudioSourceConfigurationResponseElementType {
+    type Serializer<'x> =
+        quick_xml_serialize::AddAudioSourceConfigurationResponseElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: AddAudioSourceConfigurationResponseElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: AddAudioSourceConfigurationResponseElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:AddAudioSourceConfigurationResponse") , is_root , })
+    }
+}
+impl WithDeserializer for AddAudioSourceConfigurationResponseElementType {
+    type Deserializer =
+        quick_xml_deserialize::AddAudioSourceConfigurationResponseElementTypeDeserializer;
+}
+pub type RemoveAudioSourceConfiguration = RemoveAudioSourceConfigurationElementType;
+#[derive(Debug)]
+pub struct RemoveAudioSourceConfigurationElementType {
+    pub profile_token: ::std::string::String,
+}
+impl WithSerializer for RemoveAudioSourceConfigurationElementType {
+    type Serializer<'x> =
+        quick_xml_serialize::RemoveAudioSourceConfigurationElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: RemoveAudioSourceConfigurationElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: RemoveAudioSourceConfigurationElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:RemoveAudioSourceConfiguration") , is_root , })
+    }
+}
+impl WithDeserializer for RemoveAudioSourceConfigurationElementType {
+    type Deserializer =
+        quick_xml_deserialize::RemoveAudioSourceConfigurationElementTypeDeserializer;
+}
+pub type RemoveAudioSourceConfigurationResponse = RemoveAudioSourceConfigurationResponseElementType;
+#[derive(Debug)]
+pub struct RemoveAudioSourceConfigurationResponseElementType;
+impl WithSerializer for RemoveAudioSourceConfigurationResponseElementType {
+    type Serializer<'x> =
+        quick_xml_serialize::RemoveAudioSourceConfigurationResponseElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: RemoveAudioSourceConfigurationResponseElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: RemoveAudioSourceConfigurationResponseElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:RemoveAudioSourceConfigurationResponse") , is_root , })
+    }
+}
+impl WithDeserializer for RemoveAudioSourceConfigurationResponseElementType {
+    type Deserializer =
+        quick_xml_deserialize::RemoveAudioSourceConfigurationResponseElementTypeDeserializer;
+}
+pub type GetAudioEncoderConfigurations = GetAudioEncoderConfigurationsElementType;
+#[derive(Debug)]
+pub struct GetAudioEncoderConfigurationsElementType;
+impl WithSerializer for GetAudioEncoderConfigurationsElementType {
+    type Serializer<'x> =
+        quick_xml_serialize::GetAudioEncoderConfigurationsElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: GetAudioEncoderConfigurationsElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: GetAudioEncoderConfigurationsElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:GetAudioEncoderConfigurations") , is_root , })
+    }
+}
+impl WithDeserializer for GetAudioEncoderConfigurationsElementType {
+    type Deserializer = quick_xml_deserialize::GetAudioEncoderConfigurationsElementTypeDeserializer;
+}
+pub type GetAudioEncoderConfigurationsResponse = GetAudioEncoderConfigurationsResponseElementType;
+#[derive(Debug)]
+pub struct GetAudioEncoderConfigurationsResponseElementType {
+    pub configurations: ::std::vec::Vec<super::tt::AudioEncoderConfigurationType>,
+}
+impl WithSerializer for GetAudioEncoderConfigurationsResponseElementType {
+    type Serializer<'x> =
+        quick_xml_serialize::GetAudioEncoderConfigurationsResponseElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: GetAudioEncoderConfigurationsResponseElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: GetAudioEncoderConfigurationsResponseElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:GetAudioEncoderConfigurationsResponse") , is_root , })
+    }
+}
+impl WithDeserializer for GetAudioEncoderConfigurationsResponseElementType {
+    type Deserializer =
+        quick_xml_deserialize::GetAudioEncoderConfigurationsResponseElementTypeDeserializer;
+}
+pub type GetAudioEncoderConfiguration = GetAudioEncoderConfigurationElementType;
+#[derive(Debug)]
+pub struct GetAudioEncoderConfigurationElementType {
+    pub configuration_token: ::std::string::String,
+}
+impl WithSerializer for GetAudioEncoderConfigurationElementType {
+    type Serializer<'x> =
+        quick_xml_serialize::GetAudioEncoderConfigurationElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: GetAudioEncoderConfigurationElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: GetAudioEncoderConfigurationElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:GetAudioEncoderConfiguration") , is_root , })
+    }
+}
+impl WithDeserializer for GetAudioEncoderConfigurationElementType {
+    type Deserializer = quick_xml_deserialize::GetAudioEncoderConfigurationElementTypeDeserializer;
+}
+pub type GetAudioEncoderConfigurationResponse = GetAudioEncoderConfigurationResponseElementType;
+#[derive(Debug)]
+pub struct GetAudioEncoderConfigurationResponseElementType {
+    pub configuration: super::tt::AudioEncoderConfigurationType,
+}
+impl WithSerializer for GetAudioEncoderConfigurationResponseElementType {
+    type Serializer<'x> =
+        quick_xml_serialize::GetAudioEncoderConfigurationResponseElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: GetAudioEncoderConfigurationResponseElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: GetAudioEncoderConfigurationResponseElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:GetAudioEncoderConfigurationResponse") , is_root , })
+    }
+}
+impl WithDeserializer for GetAudioEncoderConfigurationResponseElementType {
+    type Deserializer =
+        quick_xml_deserialize::GetAudioEncoderConfigurationResponseElementTypeDeserializer;
+}
+pub type GetCompatibleAudioEncoderConfigurations =
+    GetCompatibleAudioEncoderConfigurationsElementType;
+#[derive(Debug)]
+pub struct GetCompatibleAudioEncoderConfigurationsElementType {
+    pub profile_token: ::std::string::String,
+}
+impl WithSerializer for GetCompatibleAudioEncoderConfigurationsElementType {
+    type Serializer<'x> =
+        quick_xml_serialize::GetCompatibleAudioEncoderConfigurationsElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: GetCompatibleAudioEncoderConfigurationsElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: GetCompatibleAudioEncoderConfigurationsElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:GetCompatibleAudioEncoderConfigurations") , is_root , })
+    }
+}
+impl WithDeserializer for GetCompatibleAudioEncoderConfigurationsElementType {
+    type Deserializer =
+        quick_xml_deserialize::GetCompatibleAudioEncoderConfigurationsElementTypeDeserializer;
+}
+pub type GetCompatibleAudioEncoderConfigurationsResponse =
+    GetCompatibleAudioEncoderConfigurationsResponseElementType;
+#[derive(Debug)]
+pub struct GetCompatibleAudioEncoderConfigurationsResponseElementType {
+    pub configurations: ::std::vec::Vec<super::tt::AudioEncoderConfigurationType>,
+}
+impl WithSerializer for GetCompatibleAudioEncoderConfigurationsResponseElementType {
+    type Serializer<'x> =
+        quick_xml_serialize::GetCompatibleAudioEncoderConfigurationsResponseElementTypeSerializer<
+            'x,
+        >;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: GetCompatibleAudioEncoderConfigurationsResponseElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: GetCompatibleAudioEncoderConfigurationsResponseElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:GetCompatibleAudioEncoderConfigurationsResponse") , is_root , })
+    }
+}
+impl WithDeserializer for GetCompatibleAudioEncoderConfigurationsResponseElementType {
+    type Deserializer = quick_xml_deserialize :: GetCompatibleAudioEncoderConfigurationsResponseElementTypeDeserializer ;
+}
+pub type GetAudioEncoderConfigurationOptions = GetAudioEncoderConfigurationOptionsElementType;
+#[derive(Debug)]
+pub struct GetAudioEncoderConfigurationOptionsElementType {
+    pub configuration_token: ::core::option::Option<::std::string::String>,
+    pub profile_token: ::core::option::Option<::std::string::String>,
+}
+impl WithSerializer for GetAudioEncoderConfigurationOptionsElementType {
+    type Serializer<'x> =
+        quick_xml_serialize::GetAudioEncoderConfigurationOptionsElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: GetAudioEncoderConfigurationOptionsElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: GetAudioEncoderConfigurationOptionsElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:GetAudioEncoderConfigurationOptions") , is_root , })
+    }
+}
+impl WithDeserializer for GetAudioEncoderConfigurationOptionsElementType {
+    type Deserializer =
+        quick_xml_deserialize::GetAudioEncoderConfigurationOptionsElementTypeDeserializer;
+}
+pub type GetAudioEncoderConfigurationOptionsResponse =
+    GetAudioEncoderConfigurationOptionsResponseElementType;
+#[derive(Debug)]
+pub struct GetAudioEncoderConfigurationOptionsResponseElementType {
+    pub options: super::tt::AudioEncoderConfigurationOptionsType,
+}
+impl WithSerializer for GetAudioEncoderConfigurationOptionsResponseElementType {
+    type Serializer<'x> =
+        quick_xml_serialize::GetAudioEncoderConfigurationOptionsResponseElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: GetAudioEncoderConfigurationOptionsResponseElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: GetAudioEncoderConfigurationOptionsResponseElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:GetAudioEncoderConfigurationOptionsResponse") , is_root , })
+    }
+}
+impl WithDeserializer for GetAudioEncoderConfigurationOptionsResponseElementType {
+    type Deserializer =
+        quick_xml_deserialize::GetAudioEncoderConfigurationOptionsResponseElementTypeDeserializer;
+}
+pub type SetAudioEncoderConfiguration = SetAudioEncoderConfigurationElementType;
+#[derive(Debug)]
+pub struct SetAudioEncoderConfigurationElementType {
+    pub configuration: super::tt::AudioEncoderConfigurationType,
+    pub force_persistence: ::core::primitive::bool,
+}
+impl WithSerializer for SetAudioEncoderConfigurationElementType {
+    type Serializer<'x> =
+        quick_xml_serialize::SetAudioEncoderConfigurationElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: SetAudioEncoderConfigurationElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: SetAudioEncoderConfigurationElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:SetAudioEncoderConfiguration") , is_root , })
+    }
+}
+impl WithDeserializer for SetAudioEncoderConfigurationElementType {
+    type Deserializer = quick_xml_deserialize::SetAudioEncoderConfigurationElementTypeDeserializer;
+}
+pub type SetAudioEncoderConfigurationResponse = SetAudioEncoderConfigurationResponseElementType;
+#[derive(Debug)]
+pub struct SetAudioEncoderConfigurationResponseElementType;
+impl WithSerializer for SetAudioEncoderConfigurationResponseElementType {
+    type Serializer<'x> =
+        quick_xml_serialize::SetAudioEncoderConfigurationResponseElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: SetAudioEncoderConfigurationResponseElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: SetAudioEncoderConfigurationResponseElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:SetAudioEncoderConfigurationResponse") , is_root , })
+    }
+}
+impl WithDeserializer for SetAudioEncoderConfigurationResponseElementType {
+    type Deserializer =
+        quick_xml_deserialize::SetAudioEncoderConfigurationResponseElementTypeDeserializer;
+}
+pub type AddAudioEncoderConfiguration = AddAudioEncoderConfigurationElementType;
+#[derive(Debug)]
+pub struct AddAudioEncoderConfigurationElementType {
+    pub profile_token: ::std::string::String,
+    pub configuration_token: ::std::string::String,
+}
+impl WithSerializer for AddAudioEncoderConfigurationElementType {
+    type Serializer<'x> =
+        quick_xml_serialize::AddAudioEncoderConfigurationElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: AddAudioEncoderConfigurationElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: AddAudioEncoderConfigurationElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:AddAudioEncoderConfiguration") , is_root , })
+    }
+}
+impl WithDeserializer for AddAudioEncoderConfigurationElementType {
+    type Deserializer = quick_xml_deserialize::AddAudioEncoderConfigurationElementTypeDeserializer;
+}
+pub type AddAudioEncoderConfigurationResponse = AddAudioEncoderConfigurationResponseElementType;
+#[derive(Debug)]
+pub struct AddAudioEncoderConfigurationResponseElementType;
+impl WithSerializer for AddAudioEncoderConfigurationResponseElementType {
+    type Serializer<'x> =
+        quick_xml_serialize::AddAudioEncoderConfigurationResponseElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: AddAudioEncoderConfigurationResponseElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: AddAudioEncoderConfigurationResponseElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:AddAudioEncoderConfigurationResponse") , is_root , })
+    }
+}
+impl WithDeserializer for AddAudioEncoderConfigurationResponseElementType {
+    type Deserializer =
+        quick_xml_deserialize::AddAudioEncoderConfigurationResponseElementTypeDeserializer;
+}
+pub type RemoveAudioEncoderConfiguration = RemoveAudioEncoderConfigurationElementType;
+#[derive(Debug)]
+pub struct RemoveAudioEncoderConfigurationElementType {
+    pub profile_token: ::std::string::String,
+}
+impl WithSerializer for RemoveAudioEncoderConfigurationElementType {
+    type Serializer<'x> =
+        quick_xml_serialize::RemoveAudioEncoderConfigurationElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: RemoveAudioEncoderConfigurationElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: RemoveAudioEncoderConfigurationElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:RemoveAudioEncoderConfiguration") , is_root , })
+    }
+}
+impl WithDeserializer for RemoveAudioEncoderConfigurationElementType {
+    type Deserializer =
+        quick_xml_deserialize::RemoveAudioEncoderConfigurationElementTypeDeserializer;
+}
+pub type RemoveAudioEncoderConfigurationResponse =
+    RemoveAudioEncoderConfigurationResponseElementType;
+#[derive(Debug)]
+pub struct RemoveAudioEncoderConfigurationResponseElementType;
+impl WithSerializer for RemoveAudioEncoderConfigurationResponseElementType {
+    type Serializer<'x> =
+        quick_xml_serialize::RemoveAudioEncoderConfigurationResponseElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: RemoveAudioEncoderConfigurationResponseElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: RemoveAudioEncoderConfigurationResponseElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:RemoveAudioEncoderConfigurationResponse") , is_root , })
+    }
+}
+impl WithDeserializer for RemoveAudioEncoderConfigurationResponseElementType {
+    type Deserializer =
+        quick_xml_deserialize::RemoveAudioEncoderConfigurationResponseElementTypeDeserializer;
+}
+pub type GetAudioOutputs = GetAudioOutputsElementType;
+#[derive(Debug)]
+pub struct GetAudioOutputsElementType;
+impl WithSerializer for GetAudioOutputsElementType {
+    type Serializer<'x> = quick_xml_serialize::GetAudioOutputsElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok(quick_xml_serialize::GetAudioOutputsElementTypeSerializer {
+            value: self,
+            state: ::std::boxed::Box::new(
+                quick_xml_serialize::GetAudioOutputsElementTypeSerializerState::Init__,
+            ),
+            name: name.unwrap_or("trt:GetAudioOutputs"),
+            is_root,
+        })
+    }
+}
+impl WithDeserializer for GetAudioOutputsElementType {
+    type Deserializer = quick_xml_deserialize::GetAudioOutputsElementTypeDeserializer;
+}
+pub type GetAudioOutputsResponse = GetAudioOutputsResponseElementType;
+#[derive(Debug)]
+pub struct GetAudioOutputsResponseElementType {
+    pub audio_outputs: ::std::vec::Vec<super::tt::AudioOutputType>,
+}
+impl WithSerializer for GetAudioOutputsResponseElementType {
+    type Serializer<'x> = quick_xml_serialize::GetAudioOutputsResponseElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok(
+            quick_xml_serialize::GetAudioOutputsResponseElementTypeSerializer {
+                value: self,
+                state: ::std::boxed::Box::new(
+                    quick_xml_serialize::GetAudioOutputsResponseElementTypeSerializerState::Init__,
+                ),
+                name: name.unwrap_or("trt:GetAudioOutputsResponse"),
+                is_root,
+            },
+        )
+    }
+}
+impl WithDeserializer for GetAudioOutputsResponseElementType {
+    type Deserializer = quick_xml_deserialize::GetAudioOutputsResponseElementTypeDeserializer;
+}
+pub type GetAudioOutputConfigurations = GetAudioOutputConfigurationsElementType;
+#[derive(Debug)]
+pub struct GetAudioOutputConfigurationsElementType;
+impl WithSerializer for GetAudioOutputConfigurationsElementType {
+    type Serializer<'x> =
+        quick_xml_serialize::GetAudioOutputConfigurationsElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: GetAudioOutputConfigurationsElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: GetAudioOutputConfigurationsElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:GetAudioOutputConfigurations") , is_root , })
+    }
+}
+impl WithDeserializer for GetAudioOutputConfigurationsElementType {
+    type Deserializer = quick_xml_deserialize::GetAudioOutputConfigurationsElementTypeDeserializer;
+}
+pub type GetAudioOutputConfigurationsResponse = GetAudioOutputConfigurationsResponseElementType;
+#[derive(Debug)]
+pub struct GetAudioOutputConfigurationsResponseElementType {
+    pub configurations: ::std::vec::Vec<super::tt::AudioOutputConfigurationType>,
+}
+impl WithSerializer for GetAudioOutputConfigurationsResponseElementType {
+    type Serializer<'x> =
+        quick_xml_serialize::GetAudioOutputConfigurationsResponseElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: GetAudioOutputConfigurationsResponseElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: GetAudioOutputConfigurationsResponseElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:GetAudioOutputConfigurationsResponse") , is_root , })
+    }
+}
+impl WithDeserializer for GetAudioOutputConfigurationsResponseElementType {
+    type Deserializer =
+        quick_xml_deserialize::GetAudioOutputConfigurationsResponseElementTypeDeserializer;
+}
+pub type GetAudioOutputConfiguration = GetAudioOutputConfigurationElementType;
+#[derive(Debug)]
+pub struct GetAudioOutputConfigurationElementType {
+    pub configuration_token: ::std::string::String,
+}
+impl WithSerializer for GetAudioOutputConfigurationElementType {
+    type Serializer<'x> = quick_xml_serialize::GetAudioOutputConfigurationElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: GetAudioOutputConfigurationElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: GetAudioOutputConfigurationElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:GetAudioOutputConfiguration") , is_root , })
+    }
+}
+impl WithDeserializer for GetAudioOutputConfigurationElementType {
+    type Deserializer = quick_xml_deserialize::GetAudioOutputConfigurationElementTypeDeserializer;
+}
+pub type GetAudioOutputConfigurationResponse = GetAudioOutputConfigurationResponseElementType;
+#[derive(Debug)]
+pub struct GetAudioOutputConfigurationResponseElementType {
+    pub configuration: super::tt::AudioOutputConfigurationType,
+}
+impl WithSerializer for GetAudioOutputConfigurationResponseElementType {
+    type Serializer<'x> =
+        quick_xml_serialize::GetAudioOutputConfigurationResponseElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: GetAudioOutputConfigurationResponseElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: GetAudioOutputConfigurationResponseElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:GetAudioOutputConfigurationResponse") , is_root , })
+    }
+}
+impl WithDeserializer for GetAudioOutputConfigurationResponseElementType {
+    type Deserializer =
+        quick_xml_deserialize::GetAudioOutputConfigurationResponseElementTypeDeserializer;
+}
+pub type GetCompatibleAudioOutputConfigurations = GetCompatibleAudioOutputConfigurationsElementType;
+#[derive(Debug)]
+pub struct GetCompatibleAudioOutputConfigurationsElementType {
+    pub profile_token: ::std::string::String,
+}
+impl WithSerializer for GetCompatibleAudioOutputConfigurationsElementType {
+    type Serializer<'x> =
+        quick_xml_serialize::GetCompatibleAudioOutputConfigurationsElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: GetCompatibleAudioOutputConfigurationsElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: GetCompatibleAudioOutputConfigurationsElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:GetCompatibleAudioOutputConfigurations") , is_root , })
+    }
+}
+impl WithDeserializer for GetCompatibleAudioOutputConfigurationsElementType {
+    type Deserializer =
+        quick_xml_deserialize::GetCompatibleAudioOutputConfigurationsElementTypeDeserializer;
+}
+pub type GetCompatibleAudioOutputConfigurationsResponse =
+    GetCompatibleAudioOutputConfigurationsResponseElementType;
+#[derive(Debug)]
+pub struct GetCompatibleAudioOutputConfigurationsResponseElementType {
+    pub configurations: ::std::vec::Vec<super::tt::AudioOutputConfigurationType>,
+}
+impl WithSerializer for GetCompatibleAudioOutputConfigurationsResponseElementType {
+    type Serializer<'x> =
+        quick_xml_serialize::GetCompatibleAudioOutputConfigurationsResponseElementTypeSerializer<
+            'x,
+        >;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: GetCompatibleAudioOutputConfigurationsResponseElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: GetCompatibleAudioOutputConfigurationsResponseElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:GetCompatibleAudioOutputConfigurationsResponse") , is_root , })
+    }
+}
+impl WithDeserializer for GetCompatibleAudioOutputConfigurationsResponseElementType {
+    type Deserializer = quick_xml_deserialize :: GetCompatibleAudioOutputConfigurationsResponseElementTypeDeserializer ;
+}
+pub type GetAudioOutputConfigurationOptions = GetAudioOutputConfigurationOptionsElementType;
+#[derive(Debug)]
+pub struct GetAudioOutputConfigurationOptionsElementType {
+    pub configuration_token: ::core::option::Option<::std::string::String>,
+    pub profile_token: ::core::option::Option<::std::string::String>,
+}
+impl WithSerializer for GetAudioOutputConfigurationOptionsElementType {
+    type Serializer<'x> =
+        quick_xml_serialize::GetAudioOutputConfigurationOptionsElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: GetAudioOutputConfigurationOptionsElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: GetAudioOutputConfigurationOptionsElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:GetAudioOutputConfigurationOptions") , is_root , })
+    }
+}
+impl WithDeserializer for GetAudioOutputConfigurationOptionsElementType {
+    type Deserializer =
+        quick_xml_deserialize::GetAudioOutputConfigurationOptionsElementTypeDeserializer;
+}
+pub type GetAudioOutputConfigurationOptionsResponse =
+    GetAudioOutputConfigurationOptionsResponseElementType;
+#[derive(Debug)]
+pub struct GetAudioOutputConfigurationOptionsResponseElementType {
+    pub options: super::tt::AudioOutputConfigurationOptionsType,
+}
+impl WithSerializer for GetAudioOutputConfigurationOptionsResponseElementType {
+    type Serializer<'x> =
+        quick_xml_serialize::GetAudioOutputConfigurationOptionsResponseElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: GetAudioOutputConfigurationOptionsResponseElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: GetAudioOutputConfigurationOptionsResponseElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:GetAudioOutputConfigurationOptionsResponse") , is_root , })
+    }
+}
+impl WithDeserializer for GetAudioOutputConfigurationOptionsResponseElementType {
+    type Deserializer =
+        quick_xml_deserialize::GetAudioOutputConfigurationOptionsResponseElementTypeDeserializer;
+}
+pub type SetAudioOutputConfiguration = SetAudioOutputConfigurationElementType;
+#[derive(Debug)]
+pub struct SetAudioOutputConfigurationElementType {
+    pub configuration: super::tt::AudioOutputConfigurationType,
+    pub force_persistence: ::core::primitive::bool,
+}
+impl WithSerializer for SetAudioOutputConfigurationElementType {
+    type Serializer<'x> = quick_xml_serialize::SetAudioOutputConfigurationElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: SetAudioOutputConfigurationElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: SetAudioOutputConfigurationElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:SetAudioOutputConfiguration") , is_root , })
+    }
+}
+impl WithDeserializer for SetAudioOutputConfigurationElementType {
+    type Deserializer = quick_xml_deserialize::SetAudioOutputConfigurationElementTypeDeserializer;
+}
+pub type SetAudioOutputConfigurationResponse = SetAudioOutputConfigurationResponseElementType;
+#[derive(Debug)]
+pub struct SetAudioOutputConfigurationResponseElementType;
+impl WithSerializer for SetAudioOutputConfigurationResponseElementType {
+    type Serializer<'x> =
+        quick_xml_serialize::SetAudioOutputConfigurationResponseElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: SetAudioOutputConfigurationResponseElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: SetAudioOutputConfigurationResponseElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:SetAudioOutputConfigurationResponse") , is_root , })
+    }
+}
+impl WithDeserializer for SetAudioOutputConfigurationResponseElementType {
+    type Deserializer =
+        quick_xml_deserialize::SetAudioOutputConfigurationResponseElementTypeDeserializer;
+}
+pub type AddAudioOutputConfiguration = AddAudioOutputConfigurationElementType;
+#[derive(Debug)]
+pub struct AddAudioOutputConfigurationElementType {
+    pub profile_token: ::std::string::String,
+    pub configuration_token: ::std::string::String,
+}
+impl WithSerializer for AddAudioOutputConfigurationElementType {
+    type Serializer<'x> = quick_xml_serialize::AddAudioOutputConfigurationElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: AddAudioOutputConfigurationElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: AddAudioOutputConfigurationElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:AddAudioOutputConfiguration") , is_root , })
+    }
+}
+impl WithDeserializer for AddAudioOutputConfigurationElementType {
+    type Deserializer = quick_xml_deserialize::AddAudioOutputConfigurationElementTypeDeserializer;
+}
+pub type AddAudioOutputConfigurationResponse = AddAudioOutputConfigurationResponseElementType;
+#[derive(Debug)]
+pub struct AddAudioOutputConfigurationResponseElementType;
+impl WithSerializer for AddAudioOutputConfigurationResponseElementType {
+    type Serializer<'x> =
+        quick_xml_serialize::AddAudioOutputConfigurationResponseElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: AddAudioOutputConfigurationResponseElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: AddAudioOutputConfigurationResponseElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:AddAudioOutputConfigurationResponse") , is_root , })
+    }
+}
+impl WithDeserializer for AddAudioOutputConfigurationResponseElementType {
+    type Deserializer =
+        quick_xml_deserialize::AddAudioOutputConfigurationResponseElementTypeDeserializer;
+}
+pub type RemoveAudioOutputConfiguration = RemoveAudioOutputConfigurationElementType;
+#[derive(Debug)]
+pub struct RemoveAudioOutputConfigurationElementType {
+    pub profile_token: ::std::string::String,
+}
+impl WithSerializer for RemoveAudioOutputConfigurationElementType {
+    type Serializer<'x> =
+        quick_xml_serialize::RemoveAudioOutputConfigurationElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: RemoveAudioOutputConfigurationElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: RemoveAudioOutputConfigurationElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:RemoveAudioOutputConfiguration") , is_root , })
+    }
+}
+impl WithDeserializer for RemoveAudioOutputConfigurationElementType {
+    type Deserializer =
+        quick_xml_deserialize::RemoveAudioOutputConfigurationElementTypeDeserializer;
+}
+pub type RemoveAudioOutputConfigurationResponse = RemoveAudioOutputConfigurationResponseElementType;
+#[derive(Debug)]
+pub struct RemoveAudioOutputConfigurationResponseElementType;
+impl WithSerializer for RemoveAudioOutputConfigurationResponseElementType {
+    type Serializer<'x> =
+        quick_xml_serialize::RemoveAudioOutputConfigurationResponseElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: RemoveAudioOutputConfigurationResponseElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: RemoveAudioOutputConfigurationResponseElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:RemoveAudioOutputConfigurationResponse") , is_root , })
+    }
+}
+impl WithDeserializer for RemoveAudioOutputConfigurationResponseElementType {
+    type Deserializer =
+        quick_xml_deserialize::RemoveAudioOutputConfigurationResponseElementTypeDeserializer;
+}
+pub type GetAudioDecoderConfigurations = GetAudioDecoderConfigurationsElementType;
+#[derive(Debug)]
+pub struct GetAudioDecoderConfigurationsElementType;
+impl WithSerializer for GetAudioDecoderConfigurationsElementType {
+    type Serializer<'x> =
+        quick_xml_serialize::GetAudioDecoderConfigurationsElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: GetAudioDecoderConfigurationsElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: GetAudioDecoderConfigurationsElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:GetAudioDecoderConfigurations") , is_root , })
+    }
+}
+impl WithDeserializer for GetAudioDecoderConfigurationsElementType {
+    type Deserializer = quick_xml_deserialize::GetAudioDecoderConfigurationsElementTypeDeserializer;
+}
+pub type GetAudioDecoderConfigurationsResponse = GetAudioDecoderConfigurationsResponseElementType;
+#[derive(Debug)]
+pub struct GetAudioDecoderConfigurationsResponseElementType {
+    pub configurations: ::std::vec::Vec<super::tt::AudioDecoderConfigurationType>,
+}
+impl WithSerializer for GetAudioDecoderConfigurationsResponseElementType {
+    type Serializer<'x> =
+        quick_xml_serialize::GetAudioDecoderConfigurationsResponseElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: GetAudioDecoderConfigurationsResponseElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: GetAudioDecoderConfigurationsResponseElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:GetAudioDecoderConfigurationsResponse") , is_root , })
+    }
+}
+impl WithDeserializer for GetAudioDecoderConfigurationsResponseElementType {
+    type Deserializer =
+        quick_xml_deserialize::GetAudioDecoderConfigurationsResponseElementTypeDeserializer;
+}
+pub type GetAudioDecoderConfiguration = GetAudioDecoderConfigurationElementType;
+#[derive(Debug)]
+pub struct GetAudioDecoderConfigurationElementType {
+    pub configuration_token: ::std::string::String,
+}
+impl WithSerializer for GetAudioDecoderConfigurationElementType {
+    type Serializer<'x> =
+        quick_xml_serialize::GetAudioDecoderConfigurationElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: GetAudioDecoderConfigurationElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: GetAudioDecoderConfigurationElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:GetAudioDecoderConfiguration") , is_root , })
+    }
+}
+impl WithDeserializer for GetAudioDecoderConfigurationElementType {
+    type Deserializer = quick_xml_deserialize::GetAudioDecoderConfigurationElementTypeDeserializer;
+}
+pub type GetAudioDecoderConfigurationResponse = GetAudioDecoderConfigurationResponseElementType;
+#[derive(Debug)]
+pub struct GetAudioDecoderConfigurationResponseElementType {
+    pub configuration: super::tt::AudioDecoderConfigurationType,
+}
+impl WithSerializer for GetAudioDecoderConfigurationResponseElementType {
+    type Serializer<'x> =
+        quick_xml_serialize::GetAudioDecoderConfigurationResponseElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: GetAudioDecoderConfigurationResponseElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: GetAudioDecoderConfigurationResponseElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:GetAudioDecoderConfigurationResponse") , is_root , })
+    }
+}
+impl WithDeserializer for GetAudioDecoderConfigurationResponseElementType {
+    type Deserializer =
+        quick_xml_deserialize::GetAudioDecoderConfigurationResponseElementTypeDeserializer;
+}
+pub type GetCompatibleAudioDecoderConfigurations =
+    GetCompatibleAudioDecoderConfigurationsElementType;
+#[derive(Debug)]
+pub struct GetCompatibleAudioDecoderConfigurationsElementType {
+    pub profile_token: ::std::string::String,
+}
+impl WithSerializer for GetCompatibleAudioDecoderConfigurationsElementType {
+    type Serializer<'x> =
+        quick_xml_serialize::GetCompatibleAudioDecoderConfigurationsElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: GetCompatibleAudioDecoderConfigurationsElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: GetCompatibleAudioDecoderConfigurationsElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:GetCompatibleAudioDecoderConfigurations") , is_root , })
+    }
+}
+impl WithDeserializer for GetCompatibleAudioDecoderConfigurationsElementType {
+    type Deserializer =
+        quick_xml_deserialize::GetCompatibleAudioDecoderConfigurationsElementTypeDeserializer;
+}
+pub type GetCompatibleAudioDecoderConfigurationsResponse =
+    GetCompatibleAudioDecoderConfigurationsResponseElementType;
+#[derive(Debug)]
+pub struct GetCompatibleAudioDecoderConfigurationsResponseElementType {
+    pub configurations: ::std::vec::Vec<super::tt::AudioDecoderConfigurationType>,
+}
+impl WithSerializer for GetCompatibleAudioDecoderConfigurationsResponseElementType {
+    type Serializer<'x> =
+        quick_xml_serialize::GetCompatibleAudioDecoderConfigurationsResponseElementTypeSerializer<
+            'x,
+        >;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: GetCompatibleAudioDecoderConfigurationsResponseElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: GetCompatibleAudioDecoderConfigurationsResponseElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:GetCompatibleAudioDecoderConfigurationsResponse") , is_root , })
+    }
+}
+impl WithDeserializer for GetCompatibleAudioDecoderConfigurationsResponseElementType {
+    type Deserializer = quick_xml_deserialize :: GetCompatibleAudioDecoderConfigurationsResponseElementTypeDeserializer ;
+}
+pub type GetAudioDecoderConfigurationOptions = GetAudioDecoderConfigurationOptionsElementType;
+#[derive(Debug)]
+pub struct GetAudioDecoderConfigurationOptionsElementType {
+    pub configuration_token: ::core::option::Option<::std::string::String>,
+    pub profile_token: ::core::option::Option<::std::string::String>,
+}
+impl WithSerializer for GetAudioDecoderConfigurationOptionsElementType {
+    type Serializer<'x> =
+        quick_xml_serialize::GetAudioDecoderConfigurationOptionsElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: GetAudioDecoderConfigurationOptionsElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: GetAudioDecoderConfigurationOptionsElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:GetAudioDecoderConfigurationOptions") , is_root , })
+    }
+}
+impl WithDeserializer for GetAudioDecoderConfigurationOptionsElementType {
+    type Deserializer =
+        quick_xml_deserialize::GetAudioDecoderConfigurationOptionsElementTypeDeserializer;
+}
+pub type GetAudioDecoderConfigurationOptionsResponse =
+    GetAudioDecoderConfigurationOptionsResponseElementType;
+#[derive(Debug)]
+pub struct GetAudioDecoderConfigurationOptionsResponseElementType {
+    pub options: super::tt::AudioDecoderConfigurationOptionsType,
+}
+impl WithSerializer for GetAudioDecoderConfigurationOptionsResponseElementType {
+    type Serializer<'x> =
+        quick_xml_serialize::GetAudioDecoderConfigurationOptionsResponseElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: GetAudioDecoderConfigurationOptionsResponseElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: GetAudioDecoderConfigurationOptionsResponseElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:GetAudioDecoderConfigurationOptionsResponse") , is_root , })
+    }
+}
+impl WithDeserializer for GetAudioDecoderConfigurationOptionsResponseElementType {
+    type Deserializer =
+        quick_xml_deserialize::GetAudioDecoderConfigurationOptionsResponseElementTypeDeserializer;
+}
+pub type SetAudioDecoderConfiguration = SetAudioDecoderConfigurationElementType;
+#[derive(Debug)]
+pub struct SetAudioDecoderConfigurationElementType {
+    pub configuration: super::tt::AudioDecoderConfigurationType,
+    pub force_persistence: ::core::primitive::bool,
+}
+impl WithSerializer for SetAudioDecoderConfigurationElementType {
+    type Serializer<'x> =
+        quick_xml_serialize::SetAudioDecoderConfigurationElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: SetAudioDecoderConfigurationElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: SetAudioDecoderConfigurationElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:SetAudioDecoderConfiguration") , is_root , })
+    }
+}
+impl WithDeserializer for SetAudioDecoderConfigurationElementType {
+    type Deserializer = quick_xml_deserialize::SetAudioDecoderConfigurationElementTypeDeserializer;
+}
+pub type SetAudioDecoderConfigurationResponse = SetAudioDecoderConfigurationResponseElementType;
+#[derive(Debug)]
+pub struct SetAudioDecoderConfigurationResponseElementType;
+impl WithSerializer for SetAudioDecoderConfigurationResponseElementType {
+    type Serializer<'x> =
+        quick_xml_serialize::SetAudioDecoderConfigurationResponseElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: SetAudioDecoderConfigurationResponseElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: SetAudioDecoderConfigurationResponseElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:SetAudioDecoderConfigurationResponse") , is_root , })
+    }
+}
+impl WithDeserializer for SetAudioDecoderConfigurationResponseElementType {
+    type Deserializer =
+        quick_xml_deserialize::SetAudioDecoderConfigurationResponseElementTypeDeserializer;
+}
+pub type AddAudioDecoderConfiguration = AddAudioDecoderConfigurationElementType;
+#[derive(Debug)]
+pub struct AddAudioDecoderConfigurationElementType {
+    pub profile_token: ::std::string::String,
+    pub configuration_token: ::std::string::String,
+}
+impl WithSerializer for AddAudioDecoderConfigurationElementType {
+    type Serializer<'x> =
+        quick_xml_serialize::AddAudioDecoderConfigurationElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: AddAudioDecoderConfigurationElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: AddAudioDecoderConfigurationElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:AddAudioDecoderConfiguration") , is_root , })
+    }
+}
+impl WithDeserializer for AddAudioDecoderConfigurationElementType {
+    type Deserializer = quick_xml_deserialize::AddAudioDecoderConfigurationElementTypeDeserializer;
+}
+pub type AddAudioDecoderConfigurationResponse = AddAudioDecoderConfigurationResponseElementType;
+#[derive(Debug)]
+pub struct AddAudioDecoderConfigurationResponseElementType;
+impl WithSerializer for AddAudioDecoderConfigurationResponseElementType {
+    type Serializer<'x> =
+        quick_xml_serialize::AddAudioDecoderConfigurationResponseElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: AddAudioDecoderConfigurationResponseElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: AddAudioDecoderConfigurationResponseElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:AddAudioDecoderConfigurationResponse") , is_root , })
+    }
+}
+impl WithDeserializer for AddAudioDecoderConfigurationResponseElementType {
+    type Deserializer =
+        quick_xml_deserialize::AddAudioDecoderConfigurationResponseElementTypeDeserializer;
+}
+pub type RemoveAudioDecoderConfiguration = RemoveAudioDecoderConfigurationElementType;
+#[derive(Debug)]
+pub struct RemoveAudioDecoderConfigurationElementType {
+    pub profile_token: ::std::string::String,
+}
+impl WithSerializer for RemoveAudioDecoderConfigurationElementType {
+    type Serializer<'x> =
+        quick_xml_serialize::RemoveAudioDecoderConfigurationElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: RemoveAudioDecoderConfigurationElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: RemoveAudioDecoderConfigurationElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:RemoveAudioDecoderConfiguration") , is_root , })
+    }
+}
+impl WithDeserializer for RemoveAudioDecoderConfigurationElementType {
+    type Deserializer =
+        quick_xml_deserialize::RemoveAudioDecoderConfigurationElementTypeDeserializer;
+}
+pub type RemoveAudioDecoderConfigurationResponse =
+    RemoveAudioDecoderConfigurationResponseElementType;
+#[derive(Debug)]
+pub struct RemoveAudioDecoderConfigurationResponseElementType;
+impl WithSerializer for RemoveAudioDecoderConfigurationResponseElementType {
+    type Serializer<'x> =
+        quick_xml_serialize::RemoveAudioDecoderConfigurationResponseElementTypeSerializer<'x>;
+    fn serializer<'ser>(
+        &'ser self,
+        name: ::core::option::Option<&'ser ::core::primitive::str>,
+        is_root: ::core::primitive::bool,
+    ) -> ::core::result::Result<Self::Serializer<'ser>, Error> {
+        Ok (quick_xml_serialize :: RemoveAudioDecoderConfigurationResponseElementTypeSerializer { value : self , state : :: std :: boxed :: Box :: new (quick_xml_serialize :: RemoveAudioDecoderConfigurationResponseElementTypeSerializerState :: Init__) , name : name . unwrap_or ("trt:RemoveAudioDecoderConfigurationResponse") , is_root , })
+    }
+}
+impl WithDeserializer for RemoveAudioDecoderConfigurationResponseElementType {
+    type Deserializer =
+        quick_xml_deserialize::RemoveAudioDecoderConfigurationResponseElementTypeDeserializer;
+}

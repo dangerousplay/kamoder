@@ -549,3 +549,46 @@ and checked it from the LAN:
 
 WS-Discovery multicast did not reach the test host, which sits on another
 subnet; the unicast probe answered.
+
+## 11. Audio codec (ak_pcm.ko) on the live AV100 (2026-10-17)
+
+The codec nodes look like ALSA but are a vendor char device: `/dev/pcmC0D0p`
+(playback, minor 0), `/dev/pcmC0D0c` (capture, 1), `/dev/pcmC0D0l`
+(loopback, 2), major 248 `pcmchar`, class `/sys/class/akpcm`. No `/dev/snd`,
+no ALSA tools. Ioctl numbers come from disassembling the unstripped module;
+the Rust ABI is `crates/anyka-av100/src/pcm.rs`, the probe
+`tools/re/pcm-probe`.
+
+Verified with `pcm-probe` (vendor `ipc` not running):
+
+- **GET_PARS (`0x801c50f2`) works** and confirms the 7×u32 layout
+  `{?, rate, channels, bits, period_bytes, periods, ?}`. Driver defaults:
+  capture `{0, 8000, 1, 16, 16384, 16, 0}`, source 2, gain 3; playback
+  `{0, 8000, 2, 16, 16384, 32, 0}`, source 0, gain 4. Loopback answers
+  ENOTTY to GET_PARS/source/gain.
+- **Capture works natively at 8 kHz mono S16**: SET_PARS
+  `{0, 8000, 1, 16, 512, 8, 0}` + START → every `read()` returns one
+  512 B period in ~32 ms, 16384 B/s, no zeros, real room signal (AC RMS
+  ≈ 1700, no DC). 16 kHz / 2048 B also works (64 ms reads). The board
+  profile uses 8 kHz, so the service never resamples.
+- `GET_RATE` (`0x800450ea`) returned 0 before SET_PARS and the set rate
+  after.
+- **SET_SPEAKER (`0x40045081`) drives GPIO 37**: arg 1 → sysfs value 1,
+  arg 0 → 0, while `lights` keeps the line exported (the driver does not
+  `gpio_request` it exclusively).
+- **Playback works; the amp is active low and the driver gets it wrong.**
+  The driver reads `speak-gpios` without its polarity flag and treats "on"
+  as raw high: `SET_SPEAKER 1` and `SET_SOURCE 4` (route DAC → output,
+  register `0x0800009c` bits 16:14 = 0b100) drive GPIO 37 **high = amp
+  muted**; `SET_PARS`, `SET_SPEAKER 0` and closing the node drive it low but
+  also clear the output mux. So the driver alone can never be "routed + amp
+  on". Working sequence (tone heard only while the line was low):
+  SET_PARS `{0, 8000, 1, 16, 512, 8, 0}` → START → SET_SOURCE 4 →
+  SET_GAIN → *then* GPIO 37 = 0 via sysfs → write; after closing the node,
+  set GPIO 37 = 1 again (the close left it low). The vendor app does the
+  same: it drives the amp itself through sysfs (`device.config`
+  `ioremap_aoamp=10037`, inverted) and never calls SET_SPEAKER. The
+  `audio` service therefore defaults to `--amp lights`.
+- Gain table (register `0x9c` bits 22:18): index 0..5 → 0x10, 8, 4, 2, 1, 0;
+  SDK says 0 = mute, 6 = max. Source is a bitmask: 4 = DAC → output,
+  2 = line-in bypass, 1 = mic bypass, 0 = mute.

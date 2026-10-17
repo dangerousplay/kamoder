@@ -4,11 +4,12 @@
 //! - [`authorized_keys`] — `sshd`'s OpenSSH public keys, managed from the web.
 //! - [`web_users`] — the `web` users file: the same hash plus a role
 //!   and a generation counter, with atomic rewrites and a last-admin guard.
-//! - [`jwt`] — HS256 session tokens and their key file.
+//! - [`jwt`] — HS256 session tokens (`jsonwebtoken` on a ring backend) and
+//!   their key file.
 //! - [`onvif_secret`] — `etc/onvif.secret`, the plaintext `user:password`
 //!   account that ONVIF WS-UsernameToken and RTSP Digest both need.
 //! - [`atomic`] — crash-safe file replacement, [`perms`] — the "is this secret
-//!   readable by others" check that knows FAT has no modes, [`hex`].
+//!   readable by others" check that knows FAT has no modes.
 //!
 //! Everything is built on `ring` only: aws-lc, the usual alternative backend,
 //! does not build for the ARMv5TE target, and a single crypto stack keeps the
@@ -21,7 +22,6 @@
 pub mod atomic;
 pub mod authorized_keys;
 pub mod credentials;
-pub mod hex;
 pub mod jwt;
 pub mod onvif_secret;
 mod password;

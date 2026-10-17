@@ -3,6 +3,7 @@ import {
   CameraIcon,
   LayoutDashboardIcon,
   MoveIcon,
+  RefreshCwIcon,
   ScrollTextIcon,
   SettingsIcon,
   UsersIcon,
@@ -22,6 +23,7 @@ export const NAV_ITEMS: NavItem[] = [
   { title: "Services", to: "/services", icon: ActivityIcon },
   { title: "Logs", to: "/logs", icon: ScrollTextIcon },
   { title: "PTZ", to: "/ptz", icon: MoveIcon },
+  { title: "Updates", to: "/updates", icon: RefreshCwIcon },
   { title: "Settings", to: "/settings", icon: SettingsIcon, adminOnly: true },
   { title: "Users", to: "/users", icon: UsersIcon, adminOnly: true },
 ]

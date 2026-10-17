@@ -1,6 +1,7 @@
 //! Wires `onvif-device-rs` into the camera's ONVIF service: which actions
 //! exist, what they report, who may call them.
 
+use crate::audio::Audio;
 use crate::device::{Endpoints, GetCapabilities, GetServices};
 use crate::imaging;
 use crate::media::{self, Media, VideoStream};
@@ -49,6 +50,9 @@ pub struct Settings {
     /// The lights owner's socket, through which Imaging (IR-cut filter) is
     /// served; `None` = no Imaging service. Advertised only while it answers.
     pub lights: Option<lights_proto::Client>,
+    /// The board's microphones and speakers, and the audio service's socket
+    /// for the speaker volume; empty without `[audio]`.
+    pub audio: Audio,
 }
 
 /// Builds the server with every handler registered; start it with
@@ -126,6 +130,7 @@ pub fn build(settings: &Settings) -> Result<OnvifServer, OnvifError> {
             snapshot_path: settings.snapshot_path.clone(),
             device_ip: settings.device_ip.clone(),
             ptz,
+            audio: settings.audio.clone(),
             on_fallback: Default::default(),
         },
     );
@@ -240,6 +245,7 @@ pub mod tests {
             }),
             ptz,
             lights: None,
+            audio: Audio::default(),
         }
     }
 
@@ -809,6 +815,8 @@ pub mod tests {
         .await;
         assert_eq!(status, 200, "{body}");
         let _: tptz::ContinuousMoveResponse = parse(&body);
+        // ONVIF moves are manual activity for the follow tracker.
+        assert!(ptz.last_manual_ago().is_some());
         clock.advance(std::time::Duration::from_secs(1));
         let (status, body) = call(
             addr,
@@ -1444,6 +1452,421 @@ pub mod tests {
         let (addr, mut handle) = start(s).await;
         let (status, body) = call(addr, "", "<tds:GetDeviceInformation/>").await;
         assert_eq!(status, 200, "{body}");
+        handle.shutdown().await.unwrap();
+    }
+
+    // ------------------------------------------------------------ audio ----
+
+    fn board_profile(name: &str) -> board::Profile {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join(format!("../../boards/{name}.toml"));
+        board::load(&path).unwrap()
+    }
+
+    fn audio_socket(tag: &str) -> std::path::PathBuf {
+        std::env::temp_dir().join(format!(
+            "kamoder-onvif-audio-{}-{tag}.sock",
+            std::process::id()
+        ))
+    }
+
+    type AudioSeen = Arc<std::sync::Mutex<Vec<audio_proto::Request>>>;
+
+    /// An audio service on `path` serving `board`'s devices, keeping their
+    /// gains in memory and recording every request.
+    fn fake_audio(path: &std::path::Path, board: &board::Audio) -> AudioSeen {
+        use audio_proto::{Device, DeviceKind, DeviceState, Request as A, Response as R};
+        use tokio::io::{AsyncBufReadExt, BufReader};
+        let mut devices: Vec<Device> = board
+            .inputs
+            .iter()
+            .map(|d| (d, DeviceKind::Input))
+            .chain(board.outputs.iter().map(|d| (d, DeviceKind::Output)))
+            .map(|(d, kind)| Device {
+                id: d.id.clone(),
+                kind,
+                name: d.name.clone(),
+                state: DeviceState::Idle,
+                rate: audio_proto::RATE,
+                gain: d.gain,
+                gain_range: d.gain_range,
+                error: None,
+            })
+            .collect();
+        let seen = AudioSeen::default();
+        let _ = std::fs::remove_file(path);
+        let listener = tokio::net::UnixListener::bind(path).unwrap();
+        let record = Arc::clone(&seen);
+        tokio::spawn(async move {
+            while let Ok((stream, _)) = listener.accept().await {
+                let (read, mut write) = stream.into_split();
+                let mut line = String::new();
+                if BufReader::new(read).read_line(&mut line).await.is_err() {
+                    continue;
+                }
+                let request: A = serde_json::from_str(&line).unwrap();
+                record.lock().unwrap().push(request.clone());
+                let answer = match request {
+                    A::Status => R::Status {
+                        devices: devices.clone(),
+                    },
+                    A::Set { device, gain } => match devices.iter_mut().find(|d| d.id == device) {
+                        Some(d) => {
+                            d.gain = Some(gain);
+                            R::Ok
+                        }
+                        None => R::Error {
+                            code: audio_proto::ErrorCode::UnknownDevice,
+                            message: device,
+                        },
+                    },
+                    _ => R::Error {
+                        code: audio_proto::ErrorCode::BadRequest,
+                        message: "not here".into(),
+                    },
+                };
+                let mut text = serde_json::to_string(&answer).unwrap();
+                text.push('\n');
+                write.write_all(text.as_bytes()).await.unwrap();
+            }
+        });
+        seen
+    }
+
+    /// AV100 board settings (two sensors, `[audio]` with mic0 and spk0)
+    /// with the audio service at `socket`; the producer is down.
+    fn av100_audio_settings(socket: &std::path::Path) -> Settings {
+        let board = board_profile("anyka-av100-ptz");
+        Settings {
+            audio: Audio::new(board.audio.as_ref(), Some(audio_proto::Client::new(socket))),
+            ..av100_settings(crate::producer::fake::dead_address())
+        }
+    }
+
+    fn set_output_level(level: i32) -> String {
+        format!("<trt:SetAudioOutputConfiguration><trt:Configuration token=\"AudioOutputConfig_spk0\"><tt:Name>Speaker</tt:Name><tt:UseCount>2</tt:UseCount><tt:OutputToken>spk0</tt:OutputToken><tt:OutputLevel>{level}</tt:OutputLevel></trt:Configuration><trt:ForcePersistence>true</trt:ForcePersistence></trt:SetAudioOutputConfiguration>")
+    }
+
+    fn set_encoder(encoding: &str, bitrate: i32, sample_rate: i32) -> String {
+        format!("<trt:SetAudioEncoderConfiguration><trt:Configuration token=\"AudioEncoderConfig_0\"><tt:Name>G711</tt:Name><tt:UseCount>2</tt:UseCount><tt:Encoding>{encoding}</tt:Encoding><tt:Bitrate>{bitrate}</tt:Bitrate><tt:SampleRate>{sample_rate}</tt:SampleRate><tt:Multicast><tt:Address><tt:Type>IPv4</tt:Type><tt:IPv4Address>0.0.0.0</tt:IPv4Address></tt:Address><tt:Port>0</tt:Port><tt:TTL>0</tt:TTL><tt:AutoStart>false</tt:AutoStart></tt:Multicast><tt:SessionTimeout>PT60S</tt:SessionTimeout></trt:Configuration><trt:ForcePersistence>true</trt:ForcePersistence></trt:SetAudioEncoderConfiguration>")
+    }
+
+    /// AUD-14..16, AUD-28: every AV100 profile carries the microphone's
+    /// source + G.711 encoder configuration and the speaker's output +
+    /// decoder configuration, with the volume the audio service reports.
+    #[tokio::test(flavor = "current_thread")]
+    async fn av100_profiles_carry_audio() {
+        let path = audio_socket("profiles");
+        let board = board_profile("anyka-av100-ptz");
+        let seen = fake_audio(&path, board.audio.as_ref().unwrap());
+        let (addr, mut handle) = start(av100_audio_settings(&path)).await;
+        let auth = || text_header("nvr", "correct horse");
+        let ok = |(status, body): (u16, String)| {
+            assert_eq!(status, 200, "{body}");
+            body
+        };
+
+        let profiles: trt::GetProfilesResponse =
+            parse(&ok(call(addr, &auth(), "<trt:GetProfiles/>").await));
+        assert_eq!(profiles.profiles.len(), 2);
+        for profile in &profiles.profiles {
+            let source = profile.audio_source_configuration.as_ref().unwrap();
+            assert_eq!(
+                (source.token.as_str(), source.source_token.as_str()),
+                ("AudioSourceConfig_mic0", "mic0")
+            );
+            assert_eq!(source.use_count, 2);
+            let encoder = profile.audio_encoder_configuration.as_ref().unwrap();
+            assert_eq!(encoder.token, "AudioEncoderConfig_0");
+            assert!(matches!(encoder.encoding, tt::AudioEncodingType::G711));
+            assert_eq!((encoder.bitrate, encoder.sample_rate), (64, 8));
+            let extension = profile.extension.as_ref().unwrap();
+            let output = extension.audio_output_configuration.as_ref().unwrap();
+            assert_eq!(
+                (output.token.as_str(), output.output_token.as_str()),
+                ("AudioOutputConfig_spk0", "spk0")
+            );
+            assert_eq!(output.output_level, 4, "the board's spk0 gain");
+            let decoder = extension.audio_decoder_configuration.as_ref().unwrap();
+            assert_eq!(decoder.token, "AudioDecoderConfig_0");
+        }
+        assert!(seen.lock().unwrap().contains(&audio_proto::Request::Status));
+
+        // The stream URI does not change: the audio is a track of /vsN.
+        let uri: trt::GetStreamUriResponse = parse(&ok(call(
+            addr,
+            &auth(),
+            r#"<trt:GetStreamUri><trt:StreamSetup><tt:Stream>RTP-Unicast</tt:Stream><tt:Transport><tt:Protocol>RTSP</tt:Protocol></tt:Transport></trt:StreamSetup><trt:ProfileToken>Profile_vs1</trt:ProfileToken></trt:GetStreamUri>"#,
+        )
+        .await));
+        assert_eq!(uri.media_uri.uri, "rtsp://192.0.2.10:554/vs1");
+
+        let sources: trt::GetAudioSourcesResponse =
+            parse(&ok(call(addr, &auth(), "<trt:GetAudioSources/>").await));
+        assert_eq!(
+            sources
+                .audio_sources
+                .iter()
+                .map(|s| (s.token.as_str(), s.channels))
+                .collect::<Vec<_>>(),
+            [("mic0", 1)]
+        );
+        let outputs: trt::GetAudioOutputsResponse =
+            parse(&ok(call(addr, &auth(), "<trt:GetAudioOutputs/>").await));
+        assert_eq!(outputs.audio_outputs.len(), 1);
+        assert_eq!(outputs.audio_outputs[0].token, "spk0");
+
+        let configs: trt::GetAudioSourceConfigurationsResponse = parse(&ok(call(
+            addr,
+            &auth(),
+            "<trt:GetAudioSourceConfigurations/>",
+        )
+        .await));
+        assert_eq!(configs.configurations.len(), 1);
+        let config: trt::GetAudioSourceConfigurationResponse = parse(&ok(call(
+            addr,
+            &auth(),
+            "<trt:GetAudioSourceConfiguration><trt:ConfigurationToken>AudioSourceConfig_mic0</trt:ConfigurationToken></trt:GetAudioSourceConfiguration>",
+        )
+        .await));
+        assert_eq!(config.configuration.source_token, "mic0");
+        let compatible: trt::GetCompatibleAudioEncoderConfigurationsResponse = parse(&ok(call(
+            addr,
+            &auth(),
+            "<trt:GetCompatibleAudioEncoderConfigurations><trt:ProfileToken>Profile_vs0</trt:ProfileToken></trt:GetCompatibleAudioEncoderConfigurations>",
+        )
+        .await));
+        assert_eq!(compatible.configurations.len(), 1);
+        let decoders: trt::GetAudioDecoderConfigurationsResponse = parse(&ok(call(
+            addr,
+            &auth(),
+            "<trt:GetAudioDecoderConfigurations/>",
+        )
+        .await));
+        assert_eq!(decoders.configurations[0].token, "AudioDecoderConfig_0");
+
+        // Unknown tokens fault.
+        let (status, body) = call(
+            addr,
+            &auth(),
+            "<trt:GetAudioSourceConfiguration><trt:ConfigurationToken>nope</trt:ConfigurationToken></trt:GetAudioSourceConfiguration>",
+        )
+        .await;
+        assert_eq!(status, 400, "{body}");
+        assert!(body.contains("ter:NoConfig"), "{body}");
+        let (status, body) = call(
+            addr,
+            &auth(),
+            "<trt:GetCompatibleAudioSourceConfigurations><trt:ProfileToken>nope</trt:ProfileToken></trt:GetCompatibleAudioSourceConfigurations>",
+        )
+        .await;
+        assert_eq!(status, 400, "{body}");
+        assert!(body.contains("ter:NoProfile"), "{body}");
+
+        handle.shutdown().await.unwrap();
+        let _ = std::fs::remove_file(&path);
+    }
+
+    /// A board without `[audio]`: no audio anywhere, as before audio.
+    #[tokio::test(flavor = "current_thread")]
+    async fn generic_board_has_no_audio() {
+        let board = board_profile("generic-v4l2");
+        assert!(board.audio.is_none());
+        let settings = Settings {
+            audio: Audio::new(
+                board.audio.as_ref(),
+                Some(audio_proto::Client::new(audio_socket("generic"))),
+            ),
+            ..settings(None)
+        };
+        let (addr, mut handle) = start(settings).await;
+        let auth = || text_header("nvr", "correct horse");
+        let (status, body) = call(addr, &auth(), "<trt:GetProfiles/>").await;
+        assert_eq!(status, 200, "{body}");
+        let profiles: trt::GetProfilesResponse = parse(&body);
+        let profile = &profiles.profiles[0];
+        assert!(profile.audio_source_configuration.is_none());
+        assert!(profile.audio_encoder_configuration.is_none());
+        assert!(profile.extension.is_none());
+        for (action, empty) in [
+            ("GetAudioSources", "GetAudioSourcesResponse"),
+            ("GetAudioOutputs", "GetAudioOutputsResponse"),
+            (
+                "GetAudioEncoderConfigurations",
+                "GetAudioEncoderConfigurationsResponse",
+            ),
+        ] {
+            let (status, body) = call(addr, &auth(), &format!("<trt:{action}/>")).await;
+            assert_eq!(status, 200, "{body}");
+            assert!(body.contains(empty) && !body.contains("tt:"), "{body}");
+        }
+        let (status, body) =
+            call(addr, &auth(), "<trt:GetAudioEncoderConfigurationOptions/>").await;
+        assert_eq!(status, 400, "{body}");
+        handle.shutdown().await.unwrap();
+    }
+
+    /// AUD-15/17/28: what can be asked for, and what is refused.
+    #[tokio::test(flavor = "current_thread")]
+    async fn audio_options_and_set_validation() {
+        let path = audio_socket("options");
+        let board = board_profile("anyka-av100-ptz");
+        let seen = fake_audio(&path, board.audio.as_ref().unwrap());
+        let (addr, mut handle) = start(av100_audio_settings(&path)).await;
+        let auth = || text_header("nvr", "correct horse");
+        let ok = |(status, body): (u16, String)| {
+            assert_eq!(status, 200, "{body}");
+            body
+        };
+
+        let options: trt::GetAudioEncoderConfigurationOptionsResponse = parse(&ok(call(
+            addr,
+            &auth(),
+            "<trt:GetAudioEncoderConfigurationOptions><trt:ConfigurationToken>AudioEncoderConfig_0</trt:ConfigurationToken><trt:ProfileToken>Profile_vs0</trt:ProfileToken></trt:GetAudioEncoderConfigurationOptions>",
+        )
+        .await));
+        let [option] = options.options.options.as_slice() else {
+            panic!("one encoder option expected");
+        };
+        assert!(matches!(option.encoding, tt::AudioEncodingType::G711));
+        assert_eq!(option.bitrate_list.items, [64]);
+        assert_eq!(option.sample_rate_list.items, [8]);
+
+        let options: trt::GetAudioSourceConfigurationOptionsResponse = parse(&ok(call(
+            addr,
+            &auth(),
+            "<trt:GetAudioSourceConfigurationOptions/>",
+        )
+        .await));
+        assert_eq!(options.options.input_tokens_available, ["mic0"]);
+
+        let options: trt::GetAudioOutputConfigurationOptionsResponse = parse(&ok(call(
+            addr,
+            &auth(),
+            "<trt:GetAudioOutputConfigurationOptions><trt:ConfigurationToken>AudioOutputConfig_spk0</trt:ConfigurationToken></trt:GetAudioOutputConfigurationOptions>",
+        )
+        .await));
+        assert_eq!(options.options.output_tokens_available, ["spk0"]);
+        let range = &options.options.output_level_range;
+        assert_eq!((range.min, range.max), (0, 6), "the board's gain_range");
+
+        let options: trt::GetAudioDecoderConfigurationOptionsResponse = parse(&ok(call(
+            addr,
+            &auth(),
+            "<trt:GetAudioDecoderConfigurationOptions/>",
+        )
+        .await));
+        let g711 = options.options.g711_dec_options.unwrap();
+        assert_eq!(
+            (g711.bitrate.items, g711.sample_rate_range.items),
+            (vec![64], vec![8])
+        );
+
+        // The supported values are accepted (also in bit/s and Hz)...
+        ok(call(addr, &auth(), &set_encoder("G711", 64, 8)).await);
+        ok(call(addr, &auth(), &set_encoder("G711", 64000, 8000)).await);
+        // ...anything else is ConfigModify.
+        for body in [
+            set_encoder("AAC", 64, 8),
+            set_encoder("G711", 32, 8),
+            set_encoder("G711", 64, 16),
+        ] {
+            let (status, answer) = call(addr, &auth(), &body).await;
+            assert_eq!(status, 400, "{answer}");
+            assert!(answer.contains("ter:ConfigModify"), "{answer}");
+        }
+        let (status, body) = call(
+            addr,
+            &auth(),
+            "<trt:SetAudioSourceConfiguration><trt:Configuration token=\"AudioSourceConfig_mic0\"><tt:Name>m</tt:Name><tt:UseCount>2</tt:UseCount><tt:SourceToken>other</tt:SourceToken></trt:Configuration><trt:ForcePersistence>true</trt:ForcePersistence></trt:SetAudioSourceConfiguration>",
+        )
+        .await;
+        assert_eq!(status, 400, "{body}");
+        assert!(body.contains("ter:ConfigModify"), "{body}");
+
+        // Add/Remove of the known configurations on a known profile: no-ops.
+        for body in [
+            "<trt:AddAudioSourceConfiguration><trt:ProfileToken>Profile_vs0</trt:ProfileToken><trt:ConfigurationToken>AudioSourceConfig_mic0</trt:ConfigurationToken></trt:AddAudioSourceConfiguration>",
+            "<trt:AddAudioEncoderConfiguration><trt:ProfileToken>Profile_vs1</trt:ProfileToken><trt:ConfigurationToken>AudioEncoderConfig_0</trt:ConfigurationToken></trt:AddAudioEncoderConfiguration>",
+            "<trt:AddAudioOutputConfiguration><trt:ProfileToken>Profile_vs0</trt:ProfileToken><trt:ConfigurationToken>AudioOutputConfig_spk0</trt:ConfigurationToken></trt:AddAudioOutputConfiguration>",
+            "<trt:AddAudioDecoderConfiguration><trt:ProfileToken>Profile_vs0</trt:ProfileToken><trt:ConfigurationToken>AudioDecoderConfig_0</trt:ConfigurationToken></trt:AddAudioDecoderConfiguration>",
+            "<trt:RemoveAudioEncoderConfiguration><trt:ProfileToken>Profile_vs0</trt:ProfileToken></trt:RemoveAudioEncoderConfiguration>",
+        ] {
+            ok(call(addr, &auth(), body).await);
+        }
+        let (status, body) = call(
+            addr,
+            &auth(),
+            "<trt:AddAudioEncoderConfiguration><trt:ProfileToken>Profile_vs9</trt:ProfileToken><trt:ConfigurationToken>AudioEncoderConfig_0</trt:ConfigurationToken></trt:AddAudioEncoderConfiguration>",
+        )
+        .await;
+        assert_eq!(status, 400, "{body}");
+        assert!(body.contains("ter:NoProfile"), "{body}");
+
+        // A volume outside OutputLevelRange never reaches the service.
+        let (status, body) = call(addr, &auth(), &set_output_level(7)).await;
+        assert_eq!(status, 400, "{body}");
+        assert!(body.contains("ter:ConfigModify"), "{body}");
+        assert!(!seen
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|r| matches!(r, audio_proto::Request::Set { .. })));
+
+        handle.shutdown().await.unwrap();
+        let _ = std::fs::remove_file(&path);
+    }
+
+    /// AUD-27/31: OutputLevel is the audio service's speaker volume, and
+    /// SetAudioOutputConfiguration sets it there.
+    #[tokio::test(flavor = "current_thread")]
+    async fn output_level_is_the_speaker_volume() {
+        let path = audio_socket("volume");
+        let board = board_profile("anyka-av100-ptz");
+        let seen = fake_audio(&path, board.audio.as_ref().unwrap());
+        let (addr, mut handle) = start(av100_audio_settings(&path)).await;
+        let auth = || text_header("nvr", "correct horse");
+        let level = |body: String| {
+            let config: trt::GetAudioOutputConfigurationResponse = parse(&body);
+            config.configuration.output_level
+        };
+        const GET: &str = "<trt:GetAudioOutputConfiguration><trt:ConfigurationToken>AudioOutputConfig_spk0</trt:ConfigurationToken></trt:GetAudioOutputConfiguration>";
+
+        let (status, body) = call(addr, &auth(), GET).await;
+        assert_eq!(status, 200, "{body}");
+        assert_eq!(level(body), 4);
+
+        let (status, body) = call(addr, &auth(), &set_output_level(6)).await;
+        assert_eq!(status, 200, "{body}");
+        assert!(seen.lock().unwrap().contains(&audio_proto::Request::Set {
+            device: "spk0".into(),
+            gain: 6,
+        }));
+        let (_, body) = call(addr, &auth(), GET).await;
+        assert_eq!(level(body), 6);
+        let (_, body) = call(addr, &auth(), "<trt:GetAudioOutputConfigurations/>").await;
+        let configs: trt::GetAudioOutputConfigurationsResponse = parse(&body);
+        assert_eq!(configs.configurations[0].output_level, 6);
+
+        handle.shutdown().await.unwrap();
+        let _ = std::fs::remove_file(&path);
+    }
+
+    /// The audio service down: the board's volume is reported, setting it is
+    /// a Receiver fault.
+    #[tokio::test(flavor = "current_thread")]
+    async fn output_level_without_the_audio_service() {
+        let path = audio_socket("down");
+        let _ = std::fs::remove_file(&path);
+        let (addr, mut handle) = start(av100_audio_settings(&path)).await;
+        let auth = || text_header("nvr", "correct horse");
+        let (status, body) = call(addr, &auth(), "<trt:GetAudioOutputConfigurations/>").await;
+        assert_eq!(status, 200, "{body}");
+        let configs: trt::GetAudioOutputConfigurationsResponse = parse(&body);
+        assert_eq!(configs.configurations[0].output_level, 4);
+        let (status, body) = call(addr, &auth(), &set_output_level(3)).await;
+        assert_eq!(status, 500, "{body}");
+        assert!(body.contains("audio service unavailable"), "{body}");
         handle.shutdown().await.unwrap();
     }
 }

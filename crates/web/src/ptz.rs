@@ -149,6 +149,7 @@ async fn status(State(state): State<AppState>, _: AuthUser) -> Result<Json<PtzSt
         backend,
         limits,
         position,
+        ..
     } = ask(&state, Request::Status).await?
     else {
         return Err(ApiError::internal("unexpected PTZ response to status"));
@@ -190,6 +191,7 @@ async fn move_(
             pan: scale(body.pan),
             tilt: scale(body.tilt),
             timeout_ms: Some(body.timeout_ms.unwrap_or(DEFAULT_MOVE_TIMEOUT_MS)),
+            source: None,
         },
     )
     .await
@@ -197,7 +199,7 @@ async fn move_(
 
 /// `POST /api/ptz/stop` (admin) → 204.
 async fn stop(State(state): State<AppState>, _: AdminUser) -> Result<StatusCode, ApiError> {
-    command(&state, Request::Stop).await
+    command(&state, Request::Stop { source: None }).await
 }
 
 /// `POST /api/ptz/goto` (admin) `{pan, tilt}` (degrees) or `{preset}` → 204.
@@ -209,10 +211,15 @@ async fn goto(
     let request = match body {
         PtzGoto::Preset { preset } => Request::GotoPreset {
             token: preset.to_string(),
+            source: None,
         },
         PtzGoto::Position { pan, tilt } => {
             finite(&[pan, tilt])?;
-            Request::Goto { pan, tilt }
+            Request::Goto {
+                pan,
+                tilt,
+                source: None,
+            }
         }
     };
     command(&state, request).await
@@ -220,7 +227,7 @@ async fn goto(
 
 /// `POST /api/ptz/home` (admin) → 204.
 async fn home(State(state): State<AppState>, _: AdminUser) -> Result<StatusCode, ApiError> {
-    command(&state, Request::Home).await
+    command(&state, Request::Home { source: None }).await
 }
 
 /// `GET /api/ptz/presets` → `[PtzPreset]`.

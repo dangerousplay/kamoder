@@ -16,6 +16,16 @@
 //! `video.sensors`, so the same command line serves a one- or two-sensor
 //! board.
 //!
+//! - **Audio** (AUD-10..13): when the board profile has `[audio]`, every
+//!   stream also declares a PCMA track fed by the `audio` service at
+//!   `--audio-socket`, captured only while a client plays it. The service
+//!   being down leaves that track silent, never the video. `--no-audio`, or
+//!   a board without `[audio]` (or none resolvable), serves video only.
+//! - **Talk-back** (AUD-29, AUD-30): when the board has an
+//!   `[[audio.output]]`, clients that DESCRIBE with
+//!   `Require: www.onvif.org/ver20/backchannel` also get the ONVIF
+//!   backchannel, played on the speaker through the same socket.
+//!   `--no-backchannel` (or `--no-audio`) answers that tag with 551.
 //! - **Credentials**: `etc/onvif.secret`, the same `user:password` file
 //!   `onvif` reads, so an NVR uses one account for both. Without it the
 //!   service refuses to start unless `--no-auth` is given explicitly.
@@ -33,6 +43,8 @@ extern crate os;
 use auth::onvif_secret::Secret;
 use clap::Parser;
 use eyre::{Context, Result};
+use rtsp::audio::AudioStream;
+use rtsp::backchannel::Speaker;
 use rtsp::digest::DigestAuth;
 use rtsp::server::{Config, Mount};
 use rtsp::source::{CameraSource, FileSource, SourceSpec};
@@ -64,6 +76,16 @@ struct Cli {
     /// The camera service's video socket, for `camera:N` sources.
     #[arg(long, default_value = video_proto::DEFAULT_SOCKET)]
     video_socket: PathBuf,
+    /// The audio service's socket, for the microphone track.
+    #[arg(long, default_value = audio_proto::DEFAULT_SOCKET)]
+    audio_socket: PathBuf,
+    /// Serve video only, even if the board has a microphone.
+    #[arg(long)]
+    no_audio: bool,
+    /// Refuse the ONVIF talk-back backchannel even if the board has a
+    /// speaker.
+    #[arg(long)]
+    no_backchannel: bool,
     /// Frame rate of a file source.
     #[arg(long, default_value_t = 25)]
     fps: u32,
@@ -136,6 +158,68 @@ fn board_sensors() -> Result<Vec<u32>> {
     Ok(board.profile.video.sensors)
 }
 
+/// Whether to declare the audio track: not with `--no-audio`, else when the
+/// board profile has `[audio]` (AUD-13). `board_audio` is only called when
+/// it matters; a board that cannot be resolved means no audio, not an error,
+/// since `--stream` may have made the board irrelevant to video.
+fn plan_audio(no_audio: bool, board_audio: impl FnOnce() -> Result<bool>) -> bool {
+    if no_audio {
+        tracing::info!("--no-audio: video only");
+        return false;
+    }
+    match board_audio() {
+        Ok(true) => true,
+        Ok(false) => {
+            tracing::info!("the board profile has no [audio]; video only");
+            false
+        }
+        Err(error) => {
+            tracing::warn!(%error, "board profile unavailable; serving video only");
+            false
+        }
+    }
+}
+
+/// Whether to offer the ONVIF backchannel: not with `--no-audio` or
+/// `--no-backchannel`, else when the board profile lists a speaker
+/// (`[[audio.output]]`). Like [`plan_audio`], an unresolvable board means no
+/// backchannel, not an error.
+fn plan_backchannel(
+    no_audio: bool,
+    no_backchannel: bool,
+    board_speaker: impl FnOnce() -> Result<bool>,
+) -> bool {
+    if no_audio || no_backchannel {
+        tracing::info!("backchannel disabled on the command line");
+        return false;
+    }
+    match board_speaker() {
+        Ok(speaker) => {
+            if !speaker {
+                tracing::info!("the board profile has no audio output; no backchannel");
+            }
+            speaker
+        }
+        Err(error) => {
+            tracing::warn!(%error, "board profile unavailable; no backchannel");
+            false
+        }
+    }
+}
+
+/// Whether the board this runs on has a speaker.
+fn board_speaker() -> Result<bool> {
+    Ok(board::current()?
+        .profile
+        .audio
+        .is_some_and(|audio| !audio.outputs.is_empty()))
+}
+
+/// Whether the board this runs on has `[audio]`.
+fn board_audio() -> Result<bool> {
+    Ok(board::current()?.profile.audio.is_some())
+}
+
 fn parse_ports(text: &str) -> Result<std::ops::Range<u16>, String> {
     let (first, last) = text.split_once('-').ok_or("expected FIRST-LAST")?;
     let first: u16 = first.trim().parse().map_err(|_| "bad first port")?;
@@ -168,6 +252,11 @@ fn serve(cli: Cli) -> Result<()> {
         .build()?;
     runtime.block_on(async move {
         let streams = plan_streams(&cli.stream, &cli.path, cli.source.as_ref(), board_sensors)?;
+        // One microphone, shared by every mount.
+        let audio = plan_audio(cli.no_audio, board_audio)
+            .then(|| AudioStream::socket(cli.audio_socket.clone()));
+        let speaker = plan_backchannel(cli.no_audio, cli.no_backchannel, board_speaker)
+            .then(|| Speaker::socket(cli.audio_socket.clone()));
         let mut mounts = Vec::new();
         let mut pumps = tokio::task::JoinSet::new();
         for (path, spec) in streams {
@@ -176,8 +265,18 @@ fn serve(cli: Cli) -> Result<()> {
                 SourceSpec::Camera(n) => Stream::spawn(CameraSource::new(cli.video_socket.clone(), n)),
             };
             pumps.spawn(pump);
-            tracing::info!(path = %format!("/{path}"), "stream mounted");
-            mounts.push(Mount { path: format!("/{path}"), stream });
+            tracing::info!(
+                path = %format!("/{path}"),
+                audio = audio.is_some(),
+                backchannel = speaker.is_some(),
+                "stream mounted"
+            );
+            mounts.push(Mount {
+                path: format!("/{path}"),
+                stream,
+                audio: audio.clone(),
+                speaker: speaker.clone(),
+            });
         }
         let listener = tokio::net::TcpListener::bind((cli.listen.as_str(), cli.port))
             .await
@@ -229,6 +328,35 @@ mod cli_tests {
         assert_eq!(cli.udp_ports, 6970..7000);
         assert!(!cli.no_auth);
         assert_eq!(cli.source, Some(SourceSpec::File("clip.h264".into())));
+        assert_eq!(cli.audio_socket, PathBuf::from(audio_proto::DEFAULT_SOCKET));
+        assert!(!cli.no_audio);
+        assert!(!cli.no_backchannel);
+    }
+
+    #[test]
+    fn backchannel_follows_the_speaker_unless_disabled() {
+        assert!(plan_backchannel(false, false, || Ok(true)));
+        assert!(!plan_backchannel(false, false, || Ok(false)));
+        assert!(!plan_backchannel(false, false, || eyre::bail!("no board")));
+        for (no_audio, no_backchannel) in [(true, false), (false, true)] {
+            assert!(!plan_backchannel(no_audio, no_backchannel, || panic!(
+                "board not consulted when disabled"
+            )));
+        }
+        assert!(Cli::parse_from(["rtsp", "--no-backchannel"]).no_backchannel);
+    }
+
+    #[test]
+    fn audio_follows_the_board_unless_disabled() {
+        assert!(plan_audio(false, || Ok(true)));
+        assert!(!plan_audio(false, || Ok(false)));
+        assert!(!plan_audio(false, || eyre::bail!("no board")));
+        assert!(!plan_audio(true, || panic!(
+            "board not consulted with --no-audio"
+        )));
+        let cli = Cli::parse_from(["rtsp", "--no-audio", "--audio-socket", "/run/a.sock"]);
+        assert!(cli.no_audio);
+        assert_eq!(cli.audio_socket, PathBuf::from("/run/a.sock"));
     }
 
     #[test]

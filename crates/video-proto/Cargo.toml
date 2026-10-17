@@ -10,6 +10,6 @@ publish = false
 # can talk to the video producer without linking it (or any hardware backend).
 [dependencies]
 serde.workspace = true
-
-[dev-dependencies]
+# JSON lines of the motion socket (`motion`).
 serde_json.workspace = true
+snafu.workspace = true

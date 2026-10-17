@@ -1,0 +1,18 @@
+[package]
+name = "update-proto"
+description = "Wire protocol and async client for the update service control socket"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+# Like follow-proto: only the protocol, so web can be a client without
+# linking the updater (TLS client, package installer).
+serde.workspace = true
+serde_json.workspace = true
+snafu.workspace = true
+tokio = { version = "1", features = ["net", "io-util", "time"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["rt", "macros"] }

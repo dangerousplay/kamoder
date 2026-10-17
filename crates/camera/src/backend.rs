@@ -116,6 +116,18 @@ pub trait Session {
         timeout: Duration,
         f: &mut dyn FnMut(&FrameRef<'_>) -> Result<usize, BoxError>,
     ) -> Result<usize, BoxError>;
+    /// The latest motion statistics of sensor `slot`, as the ISP computes
+    /// them (FOL-01). `Ok(None)` when the backend has none, which stops the
+    /// service asking for this slot until the next bring-up; that is the
+    /// default. The service fills in `seq` and `ts_ms`; called from the
+    /// capture thread between pictures, so it must be quick.
+    fn motion_grid(
+        &mut self,
+        slot: usize,
+    ) -> Result<Option<video_proto::motion::MotionGrid>, BoxError> {
+        let _ = slot;
+        Ok(None)
+    }
 }
 
 /// One H.264 channel per sensor, created once at start-up and kept for the
